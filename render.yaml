@@ -1,5 +1,10 @@
 # Render free-tier deployment (backend). Frontend deploys to Vercel with
 # NEXT_PUBLIC_API_URL pointed at this service's URL.
+# Free tier has no persistent disk — use a free Neon Postgres for durable data:
+# set DATABASE_URL in the dashboard to
+#   postgresql+asyncpg://USER:PASS@HOST/db?ssl=require
+# Without it, the service falls back to ephemeral SQLite (data resets on
+# deploys/restarts — fine for a quick trial, not for daily use).
 # Free instances sleep after ~15 min idle — add a cron-job.org ping to /health
 # every 10 minutes to keep the scheduler alive.
 services:
@@ -11,13 +16,9 @@ services:
     buildCommand: pip install uv && uv pip install --system .
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
-    disk:
-      name: neuralfeed-data
-      mountPath: /data
-      sizeGB: 1
     envVars:
       - key: DATABASE_URL
-        value: sqlite+aiosqlite:////data/neuralFeed.db
+        sync: false  # paste your Neon connection string in the dashboard
       - key: SCHEDULER_ENABLED
         value: "true"
       - key: SUMMARY_PROVIDER

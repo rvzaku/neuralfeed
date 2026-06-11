@@ -8,6 +8,7 @@ dependencies = [
     "uvicorn[standard]==0.32.1",
     "sqlalchemy[asyncio]==2.0.36",
     "aiosqlite==0.20.0",
+    "asyncpg>=0.30",  # Postgres driver for Neon/production DATABASE_URL
     "alembic==1.14.0",
     "pydantic-settings==2.6.1",
     "celery[redis]==5.4.0",  # legacy worker path, unused at runtime (Phase 3 scale-up)
