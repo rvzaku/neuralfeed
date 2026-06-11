@@ -8,6 +8,8 @@ import type { Article } from "@/lib/types";
 
 interface FeedCardProps {
   article: Article;
+  /** Opens the 1-minute summary sheet; falls back to direct link-out when absent */
+  onOpen?: (article: Article) => void;
 }
 
 const TOPIC_COLORS: Record<string, string> = {
@@ -30,16 +32,21 @@ function isUnseen(article: Article): boolean {
   return ageHours > 48;
 }
 
-export function FeedCard({ article }: FeedCardProps) {
+export function FeedCard({ article, onOpen }: FeedCardProps) {
   const { mutate: postFeedback } = usePostFeedback();
   const { mutate: toggleBookmark } = useToggleBookmark();
   const unseen = isUnseen(article);
 
+  function activate() {
+    if (onOpen) onOpen(article);
+    else window.open(article.url, "_blank", "noopener,noreferrer");
+  }
+
   function handleCardClick(e: React.MouseEvent) {
-    // Prevent propagation from action buttons
+    // Prevent propagation from action buttons and the direct link
     const target = e.target as HTMLElement;
-    if (target.closest("button")) return;
-    window.open(article.url, "_blank", "noopener,noreferrer");
+    if (target.closest("button") || target.closest("a")) return;
+    activate();
   }
 
   function handleFeedback(e: React.MouseEvent, value: 1 | -1) {
@@ -58,7 +65,7 @@ export function FeedCard({ article }: FeedCardProps) {
       role="article"
       tabIndex={0}
       onClick={handleCardClick}
-      onKeyDown={(e) => e.key === "Enter" && window.open(article.url, "_blank", "noopener,noreferrer")}
+      onKeyDown={(e) => e.key === "Enter" && activate()}
       className={cn(
         "group relative rounded-xl border border-border bg-card p-4 cursor-pointer",
         "transition-all duration-150 hover:border-primary/40 hover:shadow-sm hover:shadow-primary/5",
@@ -84,7 +91,16 @@ export function FeedCard({ article }: FeedCardProps) {
             <span className="text-xs text-muted-foreground">↑{Math.round(article.trending_score).toLocaleString()}</span>
           )}
           <span className="text-xs text-muted-foreground">{formatRelativeTime(article.published_at)}</span>
-          <ExternalLink className="h-3 w-3 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <a
+            href={article.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Open original source"
+            onClick={(e) => e.stopPropagation()}
+            className="p-1 -m-1"
+          >
+            <ExternalLink className="h-3 w-3 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </a>
         </div>
       </div>
 

@@ -11,13 +11,15 @@ import { DesktopSidebar } from "./DesktopSidebar";
 import { RefreshIndicator } from "./RefreshIndicator";
 import { SavedViewSwitcher } from "./SavedViewSwitcher";
 import { SearchModal } from "./SearchModal";
+import { SummarySheet } from "./SummarySheet";
 import { useFeed } from "@/hooks/useFeed";
-import type { FeedFilters } from "@/lib/types";
+import type { Article, FeedFilters } from "@/lib/types";
 
 export function FeedView() {
   const params = useSearchParams();
   const [searchOpen, setSearchOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [openArticle, setOpenArticle] = useState<Article | null>(null);
 
   const filters: FeedFilters = {
     category:    (params.get("category") as FeedFilters["category"]) || undefined,
@@ -107,7 +109,7 @@ export function FeedView() {
 
           {/* Feed items */}
           {!isLoading && !isError && data?.items.map((article) => (
-            <FeedCard key={article.id} article={article} />
+            <FeedCard key={article.id} article={article} onOpen={setOpenArticle} />
           ))}
 
           {data?.has_more && (
@@ -124,6 +126,8 @@ export function FeedView() {
       <FilterDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
       <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+
+      <SummarySheet article={openArticle} onClose={() => setOpenArticle(null)} />
     </div>
   );
 }
