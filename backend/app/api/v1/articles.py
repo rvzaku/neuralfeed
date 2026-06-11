@@ -8,6 +8,28 @@ from app.schemas.article import ArticleOut
 router = APIRouter(prefix="/articles", tags=["articles"])
 
 
+@router.get("/{article_id}/summary")
+async def get_summary(article_id: str, db: AsyncSession = Depends(get_db)) -> dict:
+    """Cached-or-generate 1-minute summary. Opening a summary marks the article read."""
+    from app.services.summarizer import SummaryError, get_or_generate_summary
+
+    article = await db.get(Article, article_id)
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+
+    try:
+        result = await get_or_generate_summary(article, db)
+    except SummaryError as e:
+        # Frontend falls back to the stored snippet + direct link-out
+        raise HTTPException(status_code=503, detail=str(e))
+
+    if not article.is_read:
+        article.is_read = True
+        await db.commit()
+
+    return {**result, "article_id": article.id, "url": article.url}
+
+
 @router.post("/{article_id}/bookmark", response_model=ArticleOut)
 async def toggle_bookmark(article_id: str, db: AsyncSession = Depends(get_db)) -> ArticleOut:
     article = await db.get(Article, article_id)

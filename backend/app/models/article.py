@@ -41,3 +41,7 @@ class Article(Base):
     feedback: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     trending_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     title_hash: Mapped[Optional[str]] = mapped_column(String(16), nullable=True, index=True)
+    # Cached AI summary as JSON {"summary": str, "takeaways": [str]} — our own
+    # derivative work; full article text is never stored (see CLAUDE.md).
+    ai_summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    ai_summary_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)

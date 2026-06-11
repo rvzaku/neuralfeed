@@ -13,5 +13,11 @@ class Settings(BaseSettings):
     hf_api_token: str = ""
     cors_origins: list[str] = ["http://localhost:3000"]
 
+    # Summarization — provider is swappable via env (groq | ollama)
+    summary_provider: str = "groq"
+    summary_model: str = ""  # empty → provider default
+    groq_api_key: str = ""
+    ollama_base_url: str = "http://localhost:11434"
+
 
 settings = Settings()
