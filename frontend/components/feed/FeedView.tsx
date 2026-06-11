@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Search, AlertCircle, Inbox } from "lucide-react";
 import { FeedCard } from "./FeedCard";
 import { FeedCardSkeleton } from "./FeedCardSkeleton";
@@ -11,12 +11,17 @@ import { DesktopSidebar } from "./DesktopSidebar";
 import { RefreshIndicator } from "./RefreshIndicator";
 import { SavedViewSwitcher } from "./SavedViewSwitcher";
 import { SearchModal } from "./SearchModal";
+import { StoryCard } from "./StoryCard";
 import { SummarySheet } from "./SummarySheet";
-import { useFeed } from "@/hooks/useFeed";
+import { useFeed, useStories } from "@/hooks/useFeed";
+import { cn } from "@/lib/utils";
 import type { Article, FeedFilters } from "@/lib/types";
+
+const TIME_TO_DAYS: Record<string, number> = { "1d": 1, "3d": 3, "7d": 7, "30d": 30 };
 
 export function FeedView() {
   const params = useSearchParams();
+  const router = useRouter();
   const [searchOpen, setSearchOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [openArticle, setOpenArticle] = useState<Article | null>(null);
@@ -34,7 +39,37 @@ export function FeedView() {
     limit: 30,
   };
 
+  // Digest (story-first, finite) is the default; list view when the user asks
+  // for "all", uses category/source filters, or browses saved items.
+  const wantsList =
+    params.get("view") === "all" ||
+    !!filters.category ||
+    !!filters.source_id ||
+    !!filters.is_bookmarked ||
+    filters.feedback !== undefined;
+  const digestMode = !wantsList;
+
   const { data, isLoading, isError, refetch } = useFeed(filters);
+  const storiesQuery = useStories({
+    days: TIME_TO_DAYS[filters.time_range ?? "7d"] ?? 1,
+    limit: 12,
+    unread_only: filters.is_read === undefined ? true : filters.is_read === false,
+    topic: filters.topic,
+  });
+
+  function setView(view: "digest" | "all") {
+    const next = new URLSearchParams(params.toString());
+    if (view === "all") next.set("view", "all");
+    else {
+      next.delete("view");
+      // digest doesn't support these — clear so the toggle actually switches
+      next.delete("category");
+      next.delete("source_id");
+      next.delete("is_bookmarked");
+      next.delete("feedback");
+    }
+    router.push(`?${next.toString()}`, { scroll: false });
+  }
 
   return (
     <div className="flex min-h-screen">
@@ -84,40 +119,110 @@ export function FeedView() {
             </div>
           </div>
 
-          {/* Loading */}
-          {isLoading && Array.from({ length: 6 }).map((_, i) => <FeedCardSkeleton key={i} />)}
-
-          {/* Error */}
-          {isError && (
-            <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
-              <AlertCircle className="h-8 w-8 text-destructive" />
-              <p className="text-sm text-muted-foreground">Failed to load feed.</p>
-              <button onClick={() => refetch()} className="text-sm text-primary hover:underline">
-                Try again
+          {/* Digest / All toggle */}
+          <div className="flex items-center gap-1 rounded-lg bg-muted p-0.5 w-fit" role="tablist" aria-label="Feed view">
+            {([["digest", "Digest"], ["all", "All items"]] as const).map(([value, label]) => (
+              <button
+                key={value}
+                role="tab"
+                aria-selected={digestMode === (value === "digest")}
+                onClick={() => setView(value)}
+                className={cn(
+                  "px-3 py-1.5 rounded-md text-xs font-medium transition-colors min-h-[32px]",
+                  digestMode === (value === "digest")
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {label}
               </button>
-            </div>
-          )}
+            ))}
+          </div>
 
-          {/* Empty */}
-          {!isLoading && !isError && data?.items.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
-              <Inbox className="h-8 w-8 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">No items match your filters.</p>
-              <p className="text-xs text-muted-foreground">Try refreshing or broadening your filters.</p>
-            </div>
-          )}
+          {digestMode ? (
+            <>
+              {/* Story digest — bounded, finite by design */}
+              {storiesQuery.isLoading &&
+                Array.from({ length: 5 }).map((_, i) => <FeedCardSkeleton key={i} />)}
 
-          {/* Feed items */}
-          {!isLoading && !isError && data?.items.map((article) => (
-            <FeedCard key={article.id} article={article} onOpen={setOpenArticle} />
-          ))}
+              {storiesQuery.isError && (
+                <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+                  <AlertCircle className="h-8 w-8 text-destructive" />
+                  <p className="text-sm text-muted-foreground">Failed to load stories.</p>
+                  <button onClick={() => storiesQuery.refetch()} className="text-sm text-primary hover:underline">
+                    Try again
+                  </button>
+                </div>
+              )}
 
-          {data?.has_more && (
-            <div className="py-4 text-center">
-              <p className="text-xs text-muted-foreground">
-                Showing {data.items.length} of {data.total} items
-              </p>
-            </div>
+              {storiesQuery.data?.stories.map((story) => (
+                <StoryCard key={story.id} story={story} onOpenArticle={setOpenArticle} />
+              ))}
+
+              {storiesQuery.data && storiesQuery.data.stories.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+                  <Inbox className="h-8 w-8 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">Nothing new right now.</p>
+                  <p className="text-xs text-muted-foreground">Check back later or pull a manual refresh.</p>
+                </div>
+              )}
+
+              {/* The end-cap: the feed is finite */}
+              {storiesQuery.data && storiesQuery.data.stories.length > 0 && (
+                <div className="py-8 text-center space-y-2">
+                  {storiesQuery.data.caught_up ? (
+                    <p className="font-serif italic text-sm text-muted-foreground">
+                      You&apos;re caught up — that&apos;s everything worth your attention.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Showing top {storiesQuery.data.stories.length} of {storiesQuery.data.total_stories} stories
+                    </p>
+                  )}
+                  <button
+                    onClick={() => setView("all")}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Browse all items
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              {/* Classic list view */}
+              {isLoading && Array.from({ length: 6 }).map((_, i) => <FeedCardSkeleton key={i} />)}
+
+              {isError && (
+                <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+                  <AlertCircle className="h-8 w-8 text-destructive" />
+                  <p className="text-sm text-muted-foreground">Failed to load feed.</p>
+                  <button onClick={() => refetch()} className="text-sm text-primary hover:underline">
+                    Try again
+                  </button>
+                </div>
+              )}
+
+              {!isLoading && !isError && data?.items.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+                  <Inbox className="h-8 w-8 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">No items match your filters.</p>
+                  <p className="text-xs text-muted-foreground">Try refreshing or broadening your filters.</p>
+                </div>
+              )}
+
+              {!isLoading && !isError && data?.items.map((article) => (
+                <FeedCard key={article.id} article={article} onOpen={setOpenArticle} />
+              ))}
+
+              {data?.has_more && (
+                <div className="py-4 text-center">
+                  <p className="text-xs text-muted-foreground">
+                    Showing {data.items.length} of {data.total} items
+                  </p>
+                </div>
+              )}
+            </>
           )}
         </main>
       </div>

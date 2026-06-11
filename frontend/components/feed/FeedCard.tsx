@@ -105,7 +105,7 @@ export function FeedCard({ article, onOpen }: FeedCardProps) {
       </div>
 
       {/* Title */}
-      <h3 className="font-semibold text-sm leading-snug mb-1.5 line-clamp-2 text-foreground group-hover:text-primary transition-colors">
+      <h3 className="font-serif font-semibold text-[15px] leading-snug mb-1.5 line-clamp-2 text-foreground group-hover:text-primary transition-colors">
         {article.title}
       </h3>
 
