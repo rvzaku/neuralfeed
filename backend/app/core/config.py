@@ -24,8 +24,9 @@ class Settings(BaseSettings):
     @classmethod
     def _split_cors_origins(cls, v: Union[str, list[str]]) -> list[str]:
         if isinstance(v, str):
-            return [o.strip() for o in v.split(",") if o.strip()]
-        return v
+            v = v.split(",")
+        # Browsers send Origin without a trailing slash; exact match would fail
+        return [o.strip().rstrip("/") for o in v if o.strip()]
 
     # In-process scheduled fetching (replaces Celery beat for single-user deploys)
     scheduler_enabled: bool = True
