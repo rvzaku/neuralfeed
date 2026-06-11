@@ -34,9 +34,12 @@ def _mock_async_client(response=None, raise_exc=None):
 class TestProviders:
     @pytest.mark.asyncio
     async def test_groq_without_key_raises(self):
-        provider = GroqProvider(api_key="")
-        with pytest.raises(SummaryError, match="GROQ_API_KEY"):
-            await provider.summarize("t", "c")
+        with patch("app.services.summarizer.settings") as mock_settings:
+            mock_settings.groq_api_key = ""
+            mock_settings.summary_model = ""
+            provider = GroqProvider(api_key="")
+            with pytest.raises(SummaryError, match="GROQ_API_KEY"):
+                await provider.summarize("t", "c")
 
     @pytest.mark.asyncio
     async def test_groq_success(self):
