@@ -34,6 +34,15 @@ async def _fetch_job(source_id: str) -> None:
         source = await db.get(Source, source_id)
         if not source or not source.enabled:
             return
+        # Skip if fetched recently (cheap resume after restarts: cold starts
+        # re-register jobs, but sources that already ran shouldn't re-fetch)
+        interval_h = _hours_for(source.refresh_interval)
+        if source.last_fetched_at and (
+            datetime.now(timezone.utc).replace(tzinfo=None) - source.last_fetched_at
+        ) < timedelta(hours=interval_h * 0.5):
+            return
+        source.fetch_attempted_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        await db.commit()
         await run_fetch(source_id, db)
 
 

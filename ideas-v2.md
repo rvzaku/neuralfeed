@@ -774,6 +774,46 @@ Compliance note: full article text is fetched transiently for summarization and 
 
 ---
 
+## V4 Plan — Proposed 2026-06-12 (from app-feedback-v2.md, pending approval)
+
+Supersedes V3 items where they conflict. Driving feedback: not all buckets show content; summaries too short (want ~10-minute deep reads); every article needs a preview; Reddit/X/LinkedIn must work; frontend must be genuinely good, mobile-first, and not look AI-generic.
+
+### Phase 0 — Fetch reliability (root cause: refresh runs all ~50 sources sequentially in one background task and dies on Render restarts; back half never fetches)
+- Batched concurrent refresh (semaphore of 3–4), per-source error isolation, resumable progress.
+- Reddit 429 fix: request spacing, exponential backoff with Retry-After, shared descriptive User-Agent, rotated fetch order.
+- All enabled sources must reach `ok` in `/api/v1/sources/health` or be disabled with a note.
+
+### Phase 1 — Bucket completion
+- Conference news sources (NeurIPS/ICML/ICLR/CVPR/ACL), funding/products via TechCrunch + VentureBeat AI RSS.
+- People bucket = filter over watched accounts.
+- LinkedIn: feasibility-bounded — manual/curated follow targets only; no ToS-violating scraping. Documented in SOURCES.md.
+
+### Phase 2 — Deep summaries ("10-minute read")
+- `summarizer.py` deep mode: ~1,500–2,000-word sectioned markdown summary; new `Article.ai_deep_summary` column + migration; `GET /articles/{id}/summary?mode=deep`.
+- Source-type-aware extraction (arXiv abstract page, Reddit post+top comments, GitHub README). Source text stays transient — only derivative summaries are stored.
+- Quick 1-minute summary remains as the instant preview on every card.
+
+### Phase 3 — Frontend overhaul (editorial direction)
+- Design tokens + serif display typography via next/font; warm neutral palette, single accent, no gradients/glassmorphism.
+- Story-first bounded digest feed; every card: badge, time, snippet preview, reading-time; whole-card tap → summary sheet (bottom sheet mobile / side panel desktop) with quick summary instantly + deep summary expander + "Read at source →".
+- 4-tab bottom nav, scrollable bucket filter chips, advanced filter drawer, saved views.
+- Polish: skeletons, <200ms transitions, 44px targets, a11y review, Lighthouse mobile >90.
+
+### Phase 4 — Docs, security, deploy
+- CLAUDE.md updates (deep-summary data rule, Render hosting, refresh architecture, LinkedIn stance).
+- Security scan + secret grep before every push. (2026-06-12: leaked Groq key found in commit 4507670, removed from tip; key must be revoked at console.groq.com.)
+
+### Risks
+| Risk | Likelihood | Mitigation |
+|---|---|---|
+| Reddit 429 from shared Render IP | Medium | Backoff + spacing + per-sub RSS fallback |
+| Nitter instance death (X bucket) | High over time | Instance rotation + health flag in Sources UI |
+| LinkedIn expectation vs ToS reality | High | Scoped to curated manual targets; documented |
+| Groq limits on deep summaries | Low | On-demand + cached; provider swappable |
+| Render restart mid-refresh | High | Resumable batched refresh (Phase 0) |
+
+---
+
 ## Open Questions (to resolve before Phase 1.1)
 
 1. **Tech stack**: React + Next.js? Vue? What backend — Node.js, Python/FastAPI?

@@ -1,14 +1,29 @@
 import asyncio
+import time
 import urllib.request
 
 import feedparser
-import httpx
 import structlog
 from app.core.config import settings
-from app.fetchers.base import BaseFetcher, FetchResult
+from app.fetchers.base import BaseFetcher, FetchError, FetchResult, fetch_with_backoff
 from app.fetchers.rss import _strip_html
 
 log = structlog.get_logger()
+
+# Reddit rate-limits per client IP, not per subreddit — pace ALL reddit
+# requests globally so concurrent sub fetches don't burst into a 429.
+_PACE_SECONDS = 2.5
+_pace_lock = asyncio.Lock()
+_last_request = 0.0
+
+
+async def _pace() -> None:
+    global _last_request
+    async with _pace_lock:
+        wait = _last_request + _PACE_SECONDS - time.monotonic()
+        if wait > 0:
+            await asyncio.sleep(wait)
+        _last_request = time.monotonic()
 
 SUBREDDITS = {
     "reddit-ml":              "MachineLearning",
@@ -64,11 +79,10 @@ class RedditFetcher(BaseFetcher):
         url = f"https://www.reddit.com/r/{sub}/hot.json?limit=50"
         headers = {"User-Agent": settings.reddit_user_agent}
         try:
-            async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
-                resp = await client.get(url, headers=headers)
-                resp.raise_for_status()
-                data = resp.json()
-        except Exception as e:
+            await _pace()
+            resp = await fetch_with_backoff(url, headers=headers)
+            data = resp.json()
+        except (FetchError, Exception) as e:
             log.warning("reddit_json_blocked_trying_rss", source_id=self.source_id, error=str(e))
             return await asyncio.to_thread(self._fetch_rss_fallback, sub)
 

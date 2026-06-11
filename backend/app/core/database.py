@@ -48,6 +48,26 @@ async def get_db() -> AsyncSession:  # type: ignore[return]
         yield session
 
 
+# Columns added after a table already exists in prod. create_all() only
+# creates missing TABLES, never missing columns, so each additive column is
+# applied idempotently here. (Proper alembic-on-deploy lands with Phase 3.2.)
+_ADDITIVE_COLUMNS = [
+    ("sources", "fetch_attempted_at", "TIMESTAMP"),
+]
+
+
+async def _ensure_additive_columns(conn) -> None:
+    from sqlalchemy import text
+
+    for table, column, ddl_type in _ADDITIVE_COLUMNS:
+        try:
+            await conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {ddl_type}"))
+        except Exception:
+            pass  # column already exists — expected on every boot after the first
+
+
 async def init_db() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    async with engine.begin() as conn:
+        await _ensure_additive_columns(conn)

@@ -49,25 +49,20 @@ SAMPLE_REDDIT_JSON = {
 }
 
 
-def _mock_client(json_data=None, raise_on_get=None):
+def _mock_fetch(json_data=None, raise_exc=None):
+    """Patch target for app.fetchers.reddit.fetch_with_backoff."""
+    if raise_exc:
+        return AsyncMock(side_effect=raise_exc)
     resp = MagicMock()
     resp.status_code = 200
     resp.json = MagicMock(return_value=json_data or {})
-    resp.raise_for_status = MagicMock()
-    client = AsyncMock()
-    if raise_on_get:
-        client.get = AsyncMock(side_effect=raise_on_get)
-    else:
-        client.get = AsyncMock(return_value=resp)
-    client.__aenter__ = AsyncMock(return_value=client)
-    client.__aexit__ = AsyncMock(return_value=False)
-    return client
+    return AsyncMock(return_value=resp)
 
 
 @pytest.mark.asyncio
 async def test_reddit_parses_posts():
     fetcher = RedditFetcher("reddit-ml")
-    with patch("app.fetchers.reddit.httpx.AsyncClient", return_value=_mock_client(SAMPLE_REDDIT_JSON)):
+    with patch("app.fetchers.reddit.fetch_with_backoff", new=_mock_fetch(SAMPLE_REDDIT_JSON)):
         result = await fetcher.fetch()
 
     assert result.ok
@@ -82,7 +77,7 @@ async def test_reddit_parses_posts():
 @pytest.mark.asyncio
 async def test_reddit_self_post_uses_permalink():
     fetcher = RedditFetcher("reddit-ml")
-    with patch("app.fetchers.reddit.httpx.AsyncClient", return_value=_mock_client(SAMPLE_REDDIT_JSON)):
+    with patch("app.fetchers.reddit.fetch_with_backoff", new=_mock_fetch(SAMPLE_REDDIT_JSON)):
         result = await fetcher.fetch()
 
     self_post = next(i for i in result.items if "Discussion" in i["title"])
@@ -93,7 +88,7 @@ async def test_reddit_self_post_uses_permalink():
 @pytest.mark.asyncio
 async def test_reddit_published_at_set_from_epoch():
     fetcher = RedditFetcher("reddit-ml")
-    with patch("app.fetchers.reddit.httpx.AsyncClient", return_value=_mock_client(SAMPLE_REDDIT_JSON)):
+    with patch("app.fetchers.reddit.fetch_with_backoff", new=_mock_fetch(SAMPLE_REDDIT_JSON)):
         result = await fetcher.fetch()
 
     for item in result.items:
@@ -112,10 +107,7 @@ async def test_reddit_unknown_subreddit_returns_error():
 async def test_reddit_http_error_falls_back_to_rss():
     """JSON failure must trigger the RSS fallback; if that also fails, error out."""
     fetcher = RedditFetcher("reddit-ml")
-    with patch(
-        "app.fetchers.reddit.httpx.AsyncClient",
-        return_value=_mock_client(raise_on_get=Exception("timeout")),
-    ):
+    with patch("app.fetchers.reddit.fetch_with_backoff", new=_mock_fetch(raise_exc=Exception("timeout"))):
         with patch(
             "app.fetchers.reddit.urllib.request.urlopen",
             side_effect=Exception("rss also blocked"),
@@ -143,10 +135,7 @@ async def test_reddit_rss_fallback_parses_entries():
     mock_resp.__enter__ = MagicMock(return_value=mock_resp)
     mock_resp.__exit__ = MagicMock(return_value=False)
 
-    with patch(
-        "app.fetchers.reddit.httpx.AsyncClient",
-        return_value=_mock_client(raise_on_get=Exception("403 Blocked")),
-    ):
+    with patch("app.fetchers.reddit.fetch_with_backoff", new=_mock_fetch(raise_exc=Exception("403 Blocked"))):
         with patch("app.fetchers.reddit.urllib.request.urlopen", return_value=mock_resp):
             result = await fetcher.fetch()
 

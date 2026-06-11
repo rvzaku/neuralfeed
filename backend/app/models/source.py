@@ -23,3 +23,5 @@ class Source(Base):
     last_fetch_status: Mapped[Optional[str]] = mapped_column(String(8), nullable=True)  # ok | error
     last_fetch_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     last_fetch_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    # Refresh cursor: stamped before fetching so a crash still advances ordering
+    fetch_attempted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
