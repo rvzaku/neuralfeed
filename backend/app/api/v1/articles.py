@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_db
@@ -9,8 +9,13 @@ router = APIRouter(prefix="/articles", tags=["articles"])
 
 
 @router.get("/{article_id}/summary")
-async def get_summary(article_id: str, db: AsyncSession = Depends(get_db)) -> dict:
-    """Cached-or-generate 1-minute summary. Opening a summary marks the article read."""
+async def get_summary(
+    article_id: str,
+    mode: str = Query("quick", pattern="^(quick|deep)$"),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Cached-or-generate summary. quick = 1-minute; deep = 10-minute markdown
+    brief. Opening either marks the article read."""
     from app.services.summarizer import SummaryError, get_or_generate_summary
 
     article = await db.get(Article, article_id)
@@ -18,7 +23,7 @@ async def get_summary(article_id: str, db: AsyncSession = Depends(get_db)) -> di
         raise HTTPException(status_code=404, detail="Article not found")
 
     try:
-        result = await get_or_generate_summary(article, db)
+        result = await get_or_generate_summary(article, db, mode=mode)
     except SummaryError as e:
         # Frontend falls back to the stored snippet + direct link-out
         raise HTTPException(status_code=503, detail=str(e))

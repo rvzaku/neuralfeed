@@ -45,3 +45,6 @@ class Article(Base):
     # derivative work; full article text is never stored (see CLAUDE.md).
     ai_summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     ai_summary_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    # Deep "10-minute read" markdown brief — same derivative-only rule applies
+    ai_deep_summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    ai_deep_summary_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)

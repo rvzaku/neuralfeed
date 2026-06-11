@@ -53,6 +53,8 @@ async def get_db() -> AsyncSession:  # type: ignore[return]
 # applied idempotently here. (Proper alembic-on-deploy lands with Phase 3.2.)
 _ADDITIVE_COLUMNS = [
     ("sources", "fetch_attempted_at", "TIMESTAMP"),
+    ("articles", "ai_deep_summary", "TEXT"),
+    ("articles", "ai_deep_summary_at", "TIMESTAMP"),
 ]
 
 

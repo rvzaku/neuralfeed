@@ -15,6 +15,24 @@ Live state driving this plan (prod health check, 2026-06-12): ~17/50 sources `ok
 
 ---
 
+## Requirements Traceability (app-feedback-v2.md, re-read 2026-06-12)
+
+| # | Feedback requirement (verbatim intent) | Covered by | Status |
+|---|---|---|---|
+| R1 | Not showing content from all buckets in ideas.md; only some content | Phase 0 (resumable refresh) + Phase 1 (conference/product sources) | SHIPPED — prod soak ongoing |
+| R2 | Frontend not as wanted | Phase 3 (editorial overhaul) | pending |
+| R3 | Summary too small — want proper 10-minute summary | Phase 2 (deep summaries) | in progress |
+| R4 | All articles must have a preview | Phase 2 (ingest snippet backfill + summary sheet on every card) | in progress |
+| R5 | Reddit working | Phase 0 (backoff/pacing 6s) | SHIPPED — monitoring 429s |
+| R6 | X.com working | twitter-nitter live (125 items); health-flagged in Sources | SHIPPED |
+| R7 | LinkedIn working | Curated manual targets via watched_accounts (`platform='linkedin'`); no ToS-violating scraper — documented in SOURCES.md | SHIPPED (bounded) |
+| R8 | Really user-friendly, mobile responsive, non-AI-generic, easy navigation, best UI/UX | Phase 3 (3a–3e) | pending |
+| R9 | Refer to ECC skills | a11y + interface-polish + react-review passes wired into Phase 3e | pending |
+| R10 | Topic weights auto-adjusted | Phase 2b — feedback_service nudges weights ±0.1 clamped | SHIPPED |
+| R11 | Topic weights manually adjustable | API exists (PUT /preferences/topic_weights); Settings sliders in Phase 3 | partial |
+| R12 | Smart ranking enabled | Phase 2b — ranked=true default | SHIPPED |
+| R13 | Professionally made, desktop + mobile friendly | Phase 3 breakpoints + polish gates (Lighthouse >90) | pending |
+
 ## Architecture & Separation of Concerns (target state)
 
 ### Backend layering (rule: dependencies only point downward)
