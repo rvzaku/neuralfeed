@@ -1,0 +1,203 @@
+{
+  "version": "1.1",
+  "description": "Curated list of AI researchers and orgs to follow. Edit this file to add/remove accounts.",
+  "accounts": [
+    {
+      "platform": "twitter",
+      "handle": "karpathy",
+      "display_name": "Andrej Karpathy",
+      "source_of_discovery": "manual",
+      "notes": "Deep learning, LLMs, ex-OpenAI/Tesla"
+    },
+    {
+      "platform": "twitter",
+      "handle": "sama",
+      "display_name": "Sam Altman",
+      "source_of_discovery": "manual",
+      "notes": "CEO OpenAI"
+    },
+    {
+      "platform": "twitter",
+      "handle": "ylecun",
+      "display_name": "Yann LeCun",
+      "source_of_discovery": "manual",
+      "notes": "Chief AI Scientist at Meta, inventor of CNNs"
+    },
+    {
+      "platform": "twitter",
+      "handle": "AnthropicAI",
+      "display_name": "Anthropic",
+      "source_of_discovery": "manual",
+      "notes": "AI safety company, maker of Claude"
+    },
+    {
+      "platform": "twitter",
+      "handle": "OpenAI",
+      "display_name": "OpenAI",
+      "source_of_discovery": "manual",
+      "notes": "GPT, DALL-E, Sora"
+    },
+    {
+      "platform": "twitter",
+      "handle": "GoogleDeepMind",
+      "display_name": "Google DeepMind",
+      "source_of_discovery": "manual",
+      "notes": "Gemini, AlphaFold, AlphaCode"
+    },
+    {
+      "platform": "twitter",
+      "handle": "huggingface",
+      "display_name": "Hugging Face",
+      "source_of_discovery": "manual",
+      "notes": "Open source AI hub"
+    },
+    {
+      "platform": "twitter",
+      "handle": "swyx",
+      "display_name": "swyx",
+      "source_of_discovery": "manual",
+      "notes": "AI engineering, latent space podcast"
+    },
+    {
+      "platform": "twitter",
+      "handle": "emollick",
+      "display_name": "Ethan Mollick",
+      "source_of_discovery": "manual",
+      "notes": "AI and management, Wharton professor"
+    },
+    {
+      "platform": "twitter",
+      "handle": "fchollet",
+      "display_name": "François Chollet",
+      "source_of_discovery": "manual",
+      "notes": "Creator of Keras, ARC benchmark"
+    },
+    {
+      "platform": "twitter",
+      "handle": "ilyasut",
+      "display_name": "Ilya Sutskever",
+      "source_of_discovery": "manual",
+      "notes": "Co-founder SSI, ex-OpenAI chief scientist"
+    },
+    {
+      "platform": "twitter",
+      "handle": "drjimfan",
+      "display_name": "Jim Fan",
+      "source_of_discovery": "manual",
+      "notes": "NVIDIA AI, embodied agents"
+    },
+    {
+      "platform": "twitter",
+      "handle": "goodfellow_ian",
+      "display_name": "Ian Goodfellow",
+      "source_of_discovery": "manual",
+      "notes": "Inventor of GANs"
+    },
+    {
+      "platform": "twitter",
+      "handle": "rasbt",
+      "display_name": "Sebastian Raschka",
+      "source_of_discovery": "manual",
+      "notes": "ML educator, Ahead of AI newsletter"
+    },
+    {
+      "platform": "twitter",
+      "handle": "cwolferesearch",
+      "display_name": "Cameron Wolfe",
+      "source_of_discovery": "manual",
+      "notes": "Deep learning focus newsletter"
+    },
+    {
+      "platform": "twitter",
+      "handle": "geoffreyhinton",
+      "display_name": "Geoffrey Hinton",
+      "source_of_discovery": "manual",
+      "notes": "Godfather of deep learning, Nobel laureate 2024, AI safety advocate"
+    },
+    {
+      "platform": "twitter",
+      "handle": "yoshuabengio",
+      "display_name": "Yoshua Bengio",
+      "source_of_discovery": "manual",
+      "notes": "Deep learning pioneer, AI safety and governance"
+    },
+    {
+      "platform": "twitter",
+      "handle": "drfeifei",
+      "display_name": "Fei-Fei Li",
+      "source_of_discovery": "manual",
+      "notes": "Stanford HAI director, ImageNet creator"
+    },
+    {
+      "platform": "twitter",
+      "handle": "chelseabfinn",
+      "display_name": "Chelsea Finn",
+      "source_of_discovery": "manual",
+      "notes": "Meta-learning, robotics, Stanford"
+    },
+    {
+      "platform": "twitter",
+      "handle": "sbubeck",
+      "display_name": "Sébastien Bubeck",
+      "source_of_discovery": "manual",
+      "notes": "Microsoft Research, AGI theory, GPT-4 sparks of AGI paper"
+    },
+    {
+      "platform": "twitter",
+      "handle": "percyliang",
+      "display_name": "Percy Liang",
+      "source_of_discovery": "manual",
+      "notes": "Stanford CRFM, HELM benchmark, foundation model evaluation"
+    },
+    {
+      "platform": "twitter",
+      "handle": "demishassabis",
+      "display_name": "Demis Hassabis",
+      "source_of_discovery": "manual",
+      "notes": "CEO Google DeepMind, Nobel laureate 2024"
+    },
+    {
+      "platform": "twitter",
+      "handle": "AravSrinivas",
+      "display_name": "Arav Srinivas",
+      "source_of_discovery": "manual",
+      "notes": "CEO Perplexity AI"
+    },
+    {
+      "platform": "twitter",
+      "handle": "natolambert",
+      "display_name": "Nathan Lambert",
+      "source_of_discovery": "manual",
+      "notes": "HuggingFace, RLHF research, AI alignment"
+    },
+    {
+      "platform": "twitter",
+      "handle": "alexandr_wang",
+      "display_name": "Alexandr Wang",
+      "source_of_discovery": "manual",
+      "notes": "CEO Scale AI"
+    },
+    {
+      "platform": "twitter",
+      "handle": "MistralAI",
+      "display_name": "Mistral AI",
+      "source_of_discovery": "manual",
+      "notes": "European open-source LLM company"
+    },
+    {
+      "platform": "twitter",
+      "handle": "xai",
+      "display_name": "xAI",
+      "source_of_discovery": "manual",
+      "notes": "Elon Musk's AI company, Grok LLM"
+    }
+  ],
+  "discovery_feeds": [
+    {
+      "name": "Awesome AI Twitter (community list)",
+      "url": "https://raw.githubusercontent.com/neuralFeed/curated-ai-accounts/main/accounts.json",
+      "format": "neuralFeed-json",
+      "notes": "Optional remote list — will be fetched if reachable, skipped if not"
+    }
+  ]
+}
