@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.database import init_db, AsyncSessionLocal
 from app.core.seed import seed_sources, seed_accounts
-from app.api.v1 import feed, sources, feedback, preferences, refresh, search, articles, accounts
+from app.api.v1 import feed, sources, feedback, preferences, refresh, search, articles, accounts, stories
 
 log = structlog.get_logger()
 
@@ -48,6 +48,7 @@ for router in [
     search.router,
     articles.router,
     accounts.router,
+    stories.router,
 ]:
     app.include_router(router, prefix="/api/v1")
 
