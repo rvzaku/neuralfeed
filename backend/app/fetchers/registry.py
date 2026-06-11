@@ -3,6 +3,7 @@ so schedulers and scripts don't need Celery."""
 
 from app.fetchers.arxiv import ArxivFetcher
 from app.fetchers.github_trending import GithubTrendingFetcher
+from app.fetchers.hf_spaces import HFSpacesFetcher
 from app.fetchers.huggingface import HuggingFaceFetcher
 from app.fetchers.nitter import NitterFetcher
 from app.fetchers.reddit import RedditFetcher
@@ -21,6 +22,7 @@ FETCHER_MAP = {
     "arxiv-cs-cv":    lambda: ArxivFetcher("arxiv-cs-cv"),
     "github-trending": lambda: GithubTrendingFetcher(),
     "hf-models":      lambda: HuggingFaceFetcher(),
+    "hf-spaces":      lambda: HFSpacesFetcher(),
     "youtube-ai":     lambda: YouTubeFetcher(),
     "twitter-nitter": lambda: NitterFetcher(),
     **{sid: (lambda sid=sid: RedditFetcher(sid)) for sid in _REDDIT_IDS},

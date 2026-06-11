@@ -50,3 +50,22 @@ This is the living registry of all sources. **Never delete a source** — set `e
 | `rss-deepmind` | `https://deepmind.google/blog/rss.xml` |
 | `rss-huggingface` | `https://huggingface.co/blog/feed.xml` |
 | `rss-metaai` | `https://ai.meta.com/blog/rss/` |
+
+## V4 Additions (2026-06-12)
+
+| Source ID | Name | Category | Access | Status |
+|---|---|---|---|---|
+| `conf-neurips` | NeurIPS Blog | conference | rss | live (feed verified) |
+| `conf-iclr` | ICLR Blog | conference | rss | live (feed verified) |
+| `conf-acl` | ACL 2025 News | conference | rss | live (sparse feed) |
+| `conf-icml` | ICML News | conference | manual | disabled — no RSS feed exists |
+| `conf-cvpr` | CVPR News | conference | manual | disabled — no RSS feed exists |
+| `producthunt-ai` | Product Hunt — AI | product | rss | live (feed verified) |
+| `hf-spaces` | HuggingFace Trending Spaces | product | api | live |
+
+## LinkedIn Stance (V4)
+
+LinkedIn has no public API and scraping it at scale violates its ToS. NeuralFeed therefore
+supports LinkedIn only as **curated manual follow targets**: `watched_accounts` rows with
+`platform='linkedin'` whose cards link out to the person's public profile/activity page.
+No automated LinkedIn fetching is implemented, deliberately.

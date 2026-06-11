@@ -59,6 +59,12 @@ RSS_SOURCES = {
     # Funding / business
     "rss-techcrunch-ai":      "https://techcrunch.com/category/artificial-intelligence/feed/",
     "rss-venturebeat-ai":     "https://venturebeat.com/category/ai/feed/",
+    # Conferences (V4)
+    "conf-neurips":           "https://blog.neurips.cc/feed/",
+    "conf-iclr":              "https://blog.iclr.cc/feed/",
+    "conf-acl":               "https://2025.aclweb.org/feed.xml",
+    # Products (V4)
+    "producthunt-ai":         "https://www.producthunt.com/feed?category=artificial-intelligence",
 }
 
 
