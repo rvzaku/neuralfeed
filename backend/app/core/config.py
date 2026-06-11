@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     hf_api_token: str = ""
     cors_origins: list[str] = ["http://localhost:3000"]
 
+    # In-process scheduled fetching (replaces Celery beat for single-user deploys)
+    scheduler_enabled: bool = True
+
     # Summarization — provider is swappable via env (groq | ollama)
     summary_provider: str = "groq"
     summary_model: str = ""  # empty → provider default

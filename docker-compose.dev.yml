@@ -1,3 +1,7 @@
+# Redis is OPTIONAL for local dev as of the APScheduler migration —
+# scheduled fetching now runs inside the FastAPI process.
+# Keep this only if you want to develop against the legacy Celery workers
+# (Phase 3 scale-up path): `docker compose -f docker-compose.dev.yml up redis`.
 services:
   redis:
     image: redis:7-alpine

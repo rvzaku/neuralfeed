@@ -10,7 +10,8 @@ dependencies = [
     "aiosqlite==0.20.0",
     "alembic==1.14.0",
     "pydantic-settings==2.6.1",
-    "celery[redis]==5.4.0",
+    "celery[redis]==5.4.0",  # legacy worker path, unused at runtime (Phase 3 scale-up)
+    "apscheduler==3.11.0",
     "redis==5.2.1",
     "structlog==24.4.0",
     "httpx==0.28.1",

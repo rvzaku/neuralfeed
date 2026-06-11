@@ -18,8 +18,14 @@ async def lifespan(app: FastAPI):
     async with AsyncSessionLocal() as db:
         await seed_sources(db)
         await seed_accounts(db)
+    if settings.scheduler_enabled:
+        from app.core.scheduler import start_scheduler
+        await start_scheduler()
     log.info("startup_complete")
     yield
+    if settings.scheduler_enabled:
+        from app.core.scheduler import stop_scheduler
+        stop_scheduler()
     log.info("shutdown")
 
 
