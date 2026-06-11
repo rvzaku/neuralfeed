@@ -1,10 +1,10 @@
 import structlog
-from datetime import datetime, timezone
 from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.time import to_naive_utc, utcnow
 from app.models.article import Article, make_article_id, make_title_hash
 from app.models.source import Source
 from app.services.topic_tagger import tag_topics
@@ -21,7 +21,7 @@ def _truncate(text: Optional[str], max_len: int = 500) -> Optional[str]:
 async def ingest_items(items: list[dict], source_id: str, db: AsyncSession) -> int:
     """Normalise, dedup, and persist a list of raw fetched items. Returns count inserted."""
     inserted = 0
-    now = datetime.now(timezone.utc)
+    now = utcnow()
 
     for raw in items:
         url = raw.get("url", "").strip()
@@ -55,8 +55,7 @@ async def ingest_items(items: list[dict], source_id: str, db: AsyncSession) -> i
             if isinstance(published_at, str):
                 from dateutil import parser as dtparser
                 published_at = dtparser.parse(published_at)
-            if published_at.tzinfo is None:
-                published_at = published_at.replace(tzinfo=timezone.utc)
+            published_at = to_naive_utc(published_at)
         except Exception:
             published_at = now
 

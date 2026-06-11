@@ -2,12 +2,12 @@
 on the Source row. Single entry point used by workers, the scheduler,
 manual refresh, and the health-check script."""
 
-from datetime import datetime, timezone
 from typing import Optional
 
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.time import utcnow
 from app.fetchers.registry import FETCHER_MAP
 from app.models.source import Source
 from app.services.ingest import ingest_items
@@ -25,7 +25,7 @@ async def _record_health(
     source.last_fetch_error = error[:1000] if error else None
     source.last_fetch_count = count
     if status == "ok":
-        source.last_fetched_at = datetime.now(timezone.utc)
+        source.last_fetched_at = utcnow()
     await db.commit()
 
 

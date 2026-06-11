@@ -11,7 +11,6 @@ Providers are swappable via settings.summary_provider:
 
 import json
 import re
-from datetime import datetime, timezone
 from typing import Optional, Protocol
 
 import httpx
@@ -19,6 +18,7 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.time import utcnow
 from app.models.article import Article
 
 log = structlog.get_logger()
@@ -185,7 +185,7 @@ async def get_or_generate_summary(article: Article, db: AsyncSession) -> dict:
     result = await get_provider().summarize(article.title, content[:MAX_INPUT_CHARS])
 
     article.ai_summary = json.dumps(result)
-    article.ai_summary_at = datetime.now(timezone.utc)
+    article.ai_summary_at = utcnow()
     await db.commit()
 
     result["cached"] = False

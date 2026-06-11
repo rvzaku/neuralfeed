@@ -1,10 +1,9 @@
-from datetime import datetime, timezone
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_db
+from app.core.time import utcnow
 from app.models.article import Article
 from app.models.feedback_log import FeedbackLog
 from app.models.source import Source
@@ -25,7 +24,7 @@ async def post_feedback(body: FeedbackIn, db: AsyncSession = Depends(get_db)) ->
         article_id=body.article_id,
         source_id=article.source_id,
         value=body.value,
-        created_at=datetime.now(timezone.utc),
+        created_at=utcnow(),
     ))
 
     await db.commit()

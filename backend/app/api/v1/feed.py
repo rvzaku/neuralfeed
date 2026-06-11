@@ -1,4 +1,4 @@
-from datetime import datetime, timezone, timedelta
+from datetime import timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -6,6 +6,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_db
+from app.core.time import utcnow
 from app.models.article import Article
 from app.models.source import Source
 from app.schemas.article import ArticleOut, FeedResponse
@@ -46,7 +47,7 @@ async def get_feed(
     if is_bookmarked is not None:
         q = q.where(Article.is_bookmarked == is_bookmarked)
     if time_range and time_range in TIME_RANGE_DAYS:
-        cutoff = datetime.now(timezone.utc) - timedelta(days=TIME_RANGE_DAYS[time_range])
+        cutoff = utcnow() - timedelta(days=TIME_RANGE_DAYS[time_range])
         q = q.where(Article.published_at >= cutoff)
     if topic:
         q = q.where(Article.topic_tags.contains([topic]))
