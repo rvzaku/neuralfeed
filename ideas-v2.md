@@ -782,4 +782,4 @@ Compliance note: full article text is fetched transiently for summarization and 
 4. **Storage**: SQLite for MVP → PostgreSQL for prod, or start with Postgres?
 5. **Hosting target**: Local-only first, then which platform for prod?
 6. **UI library**: Tailwind + shadcn/ui? Or fully custom design system?
-7. **Refresh trigger**: Cron job, background worker, or on-demand?
+7. **Refresh trigger**: Cron job, background worker, or on-demand
