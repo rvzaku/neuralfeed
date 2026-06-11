@@ -12,7 +12,7 @@ log = structlog.get_logger()
 
 # Reddit rate-limits per client IP, not per subreddit — pace ALL reddit
 # requests globally so concurrent sub fetches don't burst into a 429.
-_PACE_SECONDS = 2.5
+_PACE_SECONDS = 6.0  # Render's shared IP gets 429'd at 2.5s spacing
 _pace_lock = asyncio.Lock()
 _last_request = 0.0
 

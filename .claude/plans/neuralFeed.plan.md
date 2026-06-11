@@ -130,6 +130,24 @@ People bucket = feed filter over articles whose author/handle matches a watched 
 
 ---
 
+## Phase 2b — Smart Ranking & Adaptive Topic Weights (added 2026-06-12 from updated app-feedback-v2.md)
+
+**Requirement**: topic weights auto-adjust from thumbs up/down, are manually adjustable, and smart ranking is enabled.
+
+Existing foundation: `services/ranker.py` already scores by recency/source-signal/topic-weights/trending/feedback and reads `topic_weights` + `muted_sources` from UserPreference. Gaps:
+
+| File | Action | Why |
+|---|---|---|
+| `backend/app/services/feedback_service.py` | CREATE | `apply_feedback()`: sets article feedback, logs FeedbackLog, recomputes source signal_score (moved out of route — SoC), and **nudges topic_weights** ±0.1 per article tag (clamped [-1.0, 2.0], "general" excluded) |
+| `backend/app/api/v1/feedback.py` | UPDATE | thin route → `apply_feedback()` |
+| `backend/app/api/v1/feed.py` | UPDATE | `ranked` defaults to **True** (smart ranking on) |
+| `backend/tests/services/test_feedback_service.py` | CREATE | TDD: weight nudge up/down, clamping, signal_score recompute |
+| Frontend (Phase 3 settings) | UPDATE | Topic-weight sliders in Settings reading/writing `PUT /preferences/topic_weights`; "ranked" already wired via useFeed |
+
+Manual adjustment API already exists (`PUT /api/v1/preferences/{key}`); Phase 3 adds the Settings UI sliders.
+
+**Acceptance**: thumbs-up on an LLM-tagged article raises `topic_weights["llm"]`; weights clamp; feed default order is ranked; manual PUT overrides persist.
+
 ## Phase 2 — Deep Summaries (10-minute read) + Preview Guarantee
 
 ### Files

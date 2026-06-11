@@ -26,7 +26,7 @@ async def get_feed(
     is_read: Optional[bool] = None,
     is_bookmarked: Optional[bool] = None,
     time_range: Optional[str] = Query(None, pattern="^(1d|3d|7d|30d)$"),
-    ranked: bool = Query(False),
+    ranked: bool = Query(True),  # smart ranking on by default (V4 Phase 2b)
     feedback: Optional[int] = Query(None, ge=-1, le=1),
     min_signal: Optional[float] = Query(None, ge=0.0, le=1.0),
     db: AsyncSession = Depends(get_db),
