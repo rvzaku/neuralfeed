@@ -1,0 +1,30 @@
+# Render free-tier deployment (backend). Frontend deploys to Vercel with
+# NEXT_PUBLIC_API_URL pointed at this service's URL.
+# Free instances sleep after ~15 min idle — add a cron-job.org ping to /health
+# every 10 minutes to keep the scheduler alive.
+services:
+  - type: web
+    name: neuralfeed-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install uv && uv pip install --system .
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    disk:
+      name: neuralfeed-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: DATABASE_URL
+        value: sqlite+aiosqlite:////data/neuralFeed.db
+      - key: SCHEDULER_ENABLED
+        value: "true"
+      - key: SUMMARY_PROVIDER
+        value: groq
+      - key: GROQ_API_KEY
+        sync: false  # set in the Render dashboard, never committed
+      - key: REDDIT_USER_AGENT
+        value: NeuralFeed/0.1 (personal)
+      - key: CORS_ORIGINS
+        value: '["http://localhost:3000"]'  # add your Vercel URL after first deploy

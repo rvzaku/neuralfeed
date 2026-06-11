@@ -1,14 +1,91 @@
 import json
 import pytest
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import httpx
 
 from app.models.article import Article
 from app.services.summarizer import (
+    GroqProvider,
+    OllamaProvider,
     SummaryError,
+    _html_to_text,
     _parse_llm_json,
+    extract_article_text,
     get_or_generate_summary,
+    get_provider,
 )
+
+
+def _mock_async_client(response=None, raise_exc=None):
+    client = MagicMock()
+    if raise_exc:
+        client.get = AsyncMock(side_effect=raise_exc)
+        client.post = AsyncMock(side_effect=raise_exc)
+    else:
+        client.get = AsyncMock(return_value=response)
+        client.post = AsyncMock(return_value=response)
+    client.__aenter__ = AsyncMock(return_value=client)
+    client.__aexit__ = AsyncMock(return_value=False)
+    return client
+
+
+class TestProviders:
+    @pytest.mark.asyncio
+    async def test_groq_without_key_raises(self):
+        provider = GroqProvider(api_key="")
+        with pytest.raises(SummaryError, match="GROQ_API_KEY"):
+            await provider.summarize("t", "c")
+
+    @pytest.mark.asyncio
+    async def test_groq_success(self):
+        body = {"choices": [{"message": {"content": '{"summary": "S", "takeaways": ["a"]}'}}]}
+        resp = MagicMock(status_code=200)
+        resp.json.return_value = body
+        resp.raise_for_status = MagicMock()
+        with patch("app.services.summarizer.httpx.AsyncClient", return_value=_mock_async_client(resp)):
+            out = await GroqProvider(api_key="k").summarize("t", "c")
+        assert out["summary"] == "S"
+
+    @pytest.mark.asyncio
+    async def test_groq_http_error_wrapped(self):
+        with patch("app.services.summarizer.httpx.AsyncClient",
+                   return_value=_mock_async_client(raise_exc=httpx.ConnectError("down"))):
+            with pytest.raises(SummaryError, match="groq request failed"):
+                await GroqProvider(api_key="k").summarize("t", "c")
+
+    @pytest.mark.asyncio
+    async def test_ollama_success(self):
+        resp = MagicMock(status_code=200)
+        resp.json.return_value = {"message": {"content": '{"summary": "S", "takeaways": []}'}}
+        resp.raise_for_status = MagicMock()
+        with patch("app.services.summarizer.httpx.AsyncClient", return_value=_mock_async_client(resp)):
+            out = await OllamaProvider(base_url="http://x", model="m").summarize("t", "c")
+        assert out["summary"] == "S"
+
+    def test_get_provider_default_is_groq(self):
+        assert isinstance(get_provider(), GroqProvider)
+
+
+class TestExtraction:
+    def test_html_to_text_strips_scripts(self):
+        html = "<html><script>evil()</script><p>Real content here</p></html>"
+        assert "evil" not in _html_to_text(html)
+        assert "Real content here" in _html_to_text(html)
+
+    @pytest.mark.asyncio
+    async def test_non_html_content_returns_none(self):
+        resp = MagicMock(status_code=200, headers={"content-type": "application/pdf"})
+        resp.raise_for_status = MagicMock()
+        with patch("app.services.summarizer.httpx.AsyncClient", return_value=_mock_async_client(resp)):
+            assert await extract_article_text("https://example.com/x.pdf") is None
+
+    @pytest.mark.asyncio
+    async def test_fetch_failure_returns_none(self):
+        with patch("app.services.summarizer.httpx.AsyncClient",
+                   return_value=_mock_async_client(raise_exc=httpx.ConnectError("nope"))):
+            assert await extract_article_text("https://example.com/x") is None
 
 
 def _article(**kw):
