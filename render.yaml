@@ -17,6 +17,8 @@ services:
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"  # prebuilt wheels for lxml/pydantic — avoids slow source builds
       - key: DATABASE_URL
         sync: false  # paste your Neon connection string in the dashboard
       - key: SCHEDULER_ENABLED
