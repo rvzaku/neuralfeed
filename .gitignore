@@ -53,3 +53,7 @@ celerybeat.pid
 
 # uv
 uv.lock
+
+# Tooling repos / local-only
+ECC/
+.claude/settings.local.json
