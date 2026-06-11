@@ -4,7 +4,8 @@ import type { Article, FeedFilters, FeedResponse, Source, FeedbackValue } from "
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000",
   headers: { "Content-Type": "application/json" },
-  timeout: 10000,
+  // Render free tier cold-starts can take 60-90s; 10s made every first visit fail
+  timeout: 90000,
 });
 
 // Feed
