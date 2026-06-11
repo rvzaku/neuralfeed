@@ -11,7 +11,10 @@ class Settings(BaseSettings):
     github_token: str = ""
     twitter_bearer_token: str = ""
     hf_api_token: str = ""
-    cors_origins: list[str] = ["http://localhost:3000"]
+    cors_origins: list[str] = [
+        "http://localhost:3000",
+        "https://neuralfeed.vercel.app",
+    ]
 
     # In-process scheduled fetching (replaces Celery beat for single-user deploys)
     scheduler_enabled: bool = True
