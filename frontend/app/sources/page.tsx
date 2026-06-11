@@ -1,10 +1,12 @@
 "use client";
 
-import { Database, RefreshCw, CheckCircle2, XCircle } from "lucide-react";
+import { useState } from "react";
+import { Database, RefreshCw, CheckCircle2, XCircle, AlertTriangle, Users } from "lucide-react";
 import { MobileNav } from "@/components/layout/MobileNav";
-import { useSources, usePatchSource } from "@/hooks/useFeed";
-import { cn } from "@/lib/utils";
-import type { Source } from "@/lib/types";
+import { FollowTargets } from "@/components/sources/FollowTargets";
+import { useSources, usePatchSource, useSourcesHealth } from "@/hooks/useFeed";
+import { cn, formatRelativeTime } from "@/lib/utils";
+import type { Source, SourceHealth } from "@/lib/types";
 
 const CATEGORY_LABELS: Record<string, string> = {
   research: "Research",
@@ -23,7 +25,28 @@ const PRIORITY_DOT: Record<string, string> = {
   low:    "bg-gray-400",
 };
 
-function SourceRow({ source }: { source: Source }) {
+function HealthBadge({ health }: { health?: SourceHealth }) {
+  if (!health?.last_fetch_status) return null;
+  if (health.last_fetch_status === "ok") {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] text-green-600 dark:text-green-400">
+        <CheckCircle2 className="h-3 w-3" />
+        {health.last_fetched_at ? formatRelativeTime(health.last_fetched_at) : "ok"}
+      </span>
+    );
+  }
+  return (
+    <span
+      className="inline-flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400"
+      title={health.last_fetch_error ?? undefined}
+    >
+      <AlertTriangle className="h-3 w-3" />
+      fetch failing
+    </span>
+  );
+}
+
+function SourceRow({ source, health }: { source: Source; health?: SourceHealth }) {
   const { mutate, isPending } = usePatchSource();
 
   return (
@@ -34,6 +57,7 @@ function SourceRow({ source }: { source: Source }) {
             className={cn("h-2 w-2 rounded-full shrink-0", PRIORITY_DOT[source.priority] ?? "bg-gray-400")}
           />
           <p className="text-sm font-medium truncate">{source.name}</p>
+          <HealthBadge health={health} />
         </div>
         <div className="flex items-center gap-2 mt-0.5">
           <span className="text-xs text-muted-foreground capitalize">{source.category}</span>
@@ -44,6 +68,14 @@ function SourceRow({ source }: { source: Source }) {
               <span className="text-muted-foreground">·</span>
               <span className="text-xs text-muted-foreground">
                 signal {(source.signal_score * 100).toFixed(0)}%
+              </span>
+            </>
+          )}
+          {!source.enabled && source.notes && (
+            <>
+              <span className="text-muted-foreground">·</span>
+              <span className="text-xs text-muted-foreground/70 truncate" title={source.notes}>
+                {source.notes}
               </span>
             </>
           )}
@@ -73,8 +105,10 @@ function SourceRow({ source }: { source: Source }) {
   );
 }
 
-export default function SourcesPage() {
+function SourceList() {
   const { data: sources, isLoading, isError } = useSources(true);
+  const { data: health } = useSourcesHealth();
+  const healthById = new Map((health ?? []).map((h) => [h.id, h]));
 
   const grouped = sources?.reduce<Record<string, Source[]>>((acc, s) => {
     const cat = s.category;
@@ -83,6 +117,52 @@ export default function SourcesPage() {
     return acc;
   }, {});
 
+  const failing = (health ?? []).filter((h) => h.enabled && h.last_fetch_status === "error");
+
+  return (
+    <div>
+      {isLoading && (
+        <div className="flex items-center justify-center py-20">
+          <RefreshCw className="h-5 w-5 text-muted-foreground animate-spin" />
+        </div>
+      )}
+
+      {isError && (
+        <div className="flex flex-col items-center justify-center py-16 gap-2 text-center px-4">
+          <XCircle className="h-8 w-8 text-destructive" />
+          <p className="text-sm text-muted-foreground">Failed to load sources.</p>
+        </div>
+      )}
+
+      {failing.length > 0 && (
+        <div className="mx-4 mt-4 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 px-3 py-2">
+          <p className="text-xs text-amber-700 dark:text-amber-300">
+            {failing.length} enabled {failing.length === 1 ? "source is" : "sources are"} failing to fetch — check the badges below.
+          </p>
+        </div>
+      )}
+
+      {grouped && Object.entries(grouped).map(([category, items]) => (
+        <section key={category} className="mt-4">
+          <div className="px-4 pb-1">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {CATEGORY_LABELS[category] ?? category}
+            </h2>
+          </div>
+          <div className="divide-y divide-border border-y border-border">
+            {items.map((source) => (
+              <SourceRow key={source.id} source={source} health={healthById.get(source.id)} />
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+export default function SourcesPage() {
+  const [tab, setTab] = useState<"sources" | "targets">("sources");
+  const { data: sources } = useSources(true);
   const enabledCount = sources?.filter((s) => s.enabled).length ?? 0;
   const totalCount = sources?.length ?? 0;
 
@@ -96,41 +176,30 @@ export default function SourcesPage() {
         </span>
       </header>
 
-      <main className="flex-1 pb-24 md:pb-6 max-w-2xl mx-auto w-full">
-        {isLoading && (
-          <div className="flex items-center justify-center py-20">
-            <RefreshCw className="h-5 w-5 text-muted-foreground animate-spin" />
-          </div>
-        )}
-
-        {isError && (
-          <div className="flex flex-col items-center justify-center py-16 gap-2 text-center px-4">
-            <XCircle className="h-8 w-8 text-destructive" />
-            <p className="text-sm text-muted-foreground">Failed to load sources.</p>
-          </div>
-        )}
-
-        {grouped && Object.entries(grouped).map(([category, items]) => (
-          <section key={category} className="mt-4">
-            <div className="px-4 pb-1">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {CATEGORY_LABELS[category] ?? category}
-              </h2>
-            </div>
-            <div className="divide-y divide-border border-y border-border">
-              {items.map((source) => (
-                <SourceRow key={source.id} source={source} />
-              ))}
-            </div>
-          </section>
+      {/* Tabs */}
+      <div className="border-b border-border px-4 flex gap-1 max-w-2xl mx-auto w-full">
+        {([
+          ["sources", "Sources", Database],
+          ["targets", "Follow targets", Users],
+        ] as const).map(([value, label, Icon]) => (
+          <button
+            key={value}
+            onClick={() => setTab(value)}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors",
+              tab === value
+                ? "border-primary text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Icon className="h-3.5 w-3.5" />
+            {label}
+          </button>
         ))}
+      </div>
 
-        {!isLoading && sources?.every((s) => s.enabled) && (
-          <div className="flex items-center gap-2 px-4 py-4 text-xs text-muted-foreground">
-            <CheckCircle2 className="h-4 w-4 text-green-500" />
-            All sources active
-          </div>
-        )}
+      <main className="flex-1 pb-24 md:pb-6 max-w-2xl mx-auto w-full">
+        {tab === "sources" ? <SourceList /> : <FollowTargets />}
       </main>
 
       <MobileNav />

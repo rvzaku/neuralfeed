@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { SlidersHorizontal } from "lucide-react";
+import { Bookmark, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const CONTENT_TYPES = [
@@ -32,9 +32,10 @@ export function FilterBar({ onFilterClick }: FilterBarProps) {
   const params = useSearchParams();
   const activeCategory = params.get("category") ?? "";
   const activeTime     = params.get("time_range") ?? "7d";
+  const savedOnly      = params.get("is_bookmarked") === "true";
 
   const hasAdvanced = params.has("topic") || params.has("source_id") || params.has("feedback") || params.has("min_signal");
-  const hasActiveFilters = activeCategory !== "" || activeTime !== "7d" || hasAdvanced;
+  const hasActiveFilters = activeCategory !== "" || activeTime !== "7d" || hasAdvanced || savedOnly;
 
   function setParam(key: string, value: string) {
     const next = new URLSearchParams(params.toString());
@@ -87,6 +88,19 @@ export function FilterBar({ onFilterClick }: FilterBarProps) {
         {/* Time range + clear row */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex gap-1.5 overflow-x-auto scrollbar-none">
+            <button
+              onClick={() => setParam("is_bookmarked", savedOnly ? "" : "true")}
+              className={cn(
+                "shrink-0 flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-colors whitespace-nowrap min-h-[32px] border",
+                savedOnly
+                  ? "bg-secondary text-secondary-foreground border-secondary"
+                  : "bg-transparent text-muted-foreground border-transparent hover:border-border hover:text-foreground"
+              )}
+              aria-pressed={savedOnly}
+            >
+              <Bookmark className="h-3 w-3" />
+              Saved
+            </button>
             {TIME_RANGES.map((t) => (
               <button
                 key={t.value}

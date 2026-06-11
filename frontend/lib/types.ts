@@ -81,6 +81,48 @@ export interface FeedFilters {
   min_signal?: number;
 }
 
+export interface Story {
+  id: string;
+  headline: string;
+  lead_article_id: string;
+  article_count: number;
+  source_count: number;
+  topic_tags: string[];
+  latest_at: string;
+  total_trending: number;
+  is_read: boolean;
+  article_ids: string[];
+}
+
+export interface StoryDigest {
+  stories: Story[];
+  total_stories: number;
+  window_days: number;
+  caught_up: boolean;
+}
+
+export interface StoryDetail extends Story {
+  groups: Record<string, Article[]>;
+}
+
+export interface ArticleSummary {
+  article_id: string;
+  url: string;
+  summary: string;
+  takeaways: string[];
+  cached: boolean;
+}
+
+export interface SourceHealth {
+  id: string;
+  name: string;
+  enabled: boolean;
+  last_fetched_at: string | null;
+  last_fetch_status: "ok" | "error" | null;
+  last_fetch_error: string | null;
+  last_fetch_count: number | null;
+}
+
 export interface UserPreference {
   key: string;
   value: string;

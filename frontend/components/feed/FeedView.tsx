@@ -25,6 +25,7 @@ export function FeedView() {
     source_id:   params.get("source_id") || undefined,
     time_range:  (params.get("time_range") as FeedFilters["time_range"]) || "7d",
     is_read:     params.get("is_read") === "false" ? false : params.get("is_read") === "true" ? true : undefined,
+    is_bookmarked: params.get("is_bookmarked") === "true" ? true : undefined,
     ranked:      params.get("ranked") === "true" ? true : undefined,
     feedback:    params.get("feedback") ? Number(params.get("feedback")) as FeedFilters["feedback"] : undefined,
     min_signal:  params.get("min_signal") ? Number(params.get("min_signal")) : undefined,

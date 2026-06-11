@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Users, Plus, Trash2, RefreshCw, Twitter, Linkedin, Youtube, CheckCircle2, XCircle } from "lucide-react";
-import { MobileNav } from "@/components/layout/MobileNav";
 import { useAccounts, useAddAccount, usePatchAccount, useDeleteAccount, useRunAccountDiscovery } from "@/hooks/useFeed";
 import { cn } from "@/lib/utils";
 import type { WatchedAccount, AccountPlatform } from "@/lib/types";
@@ -43,7 +42,6 @@ function AccountRow({ account }: { account: WatchedAccount }) {
         </p>
       </div>
 
-      {/* Toggle */}
       <button
         onClick={() => patch({ id: account.id, body: { enabled: !account.enabled } })}
         disabled={isPatching}
@@ -62,7 +60,6 @@ function AccountRow({ account }: { account: WatchedAccount }) {
         )} />
       </button>
 
-      {/* Delete */}
       <button
         onClick={() => remove(account.id)}
         disabled={isDeleting}
@@ -152,7 +149,7 @@ function AddAccountForm({ onDone }: { onDone: () => void }) {
   );
 }
 
-export default function AccountsPage() {
+export function FollowTargets() {
   const [showForm, setShowForm] = useState(false);
   const [platformFilter, setPlatformFilter] = useState<AccountPlatform | "">("");
   const { data: accounts, isLoading, isError } = useAccounts(platformFilter || undefined);
@@ -164,21 +161,9 @@ export default function AccountsPage() {
     return acc;
   }, {});
 
-  const enabledCount = accounts?.filter((a) => a.enabled).length ?? 0;
-
   return (
-    <div className="flex flex-col min-h-screen">
-      <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm border-b border-border px-4 py-3 flex items-center gap-2">
-        <Users className="h-4 w-4 text-primary" />
-        <h1 className="font-semibold text-sm">Watched Accounts</h1>
-        <span className="ml-auto text-xs text-muted-foreground">
-          {enabledCount}/{accounts?.length ?? 0} active
-        </span>
-      </header>
-
-      {/* Toolbar */}
+    <div>
       <div className="px-4 py-3 border-b border-border flex items-center gap-2 flex-wrap">
-        {/* Platform filter */}
         <div className="flex gap-1.5 flex-1">
           {([["", "All"], ["twitter", "X"], ["linkedin", "LinkedIn"], ["youtube", "YouTube"]] as [string, string][]).map(([val, label]) => (
             <button
@@ -217,58 +202,54 @@ export default function AccountsPage() {
 
       {showForm && <AddAccountForm onDone={() => setShowForm(false)} />}
 
-      <main className="flex-1 pb-24 md:pb-6 max-w-2xl mx-auto w-full">
-        {isLoading && (
-          <div className="flex items-center justify-center py-20">
-            <RefreshCw className="h-5 w-5 text-muted-foreground animate-spin" />
+      {isLoading && (
+        <div className="flex items-center justify-center py-20">
+          <RefreshCw className="h-5 w-5 text-muted-foreground animate-spin" />
+        </div>
+      )}
+
+      {isError && (
+        <div className="flex flex-col items-center justify-center py-16 gap-2 text-center px-4">
+          <XCircle className="h-8 w-8 text-destructive" />
+          <p className="text-sm text-muted-foreground">Failed to load accounts.</p>
+        </div>
+      )}
+
+      {!isLoading && accounts?.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-20 gap-3 text-center px-4">
+          <Users className="h-10 w-10 text-muted-foreground" />
+          <p className="text-sm font-medium">No accounts yet</p>
+          <p className="text-xs text-muted-foreground max-w-xs">
+            Click &ldquo;Rediscover&rdquo; to seed from the curated list, or add accounts manually.
+          </p>
+        </div>
+      )}
+
+      {grouped && Object.entries(grouped).map(([platform, items]) => (
+        <section key={platform} className="mt-4">
+          <div className="px-4 pb-1 flex items-center gap-2">
+            <span className={cn("shrink-0", PLATFORM_COLOR[platform as AccountPlatform])}>
+              {PLATFORM_ICON[platform as AccountPlatform]}
+            </span>
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {PLATFORM_LABELS[platform as AccountPlatform]}
+              <span className="ml-1.5 font-normal normal-case">({items.filter(a => a.enabled).length}/{items.length})</span>
+            </h2>
           </div>
-        )}
-
-        {isError && (
-          <div className="flex flex-col items-center justify-center py-16 gap-2 text-center px-4">
-            <XCircle className="h-8 w-8 text-destructive" />
-            <p className="text-sm text-muted-foreground">Failed to load accounts.</p>
+          <div className="divide-y divide-border border-y border-border">
+            {items.map((account) => (
+              <AccountRow key={account.id} account={account} />
+            ))}
           </div>
-        )}
+        </section>
+      ))}
 
-        {!isLoading && accounts?.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-20 gap-3 text-center px-4">
-            <Users className="h-10 w-10 text-muted-foreground" />
-            <p className="text-sm font-medium">No accounts yet</p>
-            <p className="text-xs text-muted-foreground max-w-xs">
-              Click &ldquo;Rediscover&rdquo; to seed from the curated list, or add accounts manually.
-            </p>
-          </div>
-        )}
-
-        {grouped && Object.entries(grouped).map(([platform, items]) => (
-          <section key={platform} className="mt-4">
-            <div className="px-4 pb-1 flex items-center gap-2">
-              <span className={cn("shrink-0", PLATFORM_COLOR[platform as AccountPlatform])}>
-                {PLATFORM_ICON[platform as AccountPlatform]}
-              </span>
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {PLATFORM_LABELS[platform as AccountPlatform]}
-                <span className="ml-1.5 font-normal normal-case">({items.filter(a => a.enabled).length}/{items.length})</span>
-              </h2>
-            </div>
-            <div className="divide-y divide-border border-y border-border">
-              {items.map((account) => (
-                <AccountRow key={account.id} account={account} />
-              ))}
-            </div>
-          </section>
-        ))}
-
-        {!isLoading && accounts && accounts.every((a) => a.enabled) && accounts.length > 0 && (
-          <div className="flex items-center gap-2 px-4 py-4 text-xs text-muted-foreground">
-            <CheckCircle2 className="h-4 w-4 text-green-500" />
-            All accounts active
-          </div>
-        )}
-      </main>
-
-      <MobileNav />
+      {!isLoading && accounts && accounts.every((a) => a.enabled) && accounts.length > 0 && (
+        <div className="flex items-center gap-2 px-4 py-4 text-xs text-muted-foreground">
+          <CheckCircle2 className="h-4 w-4 text-green-500" />
+          All accounts active
+        </div>
+      )}
     </div>
   );
 }

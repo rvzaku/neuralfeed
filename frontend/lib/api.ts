@@ -68,8 +68,39 @@ export async function triggerRefresh(): Promise<void> {
   await api.post("/api/v1/refresh");
 }
 
+// Stories (event clusters)
+import type { ArticleSummary, SourceHealth, StoryDetail, StoryDigest, WatchedAccount } from "./types";
+
+export async function getStories(params: {
+  days?: number;
+  limit?: number;
+  unread_only?: boolean;
+  topic?: string;
+} = {}): Promise<StoryDigest> {
+  const { data } = await api.get<StoryDigest>("/api/v1/stories", { params });
+  return data;
+}
+
+export async function getStoryDetail(storyId: string, days = 7): Promise<StoryDetail> {
+  const { data } = await api.get<StoryDetail>(`/api/v1/stories/${storyId}`, { params: { days } });
+  return data;
+}
+
+// AI summary (generation can take a few seconds on first open)
+export async function getSummary(articleId: string): Promise<ArticleSummary> {
+  const { data } = await api.get<ArticleSummary>(`/api/v1/articles/${articleId}/summary`, {
+    timeout: 90000,
+  });
+  return data;
+}
+
+// Source health
+export async function getSourcesHealth(): Promise<SourceHealth[]> {
+  const { data } = await api.get<SourceHealth[]>("/api/v1/sources/health");
+  return data;
+}
+
 // Watched accounts
-import type { WatchedAccount } from "./types";
 
 export async function getAccounts(platform?: string): Promise<WatchedAccount[]> {
   const { data } = await api.get<WatchedAccount[]>("/api/v1/accounts", {

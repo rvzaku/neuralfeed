@@ -11,6 +11,10 @@ import {
   toggleBookmark,
   getPreferences,
   setPreference,
+  getStories,
+  getStoryDetail,
+  getSummary,
+  getSourcesHealth,
   getAccounts,
   addAccount,
   patchAccount,
@@ -24,6 +28,41 @@ export function useFeed(filters: FeedFilters = {}) {
     queryKey: ["feed", filters],
     queryFn: () => getFeed(filters),
     staleTime: 1000 * 60 * 5,
+  });
+}
+
+export function useStories(params: { days?: number; limit?: number; unread_only?: boolean; topic?: string } = {}) {
+  return useQuery({
+    queryKey: ["stories", params],
+    queryFn: () => getStories(params),
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+export function useStoryDetail(storyId: string | null, days = 7) {
+  return useQuery({
+    queryKey: ["story", storyId, days],
+    queryFn: () => getStoryDetail(storyId as string, days),
+    enabled: !!storyId,
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+export function useSummary(articleId: string | null) {
+  return useQuery({
+    queryKey: ["summary", articleId],
+    queryFn: () => getSummary(articleId as string),
+    enabled: !!articleId,
+    staleTime: Infinity, // cached server-side; never goes stale
+    retry: 1,
+  });
+}
+
+export function useSourcesHealth() {
+  return useQuery({
+    queryKey: ["sources-health"],
+    queryFn: getSourcesHealth,
+    staleTime: 1000 * 60,
   });
 }
 
