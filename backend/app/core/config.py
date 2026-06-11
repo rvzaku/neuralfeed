@@ -1,3 +1,6 @@
+from typing import Union
+
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -11,10 +14,18 @@ class Settings(BaseSettings):
     github_token: str = ""
     twitter_bearer_token: str = ""
     hf_api_token: str = ""
-    cors_origins: list[str] = [
+    # Accepts JSON ('["https://a","https://b"]') or comma-separated ("https://a,https://b")
+    cors_origins: Union[str, list[str]] = [
         "http://localhost:3000",
         "https://neuralfeed.vercel.app",
     ]
+
+    @field_validator("cors_origins", mode="after")
+    @classmethod
+    def _split_cors_origins(cls, v: Union[str, list[str]]) -> list[str]:
+        if isinstance(v, str):
+            return [o.strip() for o in v.split(",") if o.strip()]
+        return v
 
     # In-process scheduled fetching (replaces Celery beat for single-user deploys)
     scheduler_enabled: bool = True
