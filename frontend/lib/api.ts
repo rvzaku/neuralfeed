@@ -17,6 +17,22 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// When the backend enforces auth (AUTH_REQUIRED=true), bounce to login
+// instead of surfacing opaque load errors
+api.interceptors.response.use(
+  (resp) => resp,
+  (error) => {
+    if (
+      error?.response?.status === 401 &&
+      typeof window !== "undefined" &&
+      !window.location.pathname.startsWith("/login")
+    ) {
+      window.location.href = "/login";
+    }
+    return Promise.reject(error);
+  }
+);
+
 export interface AuthResponse {
   access_token: string;
   token_type: string;
