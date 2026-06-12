@@ -67,7 +67,8 @@ async def get_feed(
 
     if ranked:
         from app.services.ranker import rank_articles
-        all_result = await db.execute(q)
+        # Bound the candidate set: rank the newest 1000, not the whole table
+        all_result = await db.execute(q.order_by(Article.published_at.desc()).limit(1000))
         all_items = list(all_result.scalars().all())
         ranked_items = await rank_articles(all_items, db)
         offset = (page - 1) * limit
