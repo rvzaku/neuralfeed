@@ -1,12 +1,14 @@
 import structlog
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.database import init_db, AsyncSessionLocal
+from app.core.deps import require_user_when_enabled
+from app.core.rate_limit import RateLimitMiddleware
 from app.core.seed import seed_sources, seed_accounts
-from app.api.v1 import feed, sources, feedback, preferences, refresh, search, articles, accounts, stories
+from app.api.v1 import auth, feed, sources, feedback, preferences, refresh, search, articles, accounts, stories
 
 log = structlog.get_logger()
 
@@ -39,6 +41,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.add_middleware(RateLimitMiddleware)
+
+# Auth endpoints are never gated; everything else requires a user once
+# AUTH_REQUIRED=true (no-op until then — see require_user_when_enabled).
+app.include_router(auth.router, prefix="/api/v1")
+
 for router in [
     feed.router,
     sources.router,
@@ -50,7 +58,9 @@ for router in [
     accounts.router,
     stories.router,
 ]:
-    app.include_router(router, prefix="/api/v1")
+    app.include_router(
+        router, prefix="/api/v1", dependencies=[Depends(require_user_when_enabled)]
+    )
 
 
 @app.get("/health")
