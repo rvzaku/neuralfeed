@@ -334,3 +334,7 @@ User feedback (app-feedback-v2.md): not user-friendly enough, looks AI-generic, 
 - AuthGuard in root layout: no stored token → immediate /login redirect (no API-401 wait, no content flash).
 - 401 responses clear the stored session (expired/tampered JWT) before redirect; no react-query retries on 401.
 - AuthZ model: per-user data scoping server-side from the JWT sub claim (user_article_state, namespaced prefs); HS256 signed tokens, 7-day expiry, PBKDF2-600k passwords, rate-limited auth endpoints, registration kill-switch.
+
+## Round 4 (feedback line 27): professional auth experience
+- Login page rebuilt: brand glow backdrop, sign-in/register pill toggle, icon inputs, show/hide password, confirm-password on register, inline alert errors, gradient CTA.
+- Settings → Account section: signed-in email + sign out (clears session, returns to /login).
