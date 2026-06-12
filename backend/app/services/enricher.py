@@ -20,7 +20,19 @@ from app.services.summarizer import extract_content_for
 log = structlog.get_logger()
 
 SLUG_SOURCES = ("github-trending", "hf-spaces", "hf-models")
-BATCH_SIZE = 15
+BATCH_SIZE = 20
+
+# Acronyms/tokens that should stay uppercase when humanizing a slug
+_ACRONYMS = {
+    "ai", "llm", "vl", "vlm", "gguf", "fp8", "fp16", "int4", "int8", "awq",
+    "gptq", "moe", "rl", "rlhf", "sft", "dpo", "ocr", "tts", "asr", "nlp",
+    "cv", "api", "sdk", "cli", "ui", "gpu", "cpu", "3d", "2d", "hd", "sd",
+    "xl", "rag", "db", "io", "os",
+}
+
+
+class RateLimited(Exception):
+    """LLM provider returned 429 — retry the batch later, don't fallback."""
 
 _ENRICH_PROMPT = (
     "You name AI tools/models for a general audience. Given the repo/model below, "
@@ -39,6 +51,29 @@ def looks_like_slug(title: str) -> bool:
     if "/" in t and " " not in t:
         return True
     return " " not in t and bool(re.search(r"[-_]", t)) and len(t) > 8
+
+
+def humanize_slug(title: str) -> str:
+    """Deterministic plain-text rendering of an owner/repo-style slug.
+
+    Not as good as the LLM rewrite, but always readable and never blocks:
+    "bartowski/Qwen3-VL-30B-GGUF" -> "Qwen3 VL 30B GGUF".
+    """
+    name = title.strip().split("/")[-1]
+    # Split on dashes/underscores/dots, then split letter-digit boundaries
+    # inside camelCase-ish tokens conservatively (keep "Qwen3", "wan2" intact)
+    raw_tokens = re.split(r"[-_.]+", name)
+    words = []
+    for tok in raw_tokens:
+        if not tok:
+            continue
+        if tok.lower() in _ACRONYMS or (tok.isupper() and len(tok) <= 5):
+            words.append(tok.upper())
+        elif tok.islower() or tok.isupper():
+            words.append(tok.capitalize())
+        else:
+            words.append(tok)  # mixed case is intentional (e.g. "DeepSeek")
+    return " ".join(words) or title
 
 
 async def enrich_article(article: Article, db: AsyncSession) -> bool:
@@ -63,15 +98,19 @@ async def enrich_article(article: Article, db: AsyncSession) -> bool:
                     "response_format": {"type": "json_object"},
                 },
             )
+            if resp.status_code == 429:
+                raise RateLimited(article.id)
             resp.raise_for_status()
             data = json.loads(resp.json()["choices"][0]["message"]["content"])
+    except RateLimited:
+        raise
     except Exception as e:
         log.info("enrich_failed", article_id=article.id, error=str(e))
         return False
 
-    title = str(data.get("title", "")).strip()
+    title = str(data.get("title", "")).strip().strip("\"'")
     summary = str(data.get("summary", "")).strip()
-    if not title or looks_like_slug(title):
+    if not title or looks_like_slug(title) or title.lower() == article.title.lower():
         return False
     article.title = title[:512]
     if summary:
@@ -82,6 +121,17 @@ async def enrich_article(article: Article, db: AsyncSession) -> bool:
     article.ai_deep_summary = None
     await db.commit()
     return True
+
+
+async def _enrich_or_fallback(article: Article, db: AsyncSession) -> bool:
+    """LLM rewrite, else deterministic humanized title so the item leaves the
+    slug queue instead of blocking it forever. Raises RateLimited untouched —
+    rate-limited items WILL succeed later, so they keep their retry slot."""
+    if await enrich_article(article, db):
+        return True
+    article.title = humanize_slug(article.title)[:512]
+    await db.commit()
+    return False
 
 
 async def enrich_slug_titles(db: AsyncSession, limit: int = BATCH_SIZE) -> int:
@@ -95,8 +145,12 @@ async def enrich_slug_titles(db: AsyncSession, limit: int = BATCH_SIZE) -> int:
     candidates = [a for a in result.scalars().all() if looks_like_slug(a.title)][:limit]
     done = 0
     for article in candidates:
-        if await enrich_article(article, db):
-            done += 1
+        try:
+            if await _enrich_or_fallback(article, db):
+                done += 1
+        except RateLimited:
+            log.info("enrich_rate_limited", remaining=len(candidates) - done)
+            break
     if candidates:
         log.info("enrich_batch_complete", attempted=len(candidates), enriched=done)
     return done

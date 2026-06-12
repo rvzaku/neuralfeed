@@ -86,7 +86,7 @@ async def start_scheduler() -> None:
     )
 
     scheduler.add_job(
-        _enrich_job, "interval", hours=1,
+        _enrich_job, "interval", minutes=30,
         start_date=now + timedelta(minutes=10),
         id="enrich-slug-titles", replace_existing=True,
         max_instances=1, coalesce=True,

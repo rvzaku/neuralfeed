@@ -51,4 +51,15 @@ async def run_fetch(source_id: str, db: AsyncSession) -> int:
 
     inserted = await ingest_items(result.items, source_id, db)
     await _record_health(db, source_id, "ok", None, len(result.items))
+
+    # HF/GitHub items arrive titled as repo slugs — rewrite them right away
+    # so fresh cards never render as raw "owner/repo-name" strings
+    if inserted:
+        from app.services.enricher import SLUG_SOURCES, enrich_slug_titles
+        if source_id in SLUG_SOURCES:
+            try:
+                await enrich_slug_titles(db)
+            except Exception as exc:  # enrichment is best-effort; fetch already succeeded
+                log.warning("post_ingest_enrich_failed", source_id=source_id, error=str(exc))
+
     return inserted
