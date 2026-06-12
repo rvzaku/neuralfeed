@@ -2,10 +2,16 @@ name: Keepalive
 
 # Render free instances sleep after ~15 min idle, which also stops the
 # in-process fetch scheduler — the feed goes stale and first loads time out.
-# Pinging /health keeps the instance (and scheduler) running.
+#
+# NOTE: this repo is private, and GitHub bills a 1-minute minimum per run —
+# a 10-min cron would burn ~4,300 min/month (free tier: 2,000). This 30-min
+# schedule (~1,440 min/month) stays free but won't prevent every nap.
+# For a true always-warm keepalive, add a free UptimeRobot monitor on
+# https://neuralfeed-api.onrender.com/health (5-min interval, $0, and it
+# doubles as the Phase 3.3 uptime monitoring item).
 on:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "*/30 * * * *"
   workflow_dispatch:
 
 jobs:
