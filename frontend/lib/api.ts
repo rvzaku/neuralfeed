@@ -8,6 +8,31 @@ const api = axios.create({
   timeout: 90000,
 });
 
+// Attach the auth token when present (no-op while logged out / AUTH_REQUIRED=false)
+api.interceptors.request.use((config) => {
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("neuralfeed_token");
+    if (token) config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  email: string;
+}
+
+export async function authRegister(email: string, password: string): Promise<AuthResponse> {
+  const { data } = await api.post<AuthResponse>("/api/v1/auth/register", { email, password });
+  return data;
+}
+
+export async function authLogin(email: string, password: string): Promise<AuthResponse> {
+  const { data } = await api.post<AuthResponse>("/api/v1/auth/login", { email, password });
+  return data;
+}
+
 // Feed
 export async function getFeed(filters: FeedFilters = {}): Promise<FeedResponse> {
   const params = Object.fromEntries(

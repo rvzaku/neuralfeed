@@ -257,3 +257,32 @@ Phases ship 0→4. Each task is its own conventional commit (`feat(refresh): …
 - [ ] SoC rules hold: api thin, services own logic, fetchers pure I/O, components behind hooks
 - [ ] Coverage ≥80% on services/fetchers; no secrets in any pushed diff
 - [ ] CLAUDE.md, SOURCES.md, ROADMAP.md updated
+
+---
+
+# Phase 3 — Multi-User & Production (planned 2026-06-12)
+
+Status of CLAUDE.md Phase 3 items: 3.2 is largely done (Render backend + Neon Postgres + Vercel frontend, env-based config). Remaining: 3.1 auth, CI/CD, 3.3 rate limiting + monitoring.
+
+## Increment 1 (this sprint)
+
+### 3.1a Authentication core (backend)
+- `User` model (`users` table): id (uuid hex), email unique, password_hash, created_at. Migration 0007.
+- Password hashing: stdlib `hashlib.scrypt` + per-user salt (no new heavy deps).
+- JWT (HS256) via `pyjwt`; settings: `JWT_SECRET`, `JWT_EXPIRES_MINUTES` (default 7d), `AUTH_REQUIRED` (default false → existing single-user deploy keeps working until flipped).
+- `app/services/auth_service.py` — register/authenticate/token issue+verify.
+- `app/api/v1/auth.py` — POST /auth/register, POST /auth/login, GET /auth/me.
+- `require_user` dependency applied to write endpoints when AUTH_REQUIRED=true.
+
+### 3.3a Rate limiting
+- In-memory sliding-window limiter middleware (per-IP): 10/min on /auth/*, 60/min on other write methods. Adequate for single-instance Render; swap to Redis-backed at scale.
+
+### CI/CD
+- `.github/workflows/ci.yml`: backend pytest on 3.12; frontend typecheck + vitest via bun.
+
+### Frontend
+- Token storage + axios Authorization interceptor in `lib/api.ts`.
+- `/login` page (login + register form). Logout clears token.
+
+## Increment 2 (deferred)
+- Per-user article state (`user_article_state`: user_id, article_id, is_read, is_bookmarked, feedback) and user-scoped preferences; OAuth providers; Sentry; Lighthouse audit.
