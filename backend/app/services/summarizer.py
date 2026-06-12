@@ -210,12 +210,22 @@ async def extract_article_text(url: str) -> Optional[str]:
             follow_redirects=True,
             headers={"User-Agent": "NeuralFeed/0.1 (summary fetch)"},
         ) as client:
-            resp = await client.get(url)
-            resp.raise_for_status()
-            content_type = resp.headers.get("content-type", "")
-            if "html" not in content_type and "xml" not in content_type:
-                return None
-            body = resp.text[:MAX_PAGE_BYTES]
+            async with client.stream("GET", url) as resp:
+                resp.raise_for_status()
+                content_type = resp.headers.get("content-type", "")
+                if "html" not in content_type and "xml" not in content_type:
+                    return None
+                # Cap while streaming — never buffer a multi-MB page in memory
+                chunks: list[bytes] = []
+                received = 0
+                async for chunk in resp.aiter_bytes():
+                    chunks.append(chunk)
+                    received += len(chunk)
+                    if received >= MAX_PAGE_BYTES:
+                        break
+                body = b"".join(chunks)[:MAX_PAGE_BYTES].decode(
+                    resp.charset_encoding or "utf-8", errors="replace"
+                )
     except Exception as e:
         log.info("summary_page_fetch_failed", url=url, error=str(e))
         return None
