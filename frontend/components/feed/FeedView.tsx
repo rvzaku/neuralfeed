@@ -8,7 +8,6 @@ import { FeedCardSkeleton } from "./FeedCardSkeleton";
 import { FilterBar } from "./FilterBar";
 import { FilterDrawer } from "./FilterDrawer";
 import { RefreshIndicator } from "./RefreshIndicator";
-import { SavedViewSwitcher } from "./SavedViewSwitcher";
 import { SearchModal } from "./SearchModal";
 import { StoryCard } from "./StoryCard";
 import { SummarySheet } from "./SummarySheet";
@@ -74,7 +73,6 @@ export function FeedView() {
     <div className="flex min-h-screen">
       {/* Single centered column on every breakpoint — no sidebar clutter */}
       <div className="flex flex-col flex-1 min-w-0">
-        <SavedViewSwitcher />
 
         {/* Filter bar */}
         <FilterBar onFilterClick={() => setDrawerOpen(true)} />
