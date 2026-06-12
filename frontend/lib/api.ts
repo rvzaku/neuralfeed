@@ -125,6 +125,21 @@ export async function getStories(params: {
   return data;
 }
 
+export interface Recap {
+  markdown: string;
+  window_days: number;
+  cached: boolean;
+}
+
+// LLM "what happened" brief — first generation of the day takes a few seconds
+export async function getRecap(days = 7): Promise<Recap> {
+  const { data } = await api.get<Recap>("/api/v1/stories/recap", {
+    params: { days },
+    timeout: 90000,
+  });
+  return data;
+}
+
 export async function getStoryDetail(storyId: string, days = 7): Promise<StoryDetail> {
   const { data } = await api.get<StoryDetail>(`/api/v1/stories/${storyId}`, { params: { days } });
   return data;

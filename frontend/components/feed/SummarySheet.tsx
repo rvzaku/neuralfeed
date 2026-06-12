@@ -35,7 +35,7 @@ function Inline({ text }: { text: string }) {
   );
 }
 
-function DeepMarkdown({ markdown }: { markdown: string }) {
+export function DeepMarkdown({ markdown }: { markdown: string }) {
   const blocks = markdown.split(/\n{2,}/);
   return (
     <div className="space-y-3">

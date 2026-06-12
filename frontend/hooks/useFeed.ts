@@ -11,6 +11,7 @@ import {
   toggleBookmark,
   getPreferences,
   setPreference,
+  getRecap,
   getStories,
   getStoryDetail,
   getSummary,
@@ -121,6 +122,16 @@ export function useSearch(q: string, enabled = true) {
     queryFn: () => searchArticles(q),
     enabled: enabled && q.trim().length >= 2,
     staleTime: 1000 * 30,
+  });
+}
+
+export function useRecap(days: number, enabled: boolean) {
+  return useQuery({
+    queryKey: ["recap", days],
+    queryFn: () => getRecap(days),
+    enabled,
+    staleTime: 1000 * 60 * 60, // server caches per day; don't refetch on focus
+    retry: 1,
   });
 }
 

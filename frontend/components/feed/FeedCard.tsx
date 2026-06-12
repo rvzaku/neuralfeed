@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useState } from "react";
-import { ThumbsUp, ThumbsDown, Bookmark, BookmarkCheck, ExternalLink, Share2, Check } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Bookmark, BookmarkCheck, ExternalLink, Share2, Check, Star, MessageSquare, ArrowBigUp, TrendingUp } from "lucide-react";
 import { shareUrl } from "@/lib/share";
 import { SourceBadge } from "@/components/ui/SourceBadge";
 import { cn, formatRelativeTime } from "@/lib/utils";
@@ -27,6 +27,35 @@ const TOPIC_COLORS: Record<string, string> = {
   products:               "bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300",
   funding:                "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
 };
+
+function compact(n: number): string {
+  return Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(n);
+}
+
+/** Platform stats in their own boxes, out of the subtitle flow — GitHub stars
+ * (total + today) and Reddit/HN votes + comments are always visible
+ * without opening the item (app-feedback-v4). */
+function EngagementStats({ article }: { article: Article }) {
+  const e = article.engagement;
+  if (!e) return null;
+  const box = "inline-flex items-center gap-1 rounded-md border border-border bg-muted/50 px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground tabular-nums";
+  const stats: React.ReactNode[] = [];
+  if (e.stars_total != null && e.stars_total > 0) {
+    stats.push(<span key="st" className={box}><Star className="h-3 w-3" />{compact(e.stars_total)}</span>);
+  }
+  if (e.stars_today != null && e.stars_today > 0) {
+    stats.push(<span key="sd" className={box}><TrendingUp className="h-3 w-3" />+{compact(e.stars_today)} today</span>);
+  }
+  const votes = e.upvotes ?? e.points;
+  if (votes != null && votes > 0) {
+    stats.push(<span key="v" className={box}><ArrowBigUp className="h-3.5 w-3.5" />{compact(votes)}</span>);
+  }
+  if (e.comments != null && e.comments > 0) {
+    stats.push(<span key="c" className={box}><MessageSquare className="h-3 w-3" />{compact(e.comments)}</span>);
+  }
+  if (stats.length === 0) return null;
+  return <div className="flex items-center gap-1.5 flex-wrap mb-2">{stats}</div>;
+}
 
 function isUnseen(article: Article): boolean {
   if (article.is_read) return false;
@@ -99,7 +128,8 @@ function FeedCardInner({ article, onOpen }: FeedCardProps) {
               Unread
             </span>
           )}
-          {article.trending_score > 0 && (
+          {/* Generic trending chip only when there are no structured stats */}
+          {!article.engagement && article.trending_score > 0 && (
             <span className={cn(
               "text-[10px] font-semibold rounded-full px-1.5 py-0.5",
               article.trending_score >= 500
@@ -129,6 +159,7 @@ function FeedCardInner({ article, onOpen }: FeedCardProps) {
           <h3 className="font-semibold text-[15px] leading-snug tracking-tight mb-1.5 line-clamp-2 text-foreground group-hover:text-primary transition-colors">
             {article.title}
           </h3>
+          <EngagementStats article={article} />
           {article.summary && (
             <p className="text-xs text-muted-foreground line-clamp-2 mb-3 leading-relaxed">
               {article.summary}

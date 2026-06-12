@@ -20,6 +20,7 @@ class RawItem(TypedDict, total=False):
     summary: Optional[str]
     published_at: Optional[str]  # ISO string or None; ingest normalizes
     trending_score: float
+    engagement: Optional[dict]  # platform stats: stars/upvotes/comments/points
 
 
 class FetchError(Exception):
@@ -42,6 +43,11 @@ class BaseFetcher:
 
     async def fetch(self) -> FetchResult:
         raise NotImplementedError
+
+    async def backfill(self, days: int = 30) -> FetchResult:
+        """Fetch a historical window. Fetchers without a date-windowed API
+        (RSS feeds, scrapes) fall back to a regular fetch."""
+        return await self.fetch()
 
 
 async def fetch_with_backoff(

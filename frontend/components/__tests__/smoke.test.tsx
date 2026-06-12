@@ -37,6 +37,10 @@ const story: Story = {
   topic_tags: ["llm", "open-source"],
   latest_at: new Date().toISOString(),
   total_trending: 900,
+  source_ids: ["arxiv-cs-ai", "reddit-ml", "github-trending"],
+  relevance: 2.5,
+  summary: "Alibaba ships its next open-weight model family.",
+  context_line: "Qwen 3 sets new open-weight benchmarks across reasoning tasks.",
   is_read: false,
   article_ids: ["a1"],
 };
@@ -55,7 +59,8 @@ describe("FrontPage", () => {
   it("shows headline and item/source counts", () => {
     withQuery(<FrontPage stories={[story]} onOpenArticle={vi.fn()} />);
     expect(screen.getByText("Qwen 3 released")).toBeInTheDocument();
-    expect(screen.getByText(/4 related items from 3 sources/)).toBeInTheDocument();
+    expect(screen.getByText(/4 related items/)).toBeInTheDocument();
+    expect(screen.getByText(/Qwen 3 sets new open-weight benchmarks/)).toBeInTheDocument();
   });
 });
 

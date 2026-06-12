@@ -86,10 +86,13 @@ export default function SettingsPage() {
 
   const [topicWeights, setTopicWeights] = useState<Record<string, number>>({});
   const [mutedSources, setMutedSources] = useState<string[]>([]);
+  const [feedDensity, setFeedDensity] = useState(10);
   const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
     if (!prefs) return;
+    const density = Number(prefs.feed_density);
+    setFeedDensity(Number.isFinite(density) && density > 0 ? density : 10);
     try {
       setTopicWeights(prefs.topic_weights ? JSON.parse(prefs.topic_weights) : {});
     } catch {
@@ -117,6 +120,7 @@ export default function SettingsPage() {
   const handleSave = () => {
     setPref({ key: "topic_weights", value: topicWeights });
     setPref({ key: "muted_sources", value: mutedSources });
+    setPref({ key: "feed_density", value: feedDensity });
     setDirty(false);
   };
 
@@ -165,6 +169,33 @@ export default function SettingsPage() {
           <div className="flex items-center justify-between py-2.5 border border-border rounded-xl px-4 bg-card">
             <span className="text-sm">Theme</span>
             <ThemeToggle />
+          </div>
+        </section>
+
+        {/* Feed density — V7 anti-overwhelm control */}
+        <section>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+            Feed Density
+          </h2>
+          <p className="text-xs text-muted-foreground mb-4">
+            How many top items each source category may contribute per day.
+            Lower = only the biggest stories; higher = broader coverage.
+          </p>
+          <div className="flex items-center gap-2">
+            {[5, 10, 15, 20].map((n) => (
+              <button
+                key={n}
+                onClick={() => { setFeedDensity(n); setDirty(true); }}
+                className={cn(
+                  "flex-1 py-2.5 rounded-xl border text-sm font-semibold transition-colors",
+                  feedDensity === n
+                    ? "bg-foreground text-background border-foreground"
+                    : "border-border hover:bg-muted text-muted-foreground"
+                )}
+              >
+                {n}<span className="font-normal text-xs">/day</span>
+              </button>
+            ))}
           </div>
         </section>
 
@@ -239,9 +270,10 @@ export default function SettingsPage() {
           <div className="rounded-xl border border-border bg-card p-4 space-y-2">
             <p className="text-sm font-medium">Smart Ranking</p>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Enable smart ranking on the feed to sort articles by a score that combines
-              recency, source signal, topic preferences, trending score, and your feedback history.
-              Toggle via <code className="px-1 py-0.5 bg-muted rounded text-xs">?ranked=true</code> in the feed URL.
+              Smart ranking is on by default: items are scored by recency × platform
+              popularity (upvotes, stars, points), gated to the daily density above, and
+              interleaved across sources. Opt out per-view via{" "}
+              <code className="px-1 py-0.5 bg-muted rounded text-xs">?ranked=false</code> in the feed URL.
             </p>
           </div>
         </section>

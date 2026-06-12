@@ -1,3 +1,5 @@
+import json
+import re
 import structlog
 from typing import Optional
 from sqlalchemy import select
@@ -28,9 +30,16 @@ async def ingest_items(items: list[dict], source_id: str, db: AsyncSession) -> i
         if not url:
             continue
 
-        # Dedup 1: URL-exact (primary key collision)
+        # Dedup 1: URL-exact — but refresh the engagement stats, which is the
+        # whole point of re-fetching hot/top listings (V7 relevance ranking)
         article_id = make_article_id(source_id, url)
-        if await db.get(Article, article_id):
+        existing = await db.get(Article, article_id)
+        if existing:
+            new_score = float(raw.get("trending_score", 0.0))
+            if new_score > existing.trending_score:
+                existing.trending_score = new_score
+            if raw.get("engagement"):
+                existing.engagement = json.dumps(raw["engagement"])
             continue
 
         title = raw.get("title", "").strip()[:512]
@@ -75,6 +84,7 @@ async def ingest_items(items: list[dict], source_id: str, db: AsyncSession) -> i
             feedback=None,
             trending_score=float(raw.get("trending_score", 0.0)),
             title_hash=title_hash,
+            engagement=json.dumps(raw["engagement"]) if raw.get("engagement") else None,
         )
         try:
             async with db.begin_nested():  # savepoint — only rolls back this one article
@@ -83,12 +93,46 @@ async def ingest_items(items: list[dict], source_id: str, db: AsyncSession) -> i
         except IntegrityError:
             log.debug("ingest_skip_duplicate", source_id=source_id, url=url)
 
+    # Engagement refreshes on existing rows also need flushing
+    await db.commit()
     if inserted:
-        await db.commit()
         source = await db.get(Source, source_id)
         if source:
             source.last_fetched_at = now
             await db.commit()
 
+    # HF Daily Papers is curated traction — propagate its upvotes onto the
+    # matching raw arxiv-* articles so the relevance ranker can tell papers
+    # gaining attention apart from the daily firehose (V7).
+    if source_id == "hf-papers":
+        await _boost_arxiv_traction(items, db)
+
     log.info("ingest_complete", source_id=source_id, inserted=inserted, total=len(items))
     return inserted
+
+
+_ARXIV_ID_RE = re.compile(r"arxiv\.org/abs/([0-9.v]+)")
+
+
+async def _boost_arxiv_traction(items: list[dict], db: AsyncSession) -> None:
+    boosted = 0
+    for raw in items:
+        m = _ARXIV_ID_RE.search(raw.get("url", ""))
+        if not m:
+            continue
+        upvotes = float(raw.get("trending_score", 0.0))
+        if upvotes <= 0:
+            continue
+        result = await db.execute(
+            select(Article).where(
+                Article.source_id.like("arxiv-%"),
+                Article.url.contains(m.group(1)),
+            )
+        )
+        for article in result.scalars().all():
+            if upvotes > article.trending_score:
+                article.trending_score = upvotes
+                boosted += 1
+    if boosted:
+        await db.commit()
+        log.info("arxiv_traction_boosted", count=boosted)

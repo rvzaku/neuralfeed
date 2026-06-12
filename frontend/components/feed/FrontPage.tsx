@@ -7,6 +7,7 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { FeedCard } from "./FeedCard";
+import { SourceBadge } from "@/components/ui/SourceBadge";
 import { useStoryDetail } from "@/hooks/useFeed";
 import { cn, formatRelativeTime } from "@/lib/utils";
 import type { Article, Story } from "@/lib/types";
@@ -88,15 +89,26 @@ function HeroStory({ story, onOpenArticle }: { story: Story; onOpenArticle: (a: 
         <h2 className="font-semibold tracking-tight text-[26px] leading-[1.15] md:text-[32px] md:leading-[1.1]">
           {story.headline}
         </h2>
-        <p className="mt-3 text-sm text-muted-foreground">
-          {story.article_count > 1
-            ? `${story.article_count} related items from ${story.source_count} sources`
-            : formatRelativeTime(story.latest_at)}
+        {/* "Why this matters" — never clipped (app-feedback-v4) */}
+        {(story.context_line || story.summary) && (
+          <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+            {story.context_line ?? story.summary}
+          </p>
+        )}
+        <div className="mt-3 flex items-center gap-2 flex-wrap text-sm text-muted-foreground">
+          {story.source_ids?.slice(0, 4).map((sid) => (
+            <SourceBadge key={sid} sourceId={sid} className="text-[10px]" />
+          ))}
+          <span>
+            {story.article_count > 1
+              ? `${story.article_count} related items · ${formatRelativeTime(story.latest_at)}`
+              : formatRelativeTime(story.latest_at)}
+          </span>
           <ChevronDown
-            className={cn("inline h-3.5 w-3.5 ml-1.5 transition-transform", expanded && "rotate-180")}
+            className={cn("inline h-3.5 w-3.5 transition-transform", expanded && "rotate-180")}
             aria-hidden
           />
-        </p>
+        </div>
       </button>
       {expanded && <RelatedItems story={story} onOpenArticle={onOpenArticle} />}
     </article>
@@ -122,11 +134,21 @@ function SectionRow({ story, onOpenArticle }: { story: Story; onOpenArticle: (a:
             )}
             {story.headline}
           </h3>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {story.source_count > 1 ? `${story.source_count} sources` : "1 source"}
-            {" · "}{formatRelativeTime(story.latest_at)}
-            {story.article_count > 1 && ` · ${story.article_count} items`}
-          </p>
+          {/* Context line shown in full — the clipped subtitle was the v4 complaint */}
+          {(story.context_line || story.summary) && (
+            <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+              {story.context_line ?? story.summary}
+            </p>
+          )}
+          <div className="mt-1.5 flex items-center gap-1.5 flex-wrap text-xs text-muted-foreground">
+            {story.source_ids?.slice(0, 3).map((sid) => (
+              <SourceBadge key={sid} sourceId={sid} className="text-[9px] px-1.5" />
+            ))}
+            <span>
+              {formatRelativeTime(story.latest_at)}
+              {story.article_count > 1 && ` · ${story.article_count} items`}
+            </span>
+          </div>
         </div>
         {story.image_url && (
           <QuietImage

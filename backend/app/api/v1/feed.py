@@ -1,3 +1,4 @@
+import json
 from datetime import timedelta
 from typing import Optional
 
@@ -67,10 +68,29 @@ async def get_feed(
 
     if ranked:
         from app.services.ranker import rank_articles
-        # Bound the candidate set: rank the newest 1000, not the whole table
-        all_result = await db.execute(q.order_by(Article.published_at.desc()).limit(1000))
+        from app.services.relevance import apply_daily_caps, interleave_by_group
+        # Bound the candidate set: rank the newest 2000, not the whole table
+        all_result = await db.execute(q.order_by(Article.published_at.desc()).limit(2000))
         all_items = list(all_result.scalars().all())
-        ranked_items = await rank_articles(all_items, db)
+
+        window_days = TIME_RANGE_DAYS.get(time_range or "7d", 7)
+        category_of = await _category_map(db)
+        per_day = await _feed_density(db, user)
+
+        # V7 anti-overwhelm: only the top-N most relevant items per source
+        # category per day survive — the rest stay queryable via ranked=false
+        capped = apply_daily_caps(
+            all_items, per_day=per_day, window_days=window_days, category_of=category_of
+        )
+        ranked_items = await rank_articles(capped, db)
+        total = len(ranked_items)
+
+        # Mix categories within each day unless the user already narrowed
+        # to one source/category (a single column is then the point)
+        if not source_id and not category:
+            ranked_items = interleave_by_group(
+                ranked_items, window_days=window_days, category_of=category_of
+            )
         offset = (page - 1) * limit
         items = ranked_items[offset: offset + limit]
     else:
@@ -101,6 +121,28 @@ async def get_feed(
         limit=limit,
         has_more=(page * limit) < total,
     )
+
+
+async def _category_map(db: AsyncSession) -> dict:
+    result = await db.execute(select(Source.id, Source.category))
+    return {sid: cat for sid, cat in result.all()}
+
+
+async def _feed_density(db: AsyncSession, user) -> int:
+    """Items per source category per day. User-namespaced pref first, then
+    global, then the V7 default of 10."""
+    from app.models.user_preference import UserPreference
+    from app.services.relevance import DEFAULT_PER_SOURCE_PER_DAY
+
+    keys = ([f"u:{user.id}:feed_density"] if user else []) + ["feed_density"]
+    for key in keys:
+        pref = await db.get(UserPreference, key)
+        if pref:
+            try:
+                return max(1, min(50, int(json.loads(pref.value))))
+            except Exception:
+                continue
+    return DEFAULT_PER_SOURCE_PER_DAY
 
 
 @router.get("/{article_id}", response_model=ArticleOut)

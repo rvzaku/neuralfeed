@@ -1,6 +1,7 @@
+import json
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 class ArticleOut(BaseModel):
@@ -18,6 +19,18 @@ class ArticleOut(BaseModel):
     is_bookmarked: bool
     feedback: Optional[int]
     trending_score: float
+    engagement: Optional[dict] = None
+    context_line: Optional[str] = None
+
+    @field_validator("engagement", mode="before")
+    @classmethod
+    def _parse_engagement(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except (json.JSONDecodeError, TypeError):
+                return None
+        return v
 
     model_config = {"from_attributes": True}
 

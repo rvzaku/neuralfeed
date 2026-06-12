@@ -21,6 +21,38 @@ class ArxivFetcher(BaseFetcher):
     async def fetch(self) -> FetchResult:
         query = QUERIES.get(self.source_id, "cat:cs.AI")
         url = f"{settings.arxiv_api_base}?search_query={query}&sortBy=submittedDate&max_results=50"
+        return await self._fetch_url(url)
+
+    async def backfill(self, days: int = 30) -> FetchResult:
+        """Pull the historical window in pages of 100 (arXiv etiquette: ≤3s
+        between requests, modest page counts)."""
+        from datetime import datetime, timedelta, timezone
+
+        query = QUERIES.get(self.source_id, "cat:cs.AI")
+        start_date = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y%m%d0000")
+        end_date = datetime.now(timezone.utc).strftime("%Y%m%d2359")
+        dated = f"{query}+AND+submittedDate:[{start_date}+TO+{end_date}]"
+
+        all_items: list[dict] = []
+        for start in (0, 100, 200, 300, 400):
+            url = (
+                f"{settings.arxiv_api_base}?search_query={dated}"
+                f"&sortBy=submittedDate&start={start}&max_results=100"
+            )
+            result = await self._fetch_url(url)
+            if not result.ok:
+                if all_items:  # partial backfill is still useful
+                    break
+                return result
+            all_items.extend(result.items)
+            if len(result.items) < 100:
+                break
+            await asyncio.sleep(3)
+
+        log.info("arxiv_backfilled", source_id=self.source_id, count=len(all_items))
+        return FetchResult(source_id=self.source_id, items=all_items)
+
+    async def _fetch_url(self, url: str) -> FetchResult:
         try:
             async with httpx.AsyncClient(timeout=30) as client:
                 resp = await client.get(url)

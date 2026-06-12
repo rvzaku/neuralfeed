@@ -50,3 +50,10 @@ class Article(Base):
     # Deep "10-minute read" markdown brief — same derivative-only rule applies
     ai_deep_summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     ai_deep_summary_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    # Engagement metadata from the original platform, JSON-encoded string:
+    # {"stars_total": int, "stars_today": int, "upvotes": int, "comments": int,
+    #  "points": int} — keys present only when the source provides them.
+    # Text (not JSON type) so the additive-column boot migration stays portable.
+    engagement: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # One-line LLM "why this matters" context, cached forever once generated
+    context_line: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

@@ -56,6 +56,8 @@ _ADDITIVE_COLUMNS = [
     ("articles", "ai_deep_summary", "TEXT"),
     ("articles", "ai_deep_summary_at", "TIMESTAMP"),
     ("articles", "image_url", "TEXT"),  # V6 preview images (hotlinked URL metadata)
+    ("articles", "engagement", "TEXT"),    # V7 platform engagement (JSON string)
+    ("articles", "context_line", "TEXT"),  # V7 cached LLM "why this matters" line
 ]
 
 

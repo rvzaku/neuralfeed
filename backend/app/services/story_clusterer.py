@@ -55,9 +55,33 @@ def _similarity(a: frozenset, b: frozenset) -> float:
     return len(shared) / min(len(a), len(b))
 
 
-def cluster_articles(articles: list[Article], read_ids: Optional[set] = None) -> list[dict]:
+def dedupe_cross_source(articles: list[Article]) -> list[Article]:
+    """Drop exact same-title duplicates that arrived via different sources
+    (e.g. the same paper from arxiv-cs-ai and hf-papers). The most-engaged
+    copy survives and absorbs the others' topic tags — one item, many tags,
+    never repeated (app-feedback-v4)."""
+    by_hash: dict = {}
+    for a in articles:
+        key = a.title_hash or a.id
+        kept = by_hash.get(key)
+        if kept is None:
+            by_hash[key] = a
+        else:
+            winner, loser = (a, kept) if a.trending_score > kept.trending_score else (kept, a)
+            merged = list(dict.fromkeys((winner.topic_tags or []) + (loser.topic_tags or [])))
+            winner.topic_tags = merged
+            by_hash[key] = winner
+    return [a for a in articles if by_hash.get(a.title_hash or a.id) is a]
+
+
+def cluster_articles(
+    articles: list[Article], read_ids: Optional[set] = None, window_days: int = 7
+) -> list[dict]:
     """Greedy single-pass clustering on title signatures.
-    Returns story dicts sorted by (size, total trending) descending."""
+    Returns story dicts sorted by total relevance descending."""
+    from app.services.relevance import relevance_score
+
+    articles = dedupe_cross_source(articles)
     clusters: list[dict] = []
     for article in articles:
         sig = title_signature(article.title)
@@ -84,6 +108,9 @@ def cluster_articles(articles: list[Article], read_ids: Optional[set] = None) ->
         # Headline: most-engaged item wins; ties go to the newest
         lead = max(arts, key=lambda a: (a.trending_score, a.published_at))
         tag_counts = Counter(t for a in arts for t in (a.topic_tags or []))
+        # Multi-source corroboration multiplies relevance — an event echoed
+        # across platforms matters more than one popular post
+        story_relevance = sum(relevance_score(a, window_days) for a in arts)
         stories.append({
             "id": story_id,
             "headline": lead.title,
@@ -91,14 +118,18 @@ def cluster_articles(articles: list[Article], read_ids: Optional[set] = None) ->
             "image_url": lead.image_url,
             "article_count": len(arts),
             "source_count": len({a.source_id for a in arts}),
+            "source_ids": list(dict.fromkeys(a.source_id for a in arts)),
             "topic_tags": [t for t, _ in tag_counts.most_common(4)],
             "latest_at": max(a.published_at for a in arts).isoformat(),
             "total_trending": sum(a.trending_score for a in arts),
+            "relevance": round(story_relevance, 4),
+            "summary": lead.summary,
+            "context_line": lead.context_line,
             "is_read": all((a.id in read_ids) if read_ids is not None else a.is_read for a in arts),
             "article_ids": [a.id for a in arts],
         })
 
-    stories.sort(key=lambda s: (s["article_count"], s["total_trending"]), reverse=True)
+    stories.sort(key=lambda s: s["relevance"], reverse=True)
     return stories
 
 
@@ -111,12 +142,14 @@ async def get_stories(
     read_ids: Optional[set] = None,  # per-user read overlay (None = global columns)
 ) -> dict:
     """Bounded story digest: at most `limit` stories — the feed must end."""
+    from app.services.relevance import apply_daily_caps
+
     cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
     q = (
         select(Article)
         .where(Article.published_at >= cutoff)
         .order_by(Article.published_at.desc())
-        .limit(800)
+        .limit(2000)
     )
     result = await db.execute(q)
     articles = list(result.scalars().all())
@@ -128,7 +161,13 @@ async def get_stories(
     if topic:
         articles = [a for a in articles if topic in (a.topic_tags or [])]
 
-    stories = cluster_articles(articles, read_ids=read_ids)
+    # Relevance gate before clustering: only items that earned attention on
+    # their platform compete for the front page (V7 anti-overwhelm)
+    cat_result = await db.execute(select(Source.id, Source.category))
+    category_of = {sid: cat for sid, cat in cat_result.all()}
+    articles = apply_daily_caps(articles, window_days=days, category_of=category_of)
+
+    stories = cluster_articles(articles, read_ids=read_ids, window_days=days)
     return {
         "stories": stories[:limit],
         "total_stories": len(stories),

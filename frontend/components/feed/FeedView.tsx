@@ -10,6 +10,7 @@ import { FilterDrawer } from "./FilterDrawer";
 import { RefreshIndicator } from "./RefreshIndicator";
 import { SearchModal } from "./SearchModal";
 import { FrontPage } from "./FrontPage";
+import { RecapSheet } from "./RecapSheet";
 import { SummarySheet } from "./SummarySheet";
 import { useInfiniteFeed, useStories } from "@/hooks/useFeed";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,7 @@ export function FeedView() {
   const router = useRouter();
   const [searchOpen, setSearchOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [recapOpen, setRecapOpen] = useState(false);
   const [openArticle, setOpenArticle] = useState<Article | null>(null);
 
   const filters: FeedFilters = {
@@ -136,6 +138,15 @@ export function FeedView() {
             </button>
           )}
 
+          {digestMode && (
+            <button
+              onClick={() => setRecapOpen(true)}
+              className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium border border-border rounded-xl hover:bg-muted transition-colors text-foreground/80"
+            >
+              ✦ What happened this week?
+            </button>
+          )}
+
           {digestMode ? (
             <>
               {/* Story digest — bounded, finite by design */}
@@ -243,6 +254,8 @@ export function FeedView() {
       <FilterDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
       <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+
+      <RecapSheet isOpen={recapOpen} onClose={() => setRecapOpen(false)} />
 
       <SummarySheet article={openArticle} onClose={() => setOpenArticle(null)} />
     </div>

@@ -19,9 +19,30 @@ async def list_stories(
     user=Depends(get_current_user),
 ) -> dict:
     read_ids = await _user_read_ids(db, user) if user else None
-    return await get_stories(
+    digest = await get_stories(
         db, days=days, limit=limit, unread_only=unread_only, topic=topic, read_ids=read_ids
     )
+    # One batched, cached LLM call for any stories still missing their
+    # "why this matters" line; failures degrade to the stored snippet.
+    from app.services.context_line import fill_context_lines
+    try:
+        await fill_context_lines(digest["stories"], db)
+    except Exception:
+        pass
+    return digest
+
+
+@router.get("/recap")
+async def weekly_recap(
+    days: int = Query(default=7, ge=1, le=31),
+    db: AsyncSession = Depends(get_db),
+    user=Depends(get_current_user),
+) -> dict:
+    from app.services.recap import RecapError, get_or_generate_recap
+    try:
+        return await get_or_generate_recap(db, days=days)
+    except RecapError as e:
+        raise HTTPException(status_code=503, detail=str(e))
 
 
 @router.get("/{story_id}")

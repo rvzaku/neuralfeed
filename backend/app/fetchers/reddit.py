@@ -13,12 +13,17 @@ log = structlog.get_logger()
 # Reddit rate-limits per client IP, not per subreddit — pace ALL reddit
 # requests globally so concurrent sub fetches don't burst into a 429.
 _PACE_SECONDS = 6.0  # Render's shared IP gets 429'd at 2.5s spacing
-_pace_lock = asyncio.Lock()
+# Created lazily inside the running loop: on Python 3.9 a module-level
+# asyncio.Lock() binds to whatever loop exists at import time, and pacing
+# then crashes with "attached to a different loop" under asyncio.run()
+_pace_lock: "asyncio.Lock | None" = None
 _last_request = 0.0
 
 
 async def _pace() -> None:
-    global _last_request
+    global _last_request, _pace_lock
+    if _pace_lock is None:
+        _pace_lock = asyncio.Lock()
     async with _pace_lock:
         wait = _last_request + _PACE_SECONDS - time.monotonic()
         if wait > 0:
@@ -36,6 +41,15 @@ SUBREDDITS = {
     "reddit-stablediffusion": "StableDiffusion",
     "reddit-learnml":         "learnmachinelearning",
     "reddit-deeplearning":    "deeplearning",
+    # V7: topic-focused subs, gated by the same per-day relevance caps
+    "reddit-mlscaling":       "mlscaling",
+    "reddit-llmdevs":         "LLMDevs",
+    "reddit-langchain":       "LangChain",
+    "reddit-rag":             "Rag",
+    "reddit-aiagents":        "AI_Agents",
+    "reddit-computervision":  "computervision",
+    "reddit-reinforcement":   "reinforcementlearning",
+    "reddit-mlops":           "mlops",
 }
 
 
@@ -88,21 +102,7 @@ class RedditFetcher(BaseFetcher):
         log.info("reddit_fetched_rss_fallback", source_id=self.source_id, count=len(items))
         return FetchResult(source_id=self.source_id, items=items)
 
-    async def fetch(self) -> FetchResult:
-        sub = SUBREDDITS.get(self.source_id)
-        if not sub:
-            return FetchResult(source_id=self.source_id, error="unknown subreddit")
-
-        url = f"https://www.reddit.com/r/{sub}/hot.json?limit=50"
-        headers = {"User-Agent": settings.reddit_user_agent}
-        try:
-            await _pace()
-            resp = await fetch_with_backoff(url, headers=headers)
-            data = resp.json()
-        except (FetchError, Exception) as e:
-            log.warning("reddit_json_blocked_trying_rss", source_id=self.source_id, error=str(e))
-            return await asyncio.to_thread(self._fetch_rss_fallback, sub)
-
+    def _parse_listing(self, data: dict) -> list[dict]:
         items = []
         for child in data.get("data", {}).get("children", []):
             post = child.get("data", {})
@@ -124,6 +124,10 @@ class RedditFetcher(BaseFetcher):
                 "summary": summary or None,
                 "published_at": None,  # will use epoch below
                 "trending_score": float(post.get("score", 0)),
+                "engagement": {
+                    "upvotes": int(post.get("score", 0)),
+                    "comments": int(post.get("num_comments", 0)),
+                },
                 "_created_utc": post.get("created_utc"),
             })
 
@@ -133,6 +137,51 @@ class RedditFetcher(BaseFetcher):
             epoch = item.pop("_created_utc", None)
             if epoch:
                 item["published_at"] = datetime.fromtimestamp(epoch, tz=timezone.utc).isoformat()
+        return items
+
+    async def _fetch_listing(self, sub: str, path: str) -> "list[dict] | None":
+        """One paced JSON listing request; None means blocked/failed."""
+        url = f"https://www.reddit.com/r/{sub}/{path}"
+        headers = {"User-Agent": settings.reddit_user_agent}
+        try:
+            await _pace()
+            resp = await fetch_with_backoff(url, headers=headers)
+            return self._parse_listing(resp.json())
+        except (FetchError, Exception) as e:
+            log.warning("reddit_listing_failed", source_id=self.source_id, path=path, error=str(e))
+            return None
+
+    async def fetch(self) -> FetchResult:
+        sub = SUBREDDITS.get(self.source_id)
+        if not sub:
+            return FetchResult(source_id=self.source_id, error="unknown subreddit")
+
+        # Blend hot (what's surging now) with top-of-week (what proved out) so
+        # the relevance ranker has popularity signal, not just recency.
+        hot = await self._fetch_listing(sub, "hot.json?limit=50")
+        if hot is None:
+            return await asyncio.to_thread(self._fetch_rss_fallback, sub)
+        top_week = await self._fetch_listing(sub, "top.json?t=week&limit=25") or []
+
+        seen, items = set(), []
+        for item in hot + top_week:
+            if item["url"] in seen:
+                continue
+            seen.add(item["url"])
+            items.append(item)
 
         log.info("reddit_fetched", source_id=self.source_id, count=len(items))
+        return FetchResult(source_id=self.source_id, items=items)
+
+    async def backfill(self, days: int = 30) -> FetchResult:
+        """Historical window via top.json — Reddit's only popularity-sorted
+        lookback. t=month covers the 30-day target."""
+        sub = SUBREDDITS.get(self.source_id)
+        if not sub:
+            return FetchResult(source_id=self.source_id, error="unknown subreddit")
+        t = "month" if days > 7 else "week"
+        items = await self._fetch_listing(sub, f"top.json?t={t}&limit=100")
+        if items is None:
+            return await asyncio.to_thread(self._fetch_rss_fallback, sub)
+        log.info("reddit_backfilled", source_id=self.source_id, count=len(items))
         return FetchResult(source_id=self.source_id, items=items)

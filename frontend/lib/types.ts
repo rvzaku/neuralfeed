@@ -43,6 +43,17 @@ export interface Article {
   is_bookmarked: boolean;
   feedback: FeedbackValue | null;
   trending_score: number;
+  /** Platform stats — keys present only when the source provides them */
+  engagement?: {
+    stars_total?: number;
+    stars_today?: number;
+    forks?: number;
+    upvotes?: number;
+    points?: number;
+    comments?: number;
+  } | null;
+  /** Cached one-line LLM "why this matters" context */
+  context_line?: string | null;
 }
 
 export interface Source {
@@ -89,9 +100,13 @@ export interface Story {
   image_url?: string | null;
   article_count: number;
   source_count: number;
+  source_ids: string[];
   topic_tags: string[];
   latest_at: string;
   total_trending: number;
+  relevance: number;
+  summary: string | null;
+  context_line: string | null;
   is_read: boolean;
   article_ids: string[];
 }
