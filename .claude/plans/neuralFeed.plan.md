@@ -329,3 +329,8 @@ User feedback (app-feedback-v2.md): not user-friendly enough, looks AI-generic, 
 
 ## Deferred (needs user/credentials or separate sprint)
 - LinkedIn/X sources (Phase 2.2 feasibility — X API tier, LinkedIn ToS), Reddit API credentials for richer briefs, daily auto-briefing differentiator.
+
+## Round 3 (feedback line 25): login-first gating
+- AuthGuard in root layout: no stored token → immediate /login redirect (no API-401 wait, no content flash).
+- 401 responses clear the stored session (expired/tampered JWT) before redirect; no react-query retries on 401.
+- AuthZ model: per-user data scoping server-side from the JWT sub claim (user_article_state, namespaced prefs); HS256 signed tokens, 7-day expiry, PBKDF2-600k passwords, rate-limited auth endpoints, registration kill-switch.

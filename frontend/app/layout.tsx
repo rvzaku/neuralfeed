@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { Header } from "@/components/layout/Header";
 import { MobileNav } from "@/components/layout/MobileNav";
+import { AuthGuard } from "@/components/providers/AuthGuard";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -26,9 +27,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable} antialiased min-h-screen`}>
         <ThemeProvider>
           <QueryProvider>
-            <Header />
-            {children}
-            <MobileNav />
+            <AuthGuard>
+              <Header />
+              {children}
+              <MobileNav />
+            </AuthGuard>
           </QueryProvider>
         </ThemeProvider>
       </body>

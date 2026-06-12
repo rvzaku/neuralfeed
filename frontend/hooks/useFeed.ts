@@ -49,7 +49,11 @@ export function useStories(params: { days?: number; limit?: number; unread_only?
     staleTime: 1000 * 60 * 5,
     // Render free tier cold-starts can exceed one request timeout — keep
     // retrying with backoff and show stale data instead of an error flash
-    retry: 3,
+    retry: (failureCount, error: unknown) => {
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      if (status === 401) return false;
+      return failureCount < 3;
+    },
     retryDelay: (attempt) => Math.min(2000 * 2 ** attempt, 15000),
     placeholderData: (prev) => prev,
   });

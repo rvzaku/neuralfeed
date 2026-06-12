@@ -27,6 +27,8 @@ api.interceptors.response.use(
       typeof window !== "undefined" &&
       !window.location.pathname.startsWith("/login")
     ) {
+      localStorage.removeItem("neuralfeed_token");
+      localStorage.removeItem("neuralfeed_email");
       window.location.href = "/login";
     }
     return Promise.reject(error);
