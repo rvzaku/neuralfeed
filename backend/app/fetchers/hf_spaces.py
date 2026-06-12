@@ -14,7 +14,7 @@ class HFSpacesFetcher(BaseFetcher):
 
     async def fetch(self) -> FetchResult:
         url = "https://huggingface.co/api/spaces"
-        params = {"sort": "trendingScore", "limit": 30}
+        params = {"sort": "trendingScore", "limit": 30, "full": "true"}
         try:
             async with httpx.AsyncClient(timeout=20) as client:
                 resp = await client.get(url, params=params)
@@ -30,11 +30,19 @@ class HFSpacesFetcher(BaseFetcher):
             space_id = s.get("id", "")
             if not space_id:
                 continue
+            card = s.get("cardData") or {}
+            desc = (card.get("short_description") or "").strip()
+            likes = s.get("likes", 0)
+            summary = (
+                f"{desc} — community demo on Hugging Face ({likes:,} likes)."
+                if desc
+                else f"Interactive AI demo on Hugging Face ({likes:,} likes)."
+            )
             items.append({
-                "title": s.get("cardData", {}).get("title") or space_id,
+                "title": card.get("title") or space_id,
                 "url": f"https://huggingface.co/spaces/{space_id}",
                 "author": space_id.split("/")[0] if "/" in space_id else None,
-                "summary": f"Trending Space on Hugging Face: {space_id}. Likes: {s.get('likes', 0):,}",
+                "summary": summary,
                 "published_at": s.get("lastModified") or now,
                 "trending_score": float(s.get("likes", 0)),
             })

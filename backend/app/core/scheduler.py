@@ -46,6 +46,12 @@ async def _fetch_job(source_id: str) -> None:
         await run_fetch(source_id, db)
 
 
+async def _enrich_job() -> None:
+    from app.services.enricher import enrich_slug_titles
+    async with AsyncSessionLocal() as db:
+        await enrich_slug_titles(db)
+
+
 async def _discovery_job() -> None:
     from app.fetchers.account_discovery import discover_accounts
     async with AsyncSessionLocal() as db:
@@ -79,8 +85,15 @@ async def start_scheduler() -> None:
         id="discover-accounts", replace_existing=True,
     )
 
+    scheduler.add_job(
+        _enrich_job, "interval", hours=1,
+        start_date=now + timedelta(minutes=10),
+        id="enrich-slug-titles", replace_existing=True,
+        max_instances=1, coalesce=True,
+    )
+
     scheduler.start()
-    log.info("scheduler_started", jobs=len(sources) + 1)
+    log.info("scheduler_started", jobs=len(sources) + 2)
 
 
 def stop_scheduler() -> None:

@@ -32,7 +32,10 @@ class HuggingFaceFetcher(BaseFetcher):
                 "title": model_id,
                 "url": f"https://huggingface.co/{model_id}",
                 "author": model_id.split("/")[0] if "/" in model_id else None,
-                "summary": f"New model on Hugging Face: {model_id}. Downloads: {m.get('downloads', 0):,}",
+                "summary": (
+                    f"New {(m.get('pipeline_tag') or 'AI').replace('-', ' ')} model "
+                    f"on Hugging Face ({m.get('downloads', 0):,} downloads)."
+                ),
                 "published_at": m.get("lastModified") or now,
                 "trending_score": float(m.get("downloads", 0)) / 1000.0,
             })

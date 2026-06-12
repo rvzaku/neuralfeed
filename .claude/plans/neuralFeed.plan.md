@@ -457,3 +457,23 @@ STATUS: PLAN ONLY — implementation awaits explicit go-ahead.
   the bottom-sheet drawer + a small Saved toggle. Clear appears only when filters active.
 - Drawer gains Content Type + Time Range sections (nothing lost), included in clear-all.
 - Desktop keeps the full chip rows.
+
+## V6.3 — Meaningful titles for HF/GitHub items (app-feedback-v3 line 12)
+
+Problem: HF Spaces/models and GitHub items surface as bare slugs
+("r3gm/wan2-2-fp8da-aoti-preview") — meaningless to a newcomer.
+
+1. **Deterministic, at fetch (free):**
+   - HF Spaces: request card data; summary = short description + likes
+     (replaces the useless "Trending Space on Hugging Face: <slug>" string).
+   - HF models: summary = pipeline tag ("Text-to-video model") + downloads.
+   - GitHub trending already captures repo descriptions — no change.
+2. **LLM title enrichment (the real fix):** scheduled job (hourly, batch ≤15) finds
+   articles from hf/github sources whose title still looks like a slug
+   (contains "/" or no spaces), transiently fetches README/model card via existing
+   extractors, and asks Groq for JSON {"title": plain-English name ≤90 chars,
+   "summary": one sentence "what it is + why it matters" ≤300 chars}. Stored
+   title/summary replaced; original slug stays in the URL and author fields.
+   Slug-shaped-title heuristic doubles as the "not yet enriched" marker — no
+   schema change. Covers existing backlog progressively (newest first).
+3. Frontend: no changes needed — enriched titles flow through feed/stories/reader.
