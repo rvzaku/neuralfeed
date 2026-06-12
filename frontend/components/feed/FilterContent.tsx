@@ -20,6 +20,25 @@ const TOPIC_TAGS = [
   { value: "funding",                label: "Funding" },
 ];
 
+const CONTENT_TYPES = [
+  { value: "",           label: "All types" },
+  { value: "research",   label: "Papers" },
+  { value: "github",     label: "GitHub" },
+  { value: "social",     label: "Social" },
+  { value: "company",    label: "Blogs" },
+  { value: "newsletter", label: "Newsletters" },
+  { value: "video",      label: "Videos" },
+  { value: "podcast",    label: "Podcasts" },
+  { value: "funding",    label: "Funding" },
+];
+
+const TIME_RANGES = [
+  { value: "1d",  label: "Today" },
+  { value: "3d",  label: "3 days" },
+  { value: "7d",  label: "Week" },
+  { value: "30d", label: "Month" },
+];
+
 const FEEDBACK_OPTIONS = [
   { value: "",   label: "All" },
   { value: "1",  label: "Liked" },
@@ -43,6 +62,8 @@ export function FilterContent({ onClear, className }: FilterContentProps) {
   const { data: sources } = useSources();
 
   const activeTopic    = params.get("topic") ?? "";
+  const activeCategory = params.get("category") ?? "";
+  const activeTime     = params.get("time_range") ?? "7d";
   const activeSource   = params.get("source_id") ?? "";
   const activeFeedback = params.get("feedback") ?? "";
   const activeQuality  = params.get("min_signal") ?? "";
@@ -59,12 +80,12 @@ export function FilterContent({ onClear, className }: FilterContentProps) {
 
   const clearAll = useCallback(() => {
     const next = new URLSearchParams(params.toString());
-    ["topic", "source_id", "feedback", "min_signal"].forEach((k) => next.delete(k));
+    ["topic", "source_id", "feedback", "min_signal", "category", "time_range"].forEach((k) => next.delete(k));
     router.push(`?${next.toString()}`, { scroll: false });
     onClear?.();
   }, [params, router, onClear]);
 
-  const hasActive = activeTopic || activeSource || activeFeedback || activeQuality;
+  const hasActive = activeTopic || activeSource || activeFeedback || activeQuality || activeCategory || activeTime !== "7d";
 
   return (
     <div className={cn("space-y-6", className)}>
@@ -76,6 +97,52 @@ export function FilterContent({ onClear, className }: FilterContentProps) {
           Clear all filters
         </button>
       )}
+
+      {/* Content type */}
+      <section>
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+          Content Type
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {CONTENT_TYPES.map((t) => (
+            <button
+              key={t.value}
+              onClick={() => setParam("category", t.value)}
+              className={cn(
+                "rounded-full px-3 py-1 text-xs font-medium border transition-colors",
+                activeCategory === t.value
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-muted/40 text-muted-foreground border-border hover:bg-muted hover:text-foreground"
+              )}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* Time range */}
+      <section>
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+          Time Range
+        </p>
+        <div className="flex gap-2">
+          {TIME_RANGES.map((t) => (
+            <button
+              key={t.value}
+              onClick={() => setParam("time_range", t.value)}
+              className={cn(
+                "flex-1 rounded-lg px-2 py-2 text-xs font-medium border transition-colors",
+                activeTime === t.value
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-muted/40 text-muted-foreground border-border hover:bg-muted hover:text-foreground"
+              )}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </section>
 
       {/* Topic */}
       <section>

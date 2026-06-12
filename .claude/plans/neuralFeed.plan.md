@@ -451,3 +451,9 @@ to recognize, never louder.
 - Lighthouse CLS ≈ 0 with and without images.
 
 STATUS: PLAN ONLY — implementation awaits explicit go-ahead.
+
+## V6.2 — Mobile filter collapse (app-feedback-v3 line 10)
+- Mobile: both chip rows removed; one quiet summary pill ("Week · All types") opens
+  the bottom-sheet drawer + a small Saved toggle. Clear appears only when filters active.
+- Drawer gains Content Type + Time Range sections (nothing lost), included in clear-all.
+- Desktop keeps the full chip rows.

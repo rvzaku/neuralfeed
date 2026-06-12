@@ -44,9 +44,49 @@ export function FilterBar({ onFilterClick }: FilterBarProps) {
     router.push(`?${next.toString()}`, { scroll: false });
   }
 
+  const categoryLabel = CONTENT_TYPES.find((t) => t.value === activeCategory)?.label ?? "All";
+  const timeLabel = TIME_RANGES.find((t) => t.value === activeTime)?.label ?? "Week";
+
   return (
     <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm border-b border-border">
-      <div className="px-4 pt-3 pb-2 space-y-2">
+      {/* Mobile: one quiet summary pill — all filtering lives in the drawer */}
+      <div className="md:hidden px-4 py-2 flex items-center gap-2">
+        <button
+          onClick={onFilterClick}
+          aria-label="Open filters"
+          className={cn(
+            "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors min-h-[36px]",
+            hasActiveFilters
+              ? "border-foreground/30 text-foreground"
+              : "border-border text-muted-foreground"
+          )}
+        >
+          <SlidersHorizontal className="h-3 w-3" />
+          {timeLabel} · {categoryLabel}
+        </button>
+        <button
+          onClick={() => setParam("is_bookmarked", savedOnly ? "" : "true")}
+          aria-pressed={savedOnly}
+          aria-label="Saved only"
+          className={cn(
+            "flex items-center justify-center rounded-full border min-h-[36px] min-w-[36px] transition-colors",
+            savedOnly ? "border-foreground/30 text-foreground" : "border-border text-muted-foreground"
+          )}
+        >
+          <Bookmark className="h-3.5 w-3.5" />
+        </button>
+        {hasActiveFilters && (
+          <button
+            onClick={() => router.push("/", { scroll: false })}
+            className="ml-auto text-xs text-muted-foreground"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
+      {/* Desktop: full chip rows */}
+      <div className="hidden md:block px-4 pt-3 pb-2 space-y-2">
         {/* Content type pills + filter button (filter button hidden on desktop — sidebar handles it) */}
         <div className="flex items-center gap-2">
           <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-0.5 flex-1">
