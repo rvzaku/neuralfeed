@@ -2,6 +2,7 @@ import structlog
 from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 
 from app.core.config import settings
 from app.core.database import init_db, AsyncSessionLocal
@@ -60,6 +61,7 @@ app.add_middleware(
 )
 
 app.add_middleware(RateLimitMiddleware)
+app.add_middleware(GZipMiddleware, minimum_size=1024)
 
 # Auth endpoints are never gated; everything else requires a user once
 # AUTH_REQUIRED=true (no-op until then — see require_user_when_enabled).

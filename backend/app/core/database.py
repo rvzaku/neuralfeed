@@ -81,7 +81,28 @@ async def _ensure_additive_columns() -> None:
                 )
 
 
+_INDEXES = [
+    ("ix_articles_published_at", "articles", "published_at"),
+    ("ix_articles_source_id", "articles", "source_id"),
+]
+
+
+async def _ensure_indexes() -> None:
+    from sqlalchemy import text
+
+    for name, table, column in _INDEXES:
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(
+                    text(f"CREATE INDEX IF NOT EXISTS {name} ON {table} ({column})")
+                )
+        except Exception as e:
+            import structlog
+            structlog.get_logger().error("index_create_failed", index=name, error=str(e))
+
+
 async def init_db() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     await _ensure_additive_columns()
+    await _ensure_indexes()

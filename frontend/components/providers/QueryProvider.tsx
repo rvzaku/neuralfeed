@@ -10,7 +10,9 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
         defaultOptions: {
           queries: {
             staleTime: 1000 * 60 * 5,
-            retry: 2,
+            retry: 1,
+            // Free-tier backend: don't refire every query on each tab switch
+            refetchOnWindowFocus: false,
           },
         },
       })
