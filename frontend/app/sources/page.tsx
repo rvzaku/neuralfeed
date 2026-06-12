@@ -168,34 +168,40 @@ export default function SourcesPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm border-b border-border px-4 py-3 flex items-center gap-2">
-        <Database className="h-4 w-4 text-primary" />
-        <h1 className="font-semibold text-sm">Sources</h1>
+      <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border px-4 py-3 flex items-center gap-2.5">
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-brand text-white">
+          <Database className="h-3.5 w-3.5" />
+        </span>
+        <h1 className="font-serif font-bold text-base">Sources</h1>
         <span className="ml-auto text-xs text-muted-foreground">
           {enabledCount}/{totalCount} enabled
         </span>
       </header>
 
       {/* Tabs */}
-      <div className="border-b border-border px-4 flex gap-1 max-w-2xl mx-auto w-full">
-        {([
-          ["sources", "Sources", Database],
-          ["targets", "Follow targets", Users],
-        ] as const).map(([value, label, Icon]) => (
-          <button
-            key={value}
-            onClick={() => setTab(value)}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors",
-              tab === value
-                ? "border-primary text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <Icon className="h-3.5 w-3.5" />
-            {label}
-          </button>
-        ))}
+      <div className="px-4 pt-3 max-w-2xl mx-auto w-full">
+        <div className="flex items-center gap-1 rounded-full bg-muted p-0.5 w-fit" role="tablist">
+          {([
+            ["sources", "Sources", Database],
+            ["targets", "Follow targets", Users],
+          ] as const).map(([value, label, Icon]) => (
+            <button
+              key={value}
+              role="tab"
+              aria-selected={tab === value}
+              onClick={() => setTab(value)}
+              className={cn(
+                "flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all min-h-[36px]",
+                tab === value
+                  ? "bg-gradient-brand text-white shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <main className="flex-1 pb-24 md:pb-6 max-w-2xl mx-auto w-full">
