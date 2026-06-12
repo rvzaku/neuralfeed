@@ -63,6 +63,7 @@ for router in [
     )
 
 
-@app.get("/health")
+# HEAD included for uptime monitors (UptimeRobot free tier probes with HEAD)
+@app.api_route("/health", methods=["GET", "HEAD"])
 async def health() -> dict:
     return {"status": "ok"}
