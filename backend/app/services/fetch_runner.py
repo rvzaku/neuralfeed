@@ -8,7 +8,7 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.time import utcnow
-from app.fetchers.registry import FETCHER_MAP
+from app.fetchers.registry import resolve_fetcher
 from app.models.source import Source
 from app.services.ingest import ingest_items
 
@@ -31,14 +31,15 @@ async def _record_health(
 
 async def run_fetch(source_id: str, db: AsyncSession) -> int:
     """Fetch one source, ingest, record health. Returns items inserted."""
-    factory = FETCHER_MAP.get(source_id)
-    if not factory:
+    source = await db.get(Source, source_id)
+    fetcher = resolve_fetcher(source_id, url=source.url if source else None)
+    if not fetcher:
         log.warning("unknown_source", source_id=source_id)
         await _record_health(db, source_id, "error", "no fetcher registered", 0)
         return 0
 
     try:
-        result = await factory().fetch()
+        result = await fetcher.fetch()
     except Exception as exc:  # fetcher bugs must not take the caller down
         log.error("fetch_crashed", source_id=source_id, error=str(exc))
         await _record_health(db, source_id, "error", str(exc), 0)

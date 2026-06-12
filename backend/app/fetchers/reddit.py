@@ -71,8 +71,10 @@ def _reddit_image(post: dict) -> "str | None":
 
 
 class RedditFetcher(BaseFetcher):
-    def __init__(self, source_id: str):
+    def __init__(self, source_id: str, sub: "str | None" = None):
         self.source_id = source_id
+        # Explicit sub for user-added custom sources; registry map otherwise
+        self.sub = sub or SUBREDDITS.get(source_id)
 
     def _fetch_rss_fallback(self, sub: str) -> FetchResult:
         """Reddit blocks httpx's TLS fingerprint on many networks but serves
@@ -152,7 +154,7 @@ class RedditFetcher(BaseFetcher):
             return None
 
     async def fetch(self) -> FetchResult:
-        sub = SUBREDDITS.get(self.source_id)
+        sub = self.sub
         if not sub:
             return FetchResult(source_id=self.source_id, error="unknown subreddit")
 
@@ -176,7 +178,7 @@ class RedditFetcher(BaseFetcher):
     async def backfill(self, days: int = 30) -> FetchResult:
         """Historical window via top.json — Reddit's only popularity-sorted
         lookback. t=month covers the 30-day target."""
-        sub = SUBREDDITS.get(self.source_id)
+        sub = self.sub
         if not sub:
             return FetchResult(source_id=self.source_id, error="unknown subreddit")
         t = "month" if days > 7 else "week"

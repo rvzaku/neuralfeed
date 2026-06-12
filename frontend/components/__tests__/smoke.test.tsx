@@ -2,10 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MobileNav } from "@/components/layout/MobileNav";
-import { FrontPage } from "@/components/feed/FrontPage";
 import { SummarySheet } from "@/components/feed/SummarySheet";
 import { FeedCard } from "@/components/feed/FeedCard";
-import type { Article, Story } from "@/lib/types";
+import type { Article } from "@/lib/types";
 
 function withQuery(ui: React.ReactElement) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -26,23 +25,9 @@ const article: Article = {
   is_bookmarked: false,
   feedback: null,
   trending_score: 10,
-};
-
-const story: Story = {
-  id: "s1",
-  headline: "Qwen 3 released",
-  lead_article_id: "a1",
-  article_count: 4,
-  source_count: 3,
-  topic_tags: ["llm", "open-source"],
-  latest_at: new Date().toISOString(),
-  total_trending: 900,
-  source_ids: ["arxiv-cs-ai", "reddit-ml", "github-trending"],
-  relevance: 2.5,
-  summary: "Alibaba ships its next open-weight model family.",
-  context_line: "Qwen 3 sets new open-weight benchmarks across reasoning tasks.",
-  is_read: false,
-  article_ids: ["a1"],
+  relevance: 87,
+  why: ["412 upvotes on Reddit", "published today"],
+  engagement: { upvotes: 412, comments: 38 },
 };
 
 describe("MobileNav", () => {
@@ -55,15 +40,6 @@ describe("MobileNav", () => {
   });
 });
 
-describe("FrontPage", () => {
-  it("shows headline and item/source counts", () => {
-    withQuery(<FrontPage stories={[story]} onOpenArticle={vi.fn()} />);
-    expect(screen.getByText("Qwen 3 released")).toBeInTheDocument();
-    expect(screen.getByText(/4 related items/)).toBeInTheDocument();
-    expect(screen.getByText(/Qwen 3 sets new open-weight benchmarks/)).toBeInTheDocument();
-  });
-});
-
 describe("FeedCard", () => {
   it("renders title, source actions, and a direct source link", () => {
     withQuery(<FeedCard article={article} onOpen={vi.fn()} />);
@@ -73,6 +49,12 @@ describe("FeedCard", () => {
       "href",
       "https://example.com/qwen3"
     );
+  });
+
+  it("shows the relevance match and why line", () => {
+    withQuery(<FeedCard article={article} onOpen={vi.fn()} />);
+    expect(screen.getByText("87% match")).toBeInTheDocument();
+    expect(screen.getByText(/412 upvotes on Reddit/)).toBeInTheDocument();
   });
 });
 

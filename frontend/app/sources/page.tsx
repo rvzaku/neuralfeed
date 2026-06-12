@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Database, RefreshCw, CheckCircle2, XCircle, AlertTriangle, Users } from "lucide-react";
+import { Database, RefreshCw, CheckCircle2, XCircle, AlertTriangle, Users, Plus, Rss, MessageCircle, Github } from "lucide-react";
 import { FollowTargets } from "@/components/sources/FollowTargets";
-import { useSources, usePatchSource, useSourcesHealth } from "@/hooks/useFeed";
+import { useAddSource, useSources, usePatchSource, useSourcesHealth } from "@/hooks/useFeed";
 import { cn, formatRelativeTime } from "@/lib/utils";
 import type { Source, SourceHealth } from "@/lib/types";
 
@@ -104,6 +104,83 @@ function SourceRow({ source, health }: { source: Source; health?: SourceHealth }
   );
 }
 
+const KIND_OPTIONS = [
+  { kind: "rss" as const,    label: "RSS feed",  icon: Rss,           placeholder: "https://example.com/feed.xml" },
+  { kind: "reddit" as const, label: "Subreddit", icon: MessageCircle, placeholder: "LocalLLaMA" },
+  { kind: "github" as const, label: "GitHub",    icon: Github,        placeholder: "topic or org, e.g. rag" },
+];
+
+/** V8: user-added sources — RSS URL, subreddit, or GitHub topic/org. */
+function AddSourceForm() {
+  const [open, setOpen] = useState(false);
+  const [kind, setKind] = useState<"rss" | "reddit" | "github">("rss");
+  const [value, setValue] = useState("");
+  const { mutate: add, isPending, error, reset } = useAddSource();
+  const selected = KIND_OPTIONS.find((o) => o.kind === kind)!;
+
+  function submit() {
+    if (!value.trim()) return;
+    add({ kind, value: value.trim() }, { onSuccess: () => { setValue(""); setOpen(false); } });
+  }
+
+  if (!open) {
+    return (
+      <div className="px-4 pt-4">
+        <button
+          onClick={() => setOpen(true)}
+          className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium border border-dashed border-border rounded-xl hover:bg-muted transition-colors text-muted-foreground"
+        >
+          <Plus className="h-4 w-4" /> Add a source
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-4 mt-4 rounded-xl border border-border bg-card p-4 space-y-3">
+      <div className="flex items-center gap-1.5">
+        {KIND_OPTIONS.map(({ kind: k, label, icon: Icon }) => (
+          <button
+            key={k}
+            onClick={() => { setKind(k); reset(); }}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors",
+              kind === k ? "bg-foreground text-background border-foreground" : "border-border text-muted-foreground hover:bg-muted"
+            )}
+          >
+            <Icon className="h-3.5 w-3.5" /> {label}
+          </button>
+        ))}
+      </div>
+      <input
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && submit()}
+        placeholder={selected.placeholder}
+        className="w-full px-3 py-2.5 text-sm rounded-lg border border-border bg-background outline-none focus:ring-2 focus:ring-primary/40"
+        aria-label="Source value"
+      />
+      {error ? (
+        <p className="text-xs text-destructive">
+          {(error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? "Could not add source."}
+        </p>
+      ) : null}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={submit}
+          disabled={isPending || !value.trim()}
+          className="px-4 py-2 rounded-full bg-foreground text-background text-xs font-semibold disabled:opacity-50"
+        >
+          {isPending ? "Adding…" : "Add source"}
+        </button>
+        <button onClick={() => setOpen(false)} className="text-xs text-muted-foreground hover:text-foreground">
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function SourceList() {
   const { data: sources, isLoading, isError } = useSources(true);
   const { data: health } = useSourcesHealth();
@@ -120,6 +197,7 @@ function SourceList() {
 
   return (
     <div>
+      <AddSourceForm />
       {isLoading && (
         <div className="flex items-center justify-center py-20">
           <RefreshCw className="h-5 w-5 text-muted-foreground animate-spin" />

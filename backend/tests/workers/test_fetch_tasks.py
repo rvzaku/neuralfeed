@@ -51,6 +51,7 @@ class TestRunFetch:
     @pytest.mark.asyncio
     async def test_failed_fetch_returns_zero_and_records_error(self):
         from app.fetchers.base import FetchResult
+        from app.fetchers import registry
         from app.services import fetch_runner
 
         mock_fetcher = MagicMock()
@@ -58,7 +59,7 @@ class TestRunFetch:
         source = _mock_source()
         db = _mock_db(source)
 
-        with patch.dict(fetch_runner.FETCHER_MAP, {"test-src": lambda: mock_fetcher}):
+        with patch.dict(registry.FETCHER_MAP, {"test-src": lambda: mock_fetcher}):
             result = await fetch_runner.run_fetch("test-src", db)
 
         assert result == 0
@@ -67,6 +68,7 @@ class TestRunFetch:
 
     @pytest.mark.asyncio
     async def test_crashing_fetcher_is_contained(self):
+        from app.fetchers import registry
         from app.services import fetch_runner
 
         mock_fetcher = MagicMock()
@@ -74,7 +76,7 @@ class TestRunFetch:
         source = _mock_source()
         db = _mock_db(source)
 
-        with patch.dict(fetch_runner.FETCHER_MAP, {"test-src": lambda: mock_fetcher}):
+        with patch.dict(registry.FETCHER_MAP, {"test-src": lambda: mock_fetcher}):
             result = await fetch_runner.run_fetch("test-src", db)
 
         assert result == 0
@@ -84,6 +86,7 @@ class TestRunFetch:
     @pytest.mark.asyncio
     async def test_successful_fetch_calls_ingest_and_records_ok(self):
         from app.fetchers.base import FetchResult
+        from app.fetchers import registry
         from app.services import fetch_runner
 
         items = [{"title": "T", "url": "https://example.com/a", "published_at": None, "trending_score": 0.0}]
@@ -92,7 +95,7 @@ class TestRunFetch:
         source = _mock_source()
         db = _mock_db(source)
 
-        with patch.dict(fetch_runner.FETCHER_MAP, {"test-src2": lambda: mock_fetcher}):
+        with patch.dict(registry.FETCHER_MAP, {"test-src2": lambda: mock_fetcher}):
             with patch("app.services.fetch_runner.ingest_items", new=AsyncMock(return_value=1)) as mock_ingest:
                 result = await fetch_runner.run_fetch("test-src2", db)
 

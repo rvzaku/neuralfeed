@@ -36,8 +36,12 @@ class HuggingFaceFetcher(BaseFetcher):
                     f"New {(m.get('pipeline_tag') or 'AI').replace('-', ' ')} model "
                     f"on Hugging Face ({m.get('downloads', 0):,} downloads)."
                 ),
-                "published_at": m.get("lastModified") or now,
+                "published_at": m.get("createdAt") or m.get("lastModified") or now,
                 "trending_score": float(m.get("downloads", 0)) / 1000.0,
+                "engagement": {
+                    "downloads": int(m.get("downloads", 0)),
+                    "likes": int(m.get("likes", 0)),
+                },
             })
 
         log.info("hf_fetched", count=len(items))

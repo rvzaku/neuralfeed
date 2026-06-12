@@ -67,8 +67,10 @@ async def get_feed(
     total = total_result.scalar_one()
 
     if ranked:
-        from app.services.ranker import rank_articles
-        from app.services.relevance import apply_daily_caps, interleave_by_group
+        from app.services.ranker import (
+            _get_source_affinity, _get_topic_weights, rank_articles,
+        )
+        from app.services.relevance import apply_daily_caps, explain, interleave_by_group
         # Bound the candidate set: rank the newest 2000, not the whole table
         all_result = await db.execute(q.order_by(Article.published_at.desc()).limit(2000))
         all_items = list(all_result.scalars().all())
@@ -82,7 +84,13 @@ async def get_feed(
         capped = apply_daily_caps(
             all_items, per_day=per_day, window_days=window_days, category_of=category_of
         )
-        ranked_items = await rank_articles(capped, db)
+        # V8: display-time cross-source dedupe — the same story fetched via
+        # two sources must never appear twice in one feed (app-feedback-v5)
+        from app.services.story_clusterer import dedupe_cross_source
+        capped = dedupe_cross_source(capped)
+
+        user_id = user.id if user else None
+        ranked_items = await rank_articles(capped, db, user_id=user_id)
         total = len(ranked_items)
 
         # Mix categories within each day unless the user already narrowed
@@ -93,12 +101,25 @@ async def get_feed(
             )
         offset = (page - 1) * limit
         items = ranked_items[offset: offset + limit]
+
+        # Visible relevance: match % + why, only for the page being returned
+        topic_w = await _get_topic_weights(db, user_id)
+        affinity = await _get_source_affinity(db, user_id)
+        explanations = {
+            a.id: explain(a, window_days, topic_weights=topic_w, source_affinity=affinity)
+            for a in items
+        }
     else:
         q = q.order_by(Article.published_at.desc()).offset((page - 1) * limit).limit(limit)
         result = await db.execute(q)
         items = result.scalars().all()
 
     out_items = [ArticleOut.model_validate(a) for a in items]
+    if ranked:
+        for o in out_items:
+            match, why = explanations.get(o.id, (None, None))
+            o.relevance = match
+            o.why = why or None
 
     if user:
         from app.services.user_state import overlay, state_map

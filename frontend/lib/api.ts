@@ -82,6 +82,15 @@ export async function patchSource(sourceId: string, body: { enabled?: boolean; p
   return data;
 }
 
+export async function createSource(body: {
+  kind: "rss" | "reddit" | "github";
+  value: string;
+  name?: string;
+}): Promise<Source> {
+  const { data } = await api.post<Source>("/api/v1/sources", body);
+  return data;
+}
+
 export async function triggerSourceFetch(sourceId: string): Promise<void> {
   await api.post(`/api/v1/sources/${sourceId}/fetch`);
 }
@@ -145,23 +154,9 @@ export async function getStoryDetail(storyId: string, days = 7): Promise<StoryDe
   return data;
 }
 
-// AI summary (generation can take a few seconds on first open)
+// AI "5-minute read" summary (generation can take a minute on first open)
 export async function getSummary(articleId: string): Promise<ArticleSummary> {
   const { data } = await api.get<ArticleSummary>(`/api/v1/articles/${articleId}/summary`, {
-    timeout: 90000,
-  });
-  return data;
-}
-
-export interface DeepSummary {
-  markdown: string;
-  reading_minutes: number;
-  cached: boolean;
-}
-
-export async function getDeepSummary(articleId: string): Promise<DeepSummary> {
-  const { data } = await api.get<DeepSummary>(`/api/v1/articles/${articleId}/summary`, {
-    params: { mode: "deep" },
     timeout: 120000,
   });
   return data;

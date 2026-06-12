@@ -9,51 +9,6 @@ import { clearSession, getEmail } from "@/lib/auth";
 import { usePreferences, useSetPreference, useSources } from "@/hooks/useFeed";
 import { cn } from "@/lib/utils";
 
-const TOPICS = [
-  { key: "llm",                  label: "LLMs & Language Models" },
-  { key: "computer-vision",      label: "Computer Vision" },
-  { key: "multimodal",           label: "Multimodal AI" },
-  { key: "reinforcement-learning", label: "Reinforcement Learning" },
-  { key: "ai-safety",            label: "AI Safety & Alignment" },
-  { key: "robotics",             label: "Robotics" },
-  { key: "ai-agents",            label: "AI Agents" },
-  { key: "audio-speech",         label: "Audio & Speech" },
-  { key: "open-source",          label: "Open Source" },
-  { key: "ai-infrastructure",    label: "Infrastructure & MLOps" },
-  { key: "products",             label: "Products & Launches" },
-  { key: "funding",              label: "Funding & Business" },
-];
-
-function WeightSlider({
-  topicKey,
-  label,
-  value,
-  onChange,
-}: {
-  topicKey: string;
-  label: string;
-  value: number;
-  onChange: (k: string, v: number) => void;
-}) {
-  return (
-    <div className="flex items-center gap-3 py-2">
-      <label className="text-sm w-44 shrink-0">{label}</label>
-      <input
-        type="range"
-        min={0}
-        max={1}
-        step={0.1}
-        value={value}
-        onChange={(e) => onChange(topicKey, parseFloat(e.target.value))}
-        className="flex-1 accent-primary"
-      />
-      <span className="text-xs text-muted-foreground w-8 text-right">
-        {value.toFixed(1)}
-      </span>
-    </div>
-  );
-}
-
 function AccountSection() {
   const router = useRouter();
   const email = typeof window !== "undefined" ? getEmail() : null;
@@ -84,7 +39,6 @@ export default function SettingsPage() {
   const { mutate: setPref, isPending: isSaving } = useSetPreference();
   const { data: sources } = useSources(true);
 
-  const [topicWeights, setTopicWeights] = useState<Record<string, number>>({});
   const [mutedSources, setMutedSources] = useState<string[]>([]);
   const [feedDensity, setFeedDensity] = useState(10);
   const [dirty, setDirty] = useState(false);
@@ -94,21 +48,11 @@ export default function SettingsPage() {
     const density = Number(prefs.feed_density);
     setFeedDensity(Number.isFinite(density) && density > 0 ? density : 10);
     try {
-      setTopicWeights(prefs.topic_weights ? JSON.parse(prefs.topic_weights) : {});
-    } catch {
-      setTopicWeights({});
-    }
-    try {
       setMutedSources(prefs.muted_sources ? JSON.parse(prefs.muted_sources) : []);
     } catch {
       setMutedSources([]);
     }
   }, [prefs]);
-
-  const handleWeightChange = (key: string, value: number) => {
-    setTopicWeights((prev) => ({ ...prev, [key]: value }));
-    setDirty(true);
-  };
 
   const toggleMutedSource = (id: string) => {
     setMutedSources((prev) =>
@@ -118,14 +62,12 @@ export default function SettingsPage() {
   };
 
   const handleSave = () => {
-    setPref({ key: "topic_weights", value: topicWeights });
     setPref({ key: "muted_sources", value: mutedSources });
     setPref({ key: "feed_density", value: feedDensity });
     setDirty(false);
   };
 
   const handleReset = () => {
-    setTopicWeights({});
     setMutedSources([]);
     setDirty(true);
   };
@@ -199,33 +141,19 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        {/* Topic Weights */}
+        {/* Learned personalization — V8: no manual sliders */}
         <section>
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
-            Topic Weights
+            Personalization
           </h2>
-          <p className="text-xs text-muted-foreground mb-4">
-            Boost topics you care about. Higher weight = ranked higher in feed.
-          </p>
-          {isLoading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-7 bg-muted rounded animate-pulse" />
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-1">
-              {TOPICS.map(({ key, label }) => (
-                <WeightSlider
-                  key={key}
-                  topicKey={key}
-                  label={label}
-                  value={topicWeights[key] ?? 0}
-                  onChange={handleWeightChange}
-                />
-              ))}
-            </div>
-          )}
+          <div className="rounded-xl border border-border bg-card p-4">
+            <p className="text-sm font-medium mb-1">Learned from your reactions</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              NeuralFeed tunes itself from your thumbs up/down and saves — liked topics and
+              sources rise, disliked ones sink. No sliders to maintain; just react to articles
+              and the For You feed adapts.
+            </p>
+          </div>
         </section>
 
         {/* Muted Sources */}

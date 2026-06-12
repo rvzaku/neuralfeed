@@ -51,9 +51,17 @@ export interface Article {
     upvotes?: number;
     points?: number;
     comments?: number;
+    downloads?: number;
+    likes?: number;
   } | null;
   /** Cached one-line LLM "why this matters" context */
   context_line?: string | null;
+  /** Slug/raw title as fetched, kept when the title was rewritten */
+  original_title?: string | null;
+  /** V8 visible relevance: 0-100 match (ranked views only) */
+  relevance?: number | null;
+  /** Human-readable reasons this item surfaced (traction, topic fit) */
+  why?: string[] | null;
 }
 
 export interface Source {
@@ -125,8 +133,8 @@ export interface StoryDetail extends Story {
 export interface ArticleSummary {
   article_id: string;
   url: string;
-  summary: string;
-  takeaways: string[];
+  markdown: string;
+  reading_minutes: number;
   cached: boolean;
 }
 

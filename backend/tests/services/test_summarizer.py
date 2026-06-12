@@ -11,7 +11,6 @@ from app.services.summarizer import (
     OllamaProvider,
     SummaryError,
     _html_to_text,
-    _parse_llm_json,
     extract_article_text,
     get_or_generate_summary,
     get_provider,
@@ -43,13 +42,13 @@ class TestProviders:
 
     @pytest.mark.asyncio
     async def test_groq_success(self):
-        body = {"choices": [{"message": {"content": '{"summary": "S", "takeaways": ["a"]}'}}]}
+        body = {"choices": [{"message": {"content": "A clear story about the model. " * 20}}]}
         resp = MagicMock(status_code=200)
         resp.json.return_value = body
         resp.raise_for_status = MagicMock()
         with patch("app.services.summarizer.httpx.AsyncClient", return_value=_mock_async_client(resp)):
             out = await GroqProvider(api_key="k").summarize("t", "c")
-        assert out["summary"] == "S"
+        assert "clear story" in out
 
     @pytest.mark.asyncio
     async def test_groq_http_error_wrapped(self):
@@ -61,11 +60,11 @@ class TestProviders:
     @pytest.mark.asyncio
     async def test_ollama_success(self):
         resp = MagicMock(status_code=200)
-        resp.json.return_value = {"message": {"content": '{"summary": "S", "takeaways": []}'}}
+        resp.json.return_value = {"message": {"content": "A clear story about the model. " * 20}}
         resp.raise_for_status = MagicMock()
         with patch("app.services.summarizer.httpx.AsyncClient", return_value=_mock_async_client(resp)):
             out = await OllamaProvider(base_url="http://x", model="m").summarize("t", "c")
-        assert out["summary"] == "S"
+        assert "clear story" in out
 
     def test_get_provider_default_is_groq(self):
         assert isinstance(get_provider(), GroqProvider)
@@ -109,52 +108,45 @@ def _article(**kw):
     return Article(**defaults)
 
 
-class TestParseLlmJson:
-    def test_clean_json(self):
-        out = _parse_llm_json('{"summary": "S", "takeaways": ["a", "b", "c"]}')
-        assert out == {"summary": "S", "takeaways": ["a", "b", "c"]}
-
-    def test_fenced_json(self):
-        out = _parse_llm_json('```json\n{"summary": "S", "takeaways": []}\n```')
-        assert out["summary"] == "S"
-
-    def test_caps_takeaways_at_three(self):
-        out = _parse_llm_json(json.dumps({"summary": "S", "takeaways": ["1", "2", "3", "4"]}))
-        assert len(out["takeaways"]) == 3
-
-    def test_no_json_raises(self):
-        with pytest.raises(SummaryError):
-            _parse_llm_json("I cannot summarize this.")
-
-    def test_empty_summary_raises(self):
-        with pytest.raises(SummaryError):
-            _parse_llm_json('{"summary": "", "takeaways": []}')
-
-
 class TestGetOrGenerateSummary:
     @pytest.mark.asyncio
-    async def test_cache_hit_skips_provider(self):
-        article = _article(ai_summary=json.dumps({"summary": "cached!", "takeaways": ["x"]}))
+    async def test_markdown_cache_hit_skips_provider(self):
+        article = _article(ai_summary="Cached five-minute story.")
         db = AsyncMock()
         with patch("app.services.summarizer.get_provider") as mock_provider:
             result = await get_or_generate_summary(article, db)
         mock_provider.assert_not_called()
         assert result["cached"] is True
-        assert result["summary"] == "cached!"
+        assert result["markdown"] == "Cached five-minute story."
 
     @pytest.mark.asyncio
-    async def test_cache_miss_generates_and_caches(self):
+    async def test_legacy_json_cache_is_regenerated(self):
+        # Pre-V8 caches were JSON blobs — they must not render verbatim
+        article = _article(ai_summary=json.dumps({"summary": "old", "takeaways": []}))
+        db = AsyncMock()
+        provider = AsyncMock()
+        provider.summarize = AsyncMock(return_value="A fresh free-form summary.")
+        with patch("app.services.summarizer.get_provider", return_value=provider):
+            with patch("app.services.summarizer.extract_content_for",
+                       new=AsyncMock(return_value="page text " * 50)):
+                result = await get_or_generate_summary(article, db)
+        assert result["cached"] is False
+        assert article.ai_summary == "A fresh free-form summary."
+
+    @pytest.mark.asyncio
+    async def test_cache_miss_generates_and_caches_markdown(self):
         article = _article()
         db = AsyncMock()
         provider = AsyncMock()
-        provider.summarize = AsyncMock(return_value={"summary": "fresh", "takeaways": ["a"]})
+        provider.summarize = AsyncMock(return_value="fresh markdown")
         with patch("app.services.summarizer.get_provider", return_value=provider):
-            with patch("app.services.summarizer.extract_article_text",
+            with patch("app.services.summarizer.extract_content_for",
                        new=AsyncMock(return_value="long page text " * 50)):
                 result = await get_or_generate_summary(article, db)
         assert result["cached"] is False
-        assert json.loads(article.ai_summary)["summary"] == "fresh"
+        assert article.ai_summary == "fresh markdown"
         assert article.ai_summary_at is not None
+        assert result["reading_minutes"] >= 1
         db.commit.assert_awaited()
 
     @pytest.mark.asyncio
@@ -162,35 +154,26 @@ class TestGetOrGenerateSummary:
         article = _article(summary="the stored snippet")
         db = AsyncMock()
         provider = AsyncMock()
-        provider.summarize = AsyncMock(return_value={"summary": "from snippet", "takeaways": []})
+        provider.summarize = AsyncMock(return_value="from snippet")
         with patch("app.services.summarizer.get_provider", return_value=provider):
-            with patch("app.services.summarizer.extract_article_text",
+            with patch("app.services.summarizer.extract_content_for",
                        new=AsyncMock(return_value=None)):
                 result = await get_or_generate_summary(article, db)
         provider.summarize.assert_awaited_once()
-        assert provider.summarize.await_args.args[1] == "the stored snippet"
-        assert result["summary"] == "from snippet"
+        assert "the stored snippet" in provider.summarize.await_args.args[1]
+        assert result["markdown"] == "from snippet"
 
     @pytest.mark.asyncio
-    async def test_no_text_at_all_raises(self):
-        article = _article(summary=None)
-        db = AsyncMock()
-        with patch("app.services.summarizer.extract_article_text",
-                   new=AsyncMock(return_value=None)):
-            with pytest.raises(SummaryError):
-                await get_or_generate_summary(article, db)
-
-    @pytest.mark.asyncio
-    async def test_arxiv_uses_abstract_without_page_fetch(self):
+    async def test_arxiv_abstract_is_included_in_content(self):
         article = _article(source_id="arxiv-cs-ai", summary="the abstract")
         db = AsyncMock()
         provider = AsyncMock()
-        provider.summarize = AsyncMock(return_value={"summary": "s", "takeaways": []})
+        provider.summarize = AsyncMock(return_value="s")
         with patch("app.services.summarizer.get_provider", return_value=provider):
-            with patch("app.services.summarizer.extract_article_text") as mock_extract:
+            with patch("app.services.summarizer.extract_content_for",
+                       new=AsyncMock(return_value="page body")):
                 await get_or_generate_summary(article, db)
-        mock_extract.assert_not_called()
-        assert provider.summarize.await_args.args[1] == "the abstract"
+        assert "the abstract" in provider.summarize.await_args.args[1]
 
     @pytest.mark.asyncio
     async def test_provider_failure_propagates_and_nothing_cached(self):
@@ -199,7 +182,7 @@ class TestGetOrGenerateSummary:
         provider = AsyncMock()
         provider.summarize = AsyncMock(side_effect=SummaryError("provider down"))
         with patch("app.services.summarizer.get_provider", return_value=provider):
-            with patch("app.services.summarizer.extract_article_text",
+            with patch("app.services.summarizer.extract_content_for",
                        new=AsyncMock(return_value="text " * 100)):
                 with pytest.raises(SummaryError):
                     await get_or_generate_summary(article, db)

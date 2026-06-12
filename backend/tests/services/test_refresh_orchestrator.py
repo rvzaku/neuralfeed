@@ -7,6 +7,7 @@ from sqlalchemy import select
 
 from app.core.time import utcnow
 from app.models.source import Source
+from app.fetchers.registry import FETCHER_MAP
 from app.services import refresh_orchestrator as ro
 
 
@@ -25,7 +26,7 @@ async def test_refreshes_all_enabled_sources(db, session_factory):
 
     db.expire_all()
     enabled = (await db.execute(select(Source).where(Source.enabled == True))).scalars().all()
-    fetchable = [s for s in enabled if s.id in ro.FETCHER_MAP]
+    fetchable = [s for s in enabled if s.id in FETCHER_MAP]
     called_ids = {c.args[0] for c in mock_fetch.call_args_list}
     assert called_ids == {s.id for s in fetchable}
     # cursor stamped on every attempted source
@@ -52,7 +53,7 @@ async def test_one_failing_source_does_not_stop_others(db, session_factory):
 async def test_least_recently_attempted_go_first(db, session_factory):
     # Mark every source as already attempted except two stragglers
     sources = (await db.execute(select(Source).where(Source.enabled == True))).scalars().all()
-    fetchable = [s for s in sources if s.id in ro.FETCHER_MAP]
+    fetchable = [s for s in sources if s.id in FETCHER_MAP]
     stragglers = {fetchable[-1].id, fetchable[-2].id}
     for s in fetchable:
         if s.id not in stragglers:

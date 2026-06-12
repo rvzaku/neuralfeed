@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,12 +12,11 @@ router = APIRouter(prefix="/articles", tags=["articles"])
 @router.get("/{article_id}/summary")
 async def get_summary(
     article_id: str,
-    mode: str = Query("quick", pattern="^(quick|deep)$"),
     db: AsyncSession = Depends(get_db),
     user=Depends(get_current_user),
 ) -> dict:
-    """Cached-or-generate summary. quick = 1-minute; deep = 10-minute markdown
-    brief. Opening either marks the article read."""
+    """Cached-or-generate '5-minute read' summary (single mode since V8).
+    Opening it marks the article read."""
     from app.services.summarizer import SummaryError, get_or_generate_summary
 
     article = await db.get(Article, article_id)
@@ -25,7 +24,7 @@ async def get_summary(
         raise HTTPException(status_code=404, detail="Article not found")
 
     try:
-        result = await get_or_generate_summary(article, db, mode=mode)
+        result = await get_or_generate_summary(article, db)
     except SummaryError as e:
         # Frontend falls back to the stored snippet + direct link-out
         raise HTTPException(status_code=503, detail=str(e))
@@ -50,17 +49,22 @@ async def toggle_bookmark(
     if not article:
         raise HTTPException(status_code=404, detail="Article not found")
 
+    from app.services.preference_learner import learn
+
     if user:
         from app.services.user_state import overlay, state_map, upsert_state
         current = (await state_map(db, user.id, [article_id])).get(article_id)
-        state = await upsert_state(
-            db, user.id, article_id,
-            is_bookmarked=not (current.is_bookmarked if current else False),
-        )
+        now_bookmarked = not (current.is_bookmarked if current else False)
+        state = await upsert_state(db, user.id, article_id, is_bookmarked=now_bookmarked)
+        if now_bookmarked:  # saving teaches the ranker; un-saving is just tidying
+            await learn(db, user, article, "bookmark")
+            await db.commit()
         out = ArticleOut.model_validate(article).model_dump()
         return ArticleOut(**overlay(out, state))
 
     article.is_bookmarked = not article.is_bookmarked
+    if article.is_bookmarked:
+        await learn(db, None, article, "bookmark")
     await db.commit()
     return ArticleOut.model_validate(article)
 

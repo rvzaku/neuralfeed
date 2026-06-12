@@ -1,4 +1,8 @@
-"""Deep summaries: caching, source-type extraction routing, provider contract."""
+"""V8 single-mode summary: source-type extraction routing + no-content guard.
+
+(The separate 'deep' mode was removed per app-feedback-v5; the source-aware
+extractors now feed the one 5-minute summary, so routing stays covered.)
+"""
 
 from unittest.mock import AsyncMock, patch
 
@@ -8,7 +12,7 @@ from app.core.time import utcnow
 from app.models.article import Article, make_title_hash
 from app.services import summarizer
 
-DEEP_MD = "## Context\n" + ("word " * 450)  # plausibly long markdown
+MD = "A flowing five-minute story. " + ("word " * 200)
 
 
 def _article(article_id, url, source_id="rss-openai", summary="snippet"):
@@ -27,65 +31,43 @@ async def _persist(db, article):
 
 
 @pytest.mark.asyncio
-async def test_deep_summary_generated_and_cached(db):
-    article = await _persist(db, _article("deep1", "https://openai.com/blog/x"))
+async def test_summary_routes_reddit_to_thread_extractor(db):
+    article = await _persist(db, _article("v8r", "https://reddit.com/r/ml/comments/x/y/", "reddit-ml"))
     provider = AsyncMock()
-    provider.summarize_deep = AsyncMock(return_value=DEEP_MD)
-
-    with patch.object(summarizer, "get_provider", return_value=provider), \
-         patch.object(summarizer, "extract_article_text", new=AsyncMock(return_value="content " * 100)):
-        first = await summarizer.get_or_generate_summary(article, db, mode="deep")
-        second = await summarizer.get_or_generate_summary(article, db, mode="deep")
-
-    assert first["cached"] is False and second["cached"] is True
-    assert second["markdown"] == DEEP_MD
-    assert first["reading_minutes"] >= 2
-    assert article.ai_deep_summary == DEEP_MD
-    assert article.ai_deep_summary_at is not None
-    provider.summarize_deep.assert_awaited_once()  # cache hit skips the provider
-
-
-@pytest.mark.asyncio
-async def test_deep_routes_reddit_to_thread_extractor(db):
-    article = await _persist(db, _article("deep2", "https://reddit.com/r/ml/comments/x/y/", "reddit-ml"))
-    provider = AsyncMock()
-    provider.summarize_deep = AsyncMock(return_value=DEEP_MD)
+    provider.summarize = AsyncMock(return_value=MD)
 
     with patch.object(summarizer, "get_provider", return_value=provider), \
          patch.object(summarizer, "_extract_reddit_thread",
                       new=AsyncMock(return_value="post body\nCOMMENT: insightful " * 30)) as ext:
-        await summarizer.get_or_generate_summary(article, db, mode="deep")
+        await summarizer.get_or_generate_summary(article, db)
     ext.assert_awaited_once()
 
 
 @pytest.mark.asyncio
-async def test_deep_routes_github_to_readme(db):
-    article = await _persist(db, _article("deep3", "https://github.com/org/repo", "github-trending"))
+async def test_summary_routes_github_to_readme(db):
+    article = await _persist(db, _article("v8g", "https://github.com/org/repo", "github-trending"))
     provider = AsyncMock()
-    provider.summarize_deep = AsyncMock(return_value=DEEP_MD)
+    provider.summarize = AsyncMock(return_value=MD)
 
     with patch.object(summarizer, "get_provider", return_value=provider), \
          patch.object(summarizer, "_extract_github_readme",
                       new=AsyncMock(return_value="# Repo\n" + "docs " * 100)) as ext:
-        await summarizer.get_or_generate_summary(article, db, mode="deep")
+        await summarizer.get_or_generate_summary(article, db)
     ext.assert_awaited_once()
 
 
 @pytest.mark.asyncio
-async def test_deep_no_content_raises(db):
-    article = await _persist(db, _article("deep4", "https://dead.example/x", summary=None))
-    with patch.object(summarizer, "extract_article_text", new=AsyncMock(return_value=None)):
-        with pytest.raises(summarizer.SummaryError):
-            await summarizer.get_or_generate_summary(article, db, mode="deep")
-
-
-@pytest.mark.asyncio
-async def test_quick_mode_unchanged(db):
-    article = await _persist(db, _article("deep5", "https://openai.com/blog/y"))
+async def test_summary_generated_once_then_cached(db):
+    article = await _persist(db, _article("v8c", "https://openai.com/blog/x"))
     provider = AsyncMock()
-    provider.summarize = AsyncMock(return_value={"summary": "s", "takeaways": ["a"]})
+    provider.summarize = AsyncMock(return_value=MD)
 
     with patch.object(summarizer, "get_provider", return_value=provider), \
          patch.object(summarizer, "extract_article_text", new=AsyncMock(return_value="content " * 100)):
-        result = await summarizer.get_or_generate_summary(article, db)
-    assert result["summary"] == "s" and result["cached"] is False
+        first = await summarizer.get_or_generate_summary(article, db)
+        second = await summarizer.get_or_generate_summary(article, db)
+
+    assert first["cached"] is False and second["cached"] is True
+    assert second["markdown"] == MD
+    assert first["reading_minutes"] >= 1
+    provider.summarize.assert_awaited_once()

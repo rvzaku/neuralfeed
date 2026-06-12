@@ -18,18 +18,12 @@ async def list_stories(
     db: AsyncSession = Depends(get_db),
     user=Depends(get_current_user),
 ) -> dict:
+    # V8: no LLM context-line generation here — user dropped feed-side LLM
+    # blurbs (app-feedback-v5); stories carry the stored snippet instead.
     read_ids = await _user_read_ids(db, user) if user else None
-    digest = await get_stories(
+    return await get_stories(
         db, days=days, limit=limit, unread_only=unread_only, topic=topic, read_ids=read_ids
     )
-    # One batched, cached LLM call for any stories still missing their
-    # "why this matters" line; failures degrade to the stored snippet.
-    from app.services.context_line import fill_context_lines
-    try:
-        await fill_context_lines(digest["stories"], db)
-    except Exception:
-        pass
-    return digest
 
 
 @router.get("/recap")

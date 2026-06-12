@@ -21,6 +21,10 @@ class ArticleOut(BaseModel):
     trending_score: float
     engagement: Optional[dict] = None
     context_line: Optional[str] = None
+    original_title: Optional[str] = None
+    # V8: visible relevance — match percentage + human-readable reasons
+    relevance: Optional[int] = None
+    why: Optional[list[str]] = None
 
     @field_validator("engagement", mode="before")
     @classmethod

@@ -114,44 +114,71 @@ class GithubTrendingFetcher(BaseFetcher):
     async def backfill(self, days: int = 30) -> FetchResult:
         """Top new/active AI repos over a window via the Search API — the
         trending page only knows about today."""
+        return await _search_repos(self.source_id, self._backfill_queries(days), days)
+
+    @staticmethod
+    def _backfill_queries(days: int) -> list[str]:
         since = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d")
-        queries = [
+        return [
             f"created:>{since} topic:llm",
             f"created:>{since} topic:machine-learning",
             f"created:>{since} language:python topic:ai",
         ]
-        items, seen = [], set()
-        try:
-            async with httpx.AsyncClient(timeout=20) as client:
-                for q in queries:
-                    resp = await client.get(
-                        "https://api.github.com/search/repositories",
-                        params={"q": q, "sort": "stars", "order": "desc", "per_page": 50},
-                        headers=_gh_headers(),
-                    )
-                    if resp.status_code != 200:
-                        log.warning("github_search_failed", status=resp.status_code, q=q)
-                        continue
-                    for r in resp.json().get("items", []):
-                        if r["html_url"] in seen:
-                            continue
-                        seen.add(r["html_url"])
-                        items.append({
-                            "title": r["full_name"],
-                            "url": r["html_url"],
-                            "author": r["owner"]["login"],
-                            "summary": r.get("description") or None,
-                            "published_at": r.get("created_at"),
-                            "trending_score": float(r.get("stargazers_count", 0)),
-                            "engagement": {
-                                "stars_total": int(r.get("stargazers_count", 0)),
-                                "forks": int(r.get("forks_count", 0)),
-                            },
-                        })
-                    await asyncio.sleep(2)  # search API: 10 req/min unauthenticated
-        except Exception as e:
-            if not items:
-                return FetchResult(source_id=self.source_id, error=str(e))
 
-        log.info("github_backfilled", count=len(items))
-        return FetchResult(source_id=self.source_id, items=items)
+
+class GithubTopicFetcher(BaseFetcher):
+    """V8 user-added source: track one GitHub topic or org via the Search API."""
+
+    def __init__(self, source_id: str, value: str):
+        self.source_id = source_id
+        self.value = value.strip()
+
+    def _queries(self, days: int) -> list[str]:
+        since = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d")
+        # The value may be a topic or an org — query both; the wrong one
+        # just returns zero results and costs one cheap search call
+        return [f"pushed:>{since} topic:{self.value}", f"pushed:>{since} org:{self.value}"]
+
+    async def fetch(self) -> FetchResult:
+        return await _search_repos(self.source_id, self._queries(7), 7)
+
+    async def backfill(self, days: int = 30) -> FetchResult:
+        return await _search_repos(self.source_id, self._queries(days), days)
+
+
+async def _search_repos(source_id: str, queries: list[str], days: int) -> FetchResult:
+    items, seen = [], set()
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            for q in queries:
+                resp = await client.get(
+                    "https://api.github.com/search/repositories",
+                    params={"q": q, "sort": "stars", "order": "desc", "per_page": 50},
+                    headers=_gh_headers(),
+                )
+                if resp.status_code != 200:
+                    log.warning("github_search_failed", status=resp.status_code, q=q)
+                    continue
+                for r in resp.json().get("items", []):
+                    if r["html_url"] in seen:
+                        continue
+                    seen.add(r["html_url"])
+                    items.append({
+                        "title": r["full_name"],
+                        "url": r["html_url"],
+                        "author": r["owner"]["login"],
+                        "summary": r.get("description") or None,
+                        "published_at": r.get("created_at"),
+                        "trending_score": float(r.get("stargazers_count", 0)),
+                        "engagement": {
+                            "stars_total": int(r.get("stargazers_count", 0)),
+                            "forks": int(r.get("forks_count", 0)),
+                        },
+                    })
+                await asyncio.sleep(2)  # search API: 10 req/min unauthenticated
+    except Exception as e:
+        if not items:
+            return FetchResult(source_id=source_id, error=str(e))
+
+    log.info("github_search_fetched", source_id=source_id, count=len(items), window_days=days)
+    return FetchResult(source_id=source_id, items=items)

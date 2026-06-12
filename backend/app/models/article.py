@@ -57,3 +57,5 @@ class Article(Base):
     engagement: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     # One-line LLM "why this matters" context, cached forever once generated
     context_line: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # Slug/raw title as fetched, kept when the enricher rewrites `title` (V8)
+    original_title: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)

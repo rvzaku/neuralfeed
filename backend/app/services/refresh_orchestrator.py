@@ -15,7 +15,7 @@ from sqlalchemy import select
 
 from app.core.database import AsyncSessionLocal
 from app.core.time import utcnow
-from app.fetchers.registry import FETCHER_MAP
+from app.fetchers.registry import is_fetchable
 from app.models.source import Source
 from app.services.fetch_runner import run_fetch
 
@@ -47,7 +47,7 @@ async def refresh_all(
                 .where(Source.enabled == True)  # noqa: E712
                 .order_by(Source.fetch_attempted_at.asc().nulls_first())
             )
-            source_ids = [sid for (sid,) in result.all() if sid in FETCHER_MAP]
+            source_ids = [sid for (sid,) in result.all() if is_fetchable(sid)]
 
         _progress.update(
             running=True, total=len(source_ids), done=0, errors=[], started_at=utcnow().isoformat()

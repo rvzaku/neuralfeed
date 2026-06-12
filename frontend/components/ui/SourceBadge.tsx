@@ -1,6 +1,24 @@
 "use client";
 
+import { BookOpen, Building2, Flame, Github, Mail, MessageCircle, Mic, Newspaper, Video, Box } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+// V8: platform icon per source family — the app stops being text-only
+const ICONS: { match: (id: string) => boolean; icon: typeof Github }[] = [
+  { match: (id) => id.startsWith("github") || id.startsWith("custom-github"), icon: Github },
+  { match: (id) => id.startsWith("reddit") || id.startsWith("custom-reddit"), icon: MessageCircle },
+  { match: (id) => id.startsWith("arxiv"), icon: BookOpen },
+  { match: (id) => id.startsWith("hackernews"), icon: Flame },
+  { match: (id) => id.startsWith("hf-"), icon: Box },
+  { match: (id) => id.startsWith("newsletter"), icon: Mail },
+  { match: (id) => id.startsWith("podcast"), icon: Mic },
+  { match: (id) => id.startsWith("youtube") || id.startsWith("video"), icon: Video },
+  { match: (id) => id.startsWith("rss") || id.startsWith("custom-rss"), icon: Building2 },
+];
+
+function iconFor(sourceId: string) {
+  return ICONS.find((e) => e.match(sourceId))?.icon ?? Newspaper;
+}
 
 const SOURCE_CONFIG: Record<string, { label: string; color: string }> = {
   "arxiv-cs-ai":       { label: "arXiv",       color: "bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300" },
@@ -37,8 +55,10 @@ export function SourceBadge({ sourceId, category, className }: SourceBadgeProps)
     color: "bg-muted text-muted-foreground",
   };
 
+  const Icon = iconFor(sourceId);
   return (
-    <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium", cfg.color, className)}>
+    <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium", cfg.color, className)}>
+      <Icon className="h-3 w-3 shrink-0" aria-hidden />
       {cfg.label}
     </span>
   );

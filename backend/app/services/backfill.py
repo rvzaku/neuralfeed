@@ -15,7 +15,7 @@ from sqlalchemy import select
 
 from app.core.database import AsyncSessionLocal
 from app.core.time import utcnow
-from app.fetchers.registry import FETCHER_MAP
+from app.fetchers.registry import is_fetchable, resolve_fetcher
 from app.models.source import Source
 from app.services.ingest import ingest_items
 
@@ -48,9 +48,11 @@ async def backfill_all(
     async with _run_lock:
         async with factory() as db:
             result = await db.execute(
-                select(Source.id).where(Source.enabled == True)  # noqa: E712
+                select(Source.id, Source.url).where(Source.enabled == True)  # noqa: E712
             )
-            source_ids = [sid for (sid,) in result.all() if sid in FETCHER_MAP]
+            sources = [(sid, url) for sid, url in result.all() if is_fetchable(sid)]
+            source_ids = [sid for sid, _ in sources]
+            url_of = dict(sources)
 
         # hf-papers last: its traction boost needs the arxiv articles in place
         source_ids.sort(key=lambda sid: sid == "hf-papers")
@@ -62,7 +64,10 @@ async def backfill_all(
         async def _one(source_id: str) -> None:
             async with sem:
                 try:
-                    result = await FETCHER_MAP[source_id]().backfill(days=days)
+                    fetcher = resolve_fetcher(source_id, url=url_of.get(source_id))
+                    if fetcher is None:
+                        return
+                    result = await fetcher.backfill(days=days)
                     if not result.ok:
                         _progress["errors"].append({"source_id": source_id, "error": result.error[:200]})
                         return

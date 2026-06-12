@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useState } from "react";
-import { ThumbsUp, ThumbsDown, Bookmark, BookmarkCheck, ExternalLink, Share2, Check, Star, MessageSquare, ArrowBigUp, TrendingUp } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Bookmark, BookmarkCheck, ExternalLink, Share2, Check, Star, MessageSquare, ArrowBigUp, TrendingUp, Flame, Download, Heart } from "lucide-react";
 import { shareUrl } from "@/lib/share";
 import { SourceBadge } from "@/components/ui/SourceBadge";
 import { cn, formatRelativeTime } from "@/lib/utils";
@@ -35,23 +35,52 @@ function compact(n: number): string {
 /** Platform stats in their own boxes, out of the subtitle flow — GitHub stars
  * (total + today) and Reddit/HN votes + comments are always visible
  * without opening the item (app-feedback-v4). */
+// V8: color-coded per metric so the eye learns the legend — amber stars,
+// emerald velocity, orange votes, sky comments, violet downloads, rose likes
+const CHIP = "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium tabular-nums";
+const CHIP_STYLES = {
+  stars:     "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+  velocity:  "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
+  votes:     "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
+  comments:  "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300",
+  downloads: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300",
+  likes:     "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300",
+};
+
 function EngagementStats({ article }: { article: Article }) {
   const e = article.engagement;
-  if (!e) return null;
-  const box = "inline-flex items-center gap-1 rounded-md border border-border bg-muted/50 px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground tabular-nums";
-  const stats: React.ReactNode[] = [];
-  if (e.stars_total != null && e.stars_total > 0) {
-    stats.push(<span key="st" className={box}><Star className="h-3 w-3" />{compact(e.stars_total)}</span>);
+  // arXiv has no native votes — traction comes from HF Daily Papers upvotes
+  if (!e) {
+    if (article.source_id.startsWith("arxiv") && article.trending_score > 0) {
+      return (
+        <div className="flex items-center gap-1.5 flex-wrap mb-2">
+          <span className={cn(CHIP, CHIP_STYLES.velocity)}>
+            <Flame className="h-3 w-3" />gaining traction · {compact(article.trending_score)} HF upvotes
+          </span>
+        </div>
+      );
+    }
+    return null;
   }
-  if (e.stars_today != null && e.stars_today > 0) {
-    stats.push(<span key="sd" className={box}><TrendingUp className="h-3 w-3" />+{compact(e.stars_today)} today</span>);
+  const stats: React.ReactNode[] = [];
+  if (e.stars_total) {
+    stats.push(<span key="st" className={cn(CHIP, CHIP_STYLES.stars)}><Star className="h-3 w-3" />{compact(e.stars_total)} stars</span>);
+  }
+  if (e.stars_today) {
+    stats.push(<span key="sd" className={cn(CHIP, CHIP_STYLES.velocity)}><TrendingUp className="h-3 w-3" />+{compact(e.stars_today)} today</span>);
   }
   const votes = e.upvotes ?? e.points;
-  if (votes != null && votes > 0) {
-    stats.push(<span key="v" className={box}><ArrowBigUp className="h-3.5 w-3.5" />{compact(votes)}</span>);
+  if (votes) {
+    stats.push(<span key="v" className={cn(CHIP, CHIP_STYLES.votes)}><ArrowBigUp className="h-3.5 w-3.5" />{compact(votes)}</span>);
   }
-  if (e.comments != null && e.comments > 0) {
-    stats.push(<span key="c" className={box}><MessageSquare className="h-3 w-3" />{compact(e.comments)}</span>);
+  if (e.comments) {
+    stats.push(<span key="c" className={cn(CHIP, CHIP_STYLES.comments)}><MessageSquare className="h-3 w-3" />{compact(e.comments)}</span>);
+  }
+  if (e.downloads) {
+    stats.push(<span key="d" className={cn(CHIP, CHIP_STYLES.downloads)}><Download className="h-3 w-3" />{compact(e.downloads)}</span>);
+  }
+  if (e.likes) {
+    stats.push(<span key="l" className={cn(CHIP, CHIP_STYLES.likes)}><Heart className="h-3 w-3" />{compact(e.likes)}</span>);
   }
   if (stats.length === 0) return null;
   return <div className="flex items-center gap-1.5 flex-wrap mb-2">{stats}</div>;
@@ -136,7 +165,7 @@ function FeedCardInner({ article, onOpen }: FeedCardProps) {
                 ? "bg-secondary text-secondary-foreground"
                 : "text-muted-foreground"
             )}>
-              {"↑"}{Math.round(article.trending_score).toLocaleString()}
+              {"↑"}{compact(article.trending_score)}
             </span>
           )}
           <span className="text-xs text-muted-foreground">{formatRelativeTime(article.published_at)}</span>
@@ -153,12 +182,33 @@ function FeedCardInner({ article, onOpen }: FeedCardProps) {
         </div>
       </div>
 
+      {/* V8 visible relevance — why this earned its slot (distinct from the
+          content preview: tinted, icon-led, never mistakable for the summary) */}
+      {(article.relevance != null || (article.why && article.why.length > 0)) && (
+        <div className="flex items-center gap-1.5 flex-wrap mb-2 text-[11px] text-primary/90">
+          {article.relevance != null && (
+            <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 font-semibold tabular-nums">
+              {article.relevance}% match
+            </span>
+          )}
+          {article.why && article.why.length > 0 && (
+            <span className="font-medium">✦ {article.why.join(" · ")}</span>
+          )}
+        </div>
+      )}
+
       {/* Title + optional quiet thumbnail */}
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-[15px] leading-snug tracking-tight mb-1.5 line-clamp-2 text-foreground group-hover:text-primary transition-colors">
             {article.title}
           </h3>
+          {/* Identity of rewritten slug titles — "what repo/model is this actually" */}
+          {article.original_title && article.original_title !== article.title && (
+            <p className="font-mono text-[11px] text-muted-foreground/80 mb-1.5 truncate">
+              {article.original_title}
+            </p>
+          )}
           <EngagementStats article={article} />
           {article.summary && (
             <p className="text-xs text-muted-foreground line-clamp-2 mb-3 leading-relaxed">

@@ -2,6 +2,7 @@
 
 import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  createSource,
   getFeed,
   getSources,
   patchSource,
@@ -15,7 +16,6 @@ import {
   getStories,
   getStoryDetail,
   getSummary,
-  getDeepSummary,
   getSourcesHealth,
   getAccounts,
   addAccount,
@@ -60,16 +60,6 @@ export function useStories(params: { days?: number; limit?: number; unread_only?
   });
 }
 
-export function useDeepSummary(articleId: string | null) {
-  return useQuery({
-    queryKey: ["deep-summary", articleId],
-    queryFn: () => getDeepSummary(articleId as string),
-    enabled: !!articleId,
-    staleTime: Infinity,
-    retry: 1,
-  });
-}
-
 export function useStoryDetail(storyId: string | null, days = 7) {
   return useQuery({
     queryKey: ["story", storyId, days],
@@ -102,6 +92,14 @@ export function useSources(all = false) {
     queryKey: ["sources", all],
     queryFn: () => getSources(all),
     staleTime: 1000 * 60 * 10,
+  });
+}
+
+export function useAddSource() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createSource,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sources"] }),
   });
 }
 

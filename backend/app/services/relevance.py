@@ -70,6 +70,7 @@ def popularity(article: Article) -> float:
     value = (
         engagement.get("upvotes")
         or engagement.get("points")
+        or engagement.get("likes")
         or article.trending_score
         or 0
     )
@@ -89,6 +90,63 @@ def relevance_score(article: Article, window_days: int = 7) -> float:
     is ancient. Popularity floor keeps zero-vote items rankable, not zero."""
     half_life = max(1.0, window_days / 4)
     return recency(article.published_at, half_life) * (0.25 + 0.75 * popularity(article))
+
+
+_FAMILY_LABEL = {"reddit": "Reddit", "hackernews": "Hacker News", "github": "GitHub",
+                 "hf": "Hugging Face", "arxiv": "arXiv"}
+
+
+def explain(
+    article: Article,
+    window_days: int = 7,
+    topic_weights: Optional[dict] = None,
+    source_affinity: Optional[dict] = None,
+) -> "tuple[int, list[str]]":
+    """(match 0-100, human reasons) — the v5 'why am I seeing this' line.
+    Reasons lead with traction (proof it isn't junk), then personal fit."""
+    pop = popularity(article)
+    rec = recency(article.published_at, max(1.0, window_days / 4))
+    match = int(round(100 * rec * (0.25 + 0.75 * pop)))
+
+    engagement: dict = {}
+    if article.engagement:
+        try:
+            engagement = json.loads(article.engagement)
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    family = _source_family(article.source_id)
+    reasons: list[str] = []
+
+    if engagement.get("stars_today"):
+        reasons.append(f"+{engagement['stars_today']:,} stars today")
+    elif engagement.get("stars_total"):
+        reasons.append(f"{engagement['stars_total']:,} stars")
+    votes = engagement.get("upvotes") or engagement.get("points")
+    if votes:
+        reasons.append(f"{votes:,} upvotes on {_FAMILY_LABEL.get(family, 'the source')}")
+    if engagement.get("comments"):
+        reasons.append(f"{engagement['comments']:,} comments")
+    if family == "arxiv" and article.trending_score > 0:
+        reasons.append("trending on HF Daily Papers")
+
+    liked_tags = [
+        t.replace("-", " ") for t in (article.topic_tags or [])
+        if (topic_weights or {}).get(t, 0) > 0.1
+    ]
+    if liked_tags:
+        reasons.append(f"matches topics you like: {', '.join(liked_tags[:2])}")
+    if (source_affinity or {}).get(article.source_id, 0) > 0.1:
+        reasons.append("from a source you often like")
+
+    age_hours = (datetime.now(timezone.utc) - (
+        article.published_at if article.published_at.tzinfo
+        else article.published_at.replace(tzinfo=timezone.utc)
+    )).total_seconds() / 3600
+    if age_hours < 24:
+        reasons.append("published today")
+
+    return match, reasons[:3]
 
 
 def _score_map(articles: list[Article], window_days: int) -> dict:

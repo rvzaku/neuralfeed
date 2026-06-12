@@ -43,8 +43,9 @@ class HFSpacesFetcher(BaseFetcher):
                 "url": f"https://huggingface.co/spaces/{space_id}",
                 "author": space_id.split("/")[0] if "/" in space_id else None,
                 "summary": summary,
-                "published_at": s.get("lastModified") or now,
+                "published_at": s.get("createdAt") or s.get("lastModified") or now,
                 "trending_score": float(s.get("likes", 0)),
+                "engagement": {"likes": int(s.get("likes", 0))},
             })
 
         log.info("hf_spaces_fetched", count=len(items))
