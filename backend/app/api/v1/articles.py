@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user, get_db
@@ -62,3 +63,21 @@ async def toggle_bookmark(
     article.is_bookmarked = not article.is_bookmarked
     await db.commit()
     return ArticleOut.model_validate(article)
+
+
+@router.post("/clear-summary-cache")
+async def clear_summary_cache(
+    db: AsyncSession = Depends(get_db),
+    user=Depends(get_current_user),
+) -> dict:
+    """Drop all cached AI summaries so they regenerate with the current model
+    and extraction pipeline. Authenticated users only."""
+    if not user:
+        raise HTTPException(status_code=401, detail="authentication required")
+    result = await db.execute(
+        update(Article)
+        .where((Article.ai_summary.is_not(None)) | (Article.ai_deep_summary.is_not(None)))
+        .values(ai_summary=None, ai_summary_at=None, ai_deep_summary=None, ai_deep_summary_at=None)
+    )
+    await db.commit()
+    return {"cleared": result.rowcount}
