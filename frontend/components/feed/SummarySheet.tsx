@@ -10,16 +10,41 @@ import { cn, formatRelativeTime } from "@/lib/utils";
 import { useDeepSummary, usePostFeedback, useSummary, useToggleBookmark } from "@/hooks/useFeed";
 import type { Article } from "@/lib/types";
 
+function Inline({ text }: { text: string }) {
+  // Minimal inline GFM: **bold**, *italic*, `code`, [label](url)
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g);
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (part.startsWith("**") && part.endsWith("**"))
+          return <strong key={i} className="font-semibold">{part.slice(2, -2)}</strong>;
+        if (part.startsWith("`") && part.endsWith("`"))
+          return <code key={i} className="font-mono text-[0.85em] bg-muted px-1 py-0.5 rounded">{part.slice(1, -1)}</code>;
+        if (part.startsWith("*") && part.endsWith("*") && part.length > 2)
+          return <em key={i}>{part.slice(1, -1)}</em>;
+        const link = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+        if (link)
+          return (
+            <a key={i} href={link[2]} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2">
+              {link[1]}
+            </a>
+          );
+        return part;
+      })}
+    </>
+  );
+}
+
 function DeepMarkdown({ markdown }: { markdown: string }) {
   const blocks = markdown.split(/\n{2,}/);
   return (
     <div className="space-y-3">
       {blocks.map((block, i) => {
         const t = block.trim();
-        if (t.startsWith("## ")) {
+        if (/^#{2,3} /.test(t)) {
           return (
-            <h3 key={i} className="font-serif font-bold text-base pt-2">
-              {t.replace(/^## /, "")}
+            <h3 key={i} className="font-semibold tracking-tight text-base pt-3 border-b border-border pb-1.5">
+              {t.replace(/^#{2,3} /, "")}
             </h3>
           );
         }
@@ -27,14 +52,14 @@ function DeepMarkdown({ markdown }: { markdown: string }) {
           return (
             <ul key={i} className="list-disc pl-5 space-y-1 text-sm leading-relaxed text-foreground/90">
               {t.split(/\n/).map((line, j) => (
-                <li key={j}>{line.replace(/^[-*] /, "")}</li>
+                <li key={j}><Inline text={line.replace(/^[-*] |^\d+\. /, "")} /></li>
               ))}
             </ul>
           );
         }
         return (
-          <p key={i} className="text-sm leading-relaxed text-foreground/90">
-            {t}
+          <p key={i} className="text-[15px] leading-[1.7] text-foreground/90">
+            <Inline text={t} />
           </p>
         );
       })}

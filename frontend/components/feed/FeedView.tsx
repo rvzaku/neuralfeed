@@ -67,7 +67,7 @@ export function FeedView() {
     );
     obs.observe(el);
     return () => obs.disconnect();
-  }, [digestMode, hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [digestMode, hasNextPage, isFetchingNextPage, fetchNextPage, allItems.length]);
   const storiesQuery = useStories({
     days: TIME_TO_DAYS[filters.time_range ?? "7d"] ?? 1,
     limit: 12,
@@ -221,6 +221,14 @@ export function FeedView() {
               {/* Infinite scroll sentinel + status */}
               <div ref={sentinelRef} aria-hidden />
               {isFetchingNextPage && Array.from({ length: 3 }).map((_, i) => <FeedCardSkeleton key={`p${i}`} />)}
+              {hasNextPage && !isFetchingNextPage && allItems.length > 0 && (
+                <button
+                  onClick={() => fetchNextPage()}
+                  className="w-full py-3 text-sm font-medium text-muted-foreground border border-border rounded-lg hover:bg-muted transition-colors"
+                >
+                  Load more
+                </button>
+              )}
               {!hasNextPage && allItems.length > 0 && (
                 <p className="py-6 text-center text-xs text-muted-foreground">
                   All {total} items loaded

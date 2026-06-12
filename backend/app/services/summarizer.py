@@ -94,7 +94,7 @@ def _parse_llm_json(raw: str) -> dict:
 
 
 class GroqProvider:
-    DEFAULT_MODEL = "llama-3.1-8b-instant"
+    DEFAULT_MODEL = "llama-3.3-70b-versatile"  # free tier; far denser briefs than 8b
 
     def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
         self.api_key = api_key or settings.groq_api_key
@@ -300,6 +300,28 @@ async def _extract_github_readme(url: str) -> Optional[str]:
         return None
 
 
+async def _extract_hf_readme(url: str) -> Optional[str]:
+    """README/model card via the raw endpoint — HF pages are JS apps, so the
+    HTML fetch yields nothing readable."""
+    path = url.split("huggingface.co/")[-1].strip("/")
+    raw_url = f"https://huggingface.co/{path}/raw/main/README.md"
+    try:
+        async with httpx.AsyncClient(timeout=FETCH_TIMEOUT, follow_redirects=True) as client:
+            resp = await client.get(raw_url)
+            if resp.status_code != 200:
+                return None
+            text = resp.text[:MAX_PAGE_BYTES]
+            # Strip YAML frontmatter — metadata, not prose
+            if text.startswith("---"):
+                end = text.find("---", 3)
+                if end != -1:
+                    text = text[end + 3:]
+            return text if len(text.strip()) > 200 else None
+    except Exception as e:
+        log.info("deep_hf_readme_fetch_failed", url=url, error=str(e))
+        return None
+
+
 async def extract_content_for(article: Article) -> Optional[str]:
     """Source-type-aware transient extraction (never stored).
 
@@ -315,6 +337,10 @@ async def extract_content_for(article: Article) -> Optional[str]:
         text = await _extract_github_readme(url)
         if text:
             return text
+    elif "huggingface.co" in url:
+        text = await _extract_hf_readme(url)
+        if text:
+            return f"{article.summary or ''}\n\n{text}"
     elif article.source_id.startswith("arxiv"):
         page = await extract_article_text(url)
         if page:

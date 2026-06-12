@@ -477,3 +477,11 @@ Problem: HF Spaces/models and GitHub items surface as bare slugs
    Slug-shaped-title heuristic doubles as the "not yet enriched" marker — no
    schema change. Covers existing backlog progressively (newest first).
 3. Frontend: no changes needed — enriched titles flow through feed/stories/reader.
+
+## V6.4 — feedback-v3 lines 14/16/18
+- Infinite feed: API pagination verified healthy; frontend observer rebinds on item
+  count + explicit "Load more" fallback button so scroll-loading can never strand.
+- Summary context: HF README/model-card extraction branch (raw endpoint, frontmatter
+  stripped, prepended enriched summary); default Groq model → llama-3.3-70b-versatile.
+- Brief formatting: inline GFM rendering (bold/italic/code/links), ###-heading support,
+  consistent 15px/1.7 reading type with bordered section headings.
