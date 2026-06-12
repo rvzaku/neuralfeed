@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { Settings, Save, RotateCcw } from "lucide-react";
-import { MobileNav } from "@/components/layout/MobileNav";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { usePreferences, useSetPreference, useSources } from "@/hooks/useFeed";
 import { cn } from "@/lib/utils";
@@ -101,7 +100,7 @@ export default function SettingsPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border px-4 py-3 flex items-center gap-2.5">
+      <header className="sticky top-0 md:static z-10 bg-background/80 backdrop-blur-md border-b border-border px-4 py-3 flex items-center gap-2.5">
         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-brand text-white">
           <Settings className="h-3.5 w-3.5" />
         </span>
@@ -218,7 +217,6 @@ export default function SettingsPage() {
         </section>
       </main>
 
-      <MobileNav />
     </div>
   );
 }

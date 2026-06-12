@@ -1,13 +1,24 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Search } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const NAV_LINKS = [
+  { href: "/",         label: "Feed" },
+  { href: "/discover", label: "Discover" },
+  { href: "/sources",  label: "Sources" },
+  { href: "/settings", label: "Settings" },
+];
 import { ThemeToggle } from "./ThemeToggle";
 import { RefreshIndicator } from "@/components/feed/RefreshIndicator";
 import { SearchModal } from "@/components/feed/SearchModal";
 
 export function Header() {
   const [searchOpen, setSearchOpen] = useState(false);
+  const pathname = usePathname();
 
   return (
     <>
@@ -20,6 +31,28 @@ export function Header() {
             beta
           </span>
         </div>
+
+        {/* Desktop nav — mirrors the mobile dock */}
+        <nav className="flex items-center gap-1" aria-label="Primary">
+          {NAV_LINKS.map(({ href, label }) => {
+            const active = pathname === href;
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "px-3.5 py-1.5 rounded-full text-sm font-semibold transition-all",
+                  active
+                    ? "bg-gradient-brand text-white shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                )}
+              >
+                {label}
+              </Link>
+            );
+          })}
+        </nav>
 
         <button
           onClick={() => setSearchOpen(true)}

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Compass, Search, Flame, Tags, UserPlus, RefreshCw, Check, X as XIcon } from "lucide-react";
-import { MobileNav } from "@/components/layout/MobileNav";
 import { FeedCard } from "@/components/feed/FeedCard";
 import { FeedCardSkeleton } from "@/components/feed/FeedCardSkeleton";
 import { SummarySheet } from "@/components/feed/SummarySheet";
@@ -118,7 +117,7 @@ export default function DiscoverPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border px-4 py-3 flex items-center gap-2.5">
+      <header className="sticky top-0 md:static z-10 bg-background/80 backdrop-blur-md border-b border-border px-4 py-3 flex items-center gap-2.5">
         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-brand text-white">
           <Compass className="h-3.5 w-3.5" />
         </span>
@@ -188,7 +187,6 @@ export default function DiscoverPage() {
         )}
       </main>
 
-      <MobileNav />
       <SummarySheet article={openArticle} onClose={() => setOpenArticle(null)} />
     </div>
   );

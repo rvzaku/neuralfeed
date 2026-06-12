@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Database, RefreshCw, CheckCircle2, XCircle, AlertTriangle, Users } from "lucide-react";
-import { MobileNav } from "@/components/layout/MobileNav";
 import { FollowTargets } from "@/components/sources/FollowTargets";
 import { useSources, usePatchSource, useSourcesHealth } from "@/hooks/useFeed";
 import { cn, formatRelativeTime } from "@/lib/utils";
@@ -168,7 +167,7 @@ export default function SourcesPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border px-4 py-3 flex items-center gap-2.5">
+      <header className="sticky top-0 md:static z-10 bg-background/80 backdrop-blur-md border-b border-border px-4 py-3 flex items-center gap-2.5">
         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-brand text-white">
           <Database className="h-3.5 w-3.5" />
         </span>
@@ -208,7 +207,6 @@ export default function SourcesPage() {
         {tab === "sources" ? <SourceList /> : <FollowTargets />}
       </main>
 
-      <MobileNav />
     </div>
   );
 }
