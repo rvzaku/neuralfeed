@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MobileNav } from "@/components/layout/MobileNav";
-import { StoryCard } from "@/components/feed/StoryCard";
+import { FrontPage } from "@/components/feed/FrontPage";
 import { SummarySheet } from "@/components/feed/SummarySheet";
 import { FeedCard } from "@/components/feed/FeedCard";
 import type { Article, Story } from "@/lib/types";
@@ -51,11 +51,11 @@ describe("MobileNav", () => {
   });
 });
 
-describe("StoryCard", () => {
+describe("FrontPage", () => {
   it("shows headline and item/source counts", () => {
-    withQuery(<StoryCard story={story} onOpenArticle={vi.fn()} />);
+    withQuery(<FrontPage stories={[story]} onOpenArticle={vi.fn()} />);
     expect(screen.getByText("Qwen 3 released")).toBeInTheDocument();
-    expect(screen.getByText(/4 items · 3 sources/)).toBeInTheDocument();
+    expect(screen.getByText(/4 related items from 3 sources/)).toBeInTheDocument();
   });
 });
 

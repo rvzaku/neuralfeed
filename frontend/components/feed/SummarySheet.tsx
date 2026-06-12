@@ -94,8 +94,8 @@ export function SummarySheet({ article, onClose }: SummarySheetProps) {
         aria-label={`Summary: ${article.title}`}
         className={cn(
           "fixed z-50 bg-background border-border shadow-xl flex flex-col",
-          "inset-x-0 bottom-0 max-h-[88dvh] rounded-t-xl border-t animate-in slide-in-from-bottom duration-200",
-          "md:inset-y-0 md:left-auto md:right-0 md:bottom-auto md:h-full md:max-h-none md:w-[440px] lg:w-[500px] md:rounded-none md:border-l md:slide-in-from-right"
+          "inset-0 animate-in slide-in-from-bottom duration-200",
+          "md:inset-y-6 md:inset-x-0 md:mx-auto md:max-w-2xl md:rounded-xl md:border md:slide-in-from-bottom-4"
         )}
       >
         {/* Grab handle (mobile) */}
@@ -115,7 +115,7 @@ export function SummarySheet({ article, onClose }: SummarySheetProps) {
                 <span className="text-xs text-muted-foreground truncate">· {article.author}</span>
               )}
             </div>
-            <h2 className="font-serif font-semibold text-lg leading-snug">{article.title}</h2>
+            <h2 className="font-semibold tracking-tight text-xl leading-snug">{article.title}</h2>
           </div>
           <button
             onClick={onClose}
@@ -128,6 +128,18 @@ export function SummarySheet({ article, onClose }: SummarySheetProps) {
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-5 pb-4">
+          {article.image_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={article.image_url}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              referrerPolicy="no-referrer"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              className="w-full aspect-video object-cover rounded-lg border border-border saturate-[.85] mb-4"
+            />
+          )}
           {/* 1-min / 10-min toggle */}
           <div className="flex items-center gap-1 rounded-full bg-muted p-0.5 w-fit mb-4" role="tablist" aria-label="Summary depth">
             {([["deep", "10-min brief"], ["quick", "1-min"]] as const).map(([value, label]) => (

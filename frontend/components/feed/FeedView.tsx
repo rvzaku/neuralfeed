@@ -9,7 +9,7 @@ import { FilterBar } from "./FilterBar";
 import { FilterDrawer } from "./FilterDrawer";
 import { RefreshIndicator } from "./RefreshIndicator";
 import { SearchModal } from "./SearchModal";
-import { StoryCard } from "./StoryCard";
+import { FrontPage } from "./FrontPage";
 import { SummarySheet } from "./SummarySheet";
 import { useInfiniteFeed, useStories } from "@/hooks/useFeed";
 import { cn } from "@/lib/utils";
@@ -130,25 +130,11 @@ export function FeedView() {
             </div>
           </div>
 
-          {/* Digest / All toggle */}
-          <div className="flex items-center gap-1 rounded-full bg-muted p-0.5 w-fit" role="tablist" aria-label="Feed view">
-            {([["digest", "Digest"], ["all", "All items"]] as const).map(([value, label]) => (
-              <button
-                key={value}
-                role="tab"
-                aria-selected={digestMode === (value === "digest")}
-                onClick={() => setView(value)}
-                className={cn(
-                  "px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all min-h-[32px]",
-                  digestMode === (value === "digest")
-                    ? "bg-foreground text-background shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          {!digestMode && (
+            <button onClick={() => setView("digest")} className="text-xs text-primary hover:underline">
+              ← Back to your front page
+            </button>
+          )}
 
           {digestMode ? (
             <>
@@ -172,9 +158,9 @@ export function FeedView() {
                 </div>
               )}
 
-              {storiesQuery.data?.stories.map((story) => (
-                <StoryCard key={story.id} story={story} onOpenArticle={setOpenArticle} />
-              ))}
+              {storiesQuery.data && storiesQuery.data.stories.length > 0 && (
+                <FrontPage stories={storiesQuery.data.stories} onOpenArticle={setOpenArticle} />
+              )}
 
               {storiesQuery.data && storiesQuery.data.stories.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">

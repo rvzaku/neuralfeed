@@ -35,6 +35,7 @@ export interface Article {
   source_id: string;
   author: string | null;
   summary: string | null;
+  image_url?: string | null;
   published_at: string;
   fetched_at: string;
   topic_tags: TopicTag[];
@@ -85,6 +86,7 @@ export interface Story {
   id: string;
   headline: string;
   lead_article_id: string;
+  image_url?: string | null;
   article_count: number;
   source_count: number;
   topic_tags: string[];

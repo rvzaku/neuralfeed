@@ -123,17 +123,31 @@ export function FeedCard({ article, onOpen }: FeedCardProps) {
         </div>
       </div>
 
-      {/* Title */}
-      <h3 className="font-serif font-semibold text-[15px] leading-snug mb-1.5 line-clamp-2 text-foreground group-hover:text-primary transition-colors">
-        {article.title}
-      </h3>
-
-      {/* Summary */}
-      {article.summary && (
-        <p className="text-xs text-muted-foreground line-clamp-2 mb-3 leading-relaxed">
-          {article.summary}
-        </p>
-      )}
+      {/* Title + optional quiet thumbnail */}
+      <div className="flex items-start gap-3">
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-[15px] leading-snug tracking-tight mb-1.5 line-clamp-2 text-foreground group-hover:text-primary transition-colors">
+            {article.title}
+          </h3>
+          {article.summary && (
+            <p className="text-xs text-muted-foreground line-clamp-2 mb-3 leading-relaxed">
+              {article.summary}
+            </p>
+          )}
+        </div>
+        {article.image_url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={article.image_url}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            referrerPolicy="no-referrer"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            className="h-16 w-16 rounded-lg object-cover border border-border saturate-[.85] shrink-0"
+          />
+        )}
+      </div>
 
       {/* Footer row */}
       <div className="flex items-center justify-between gap-2">
