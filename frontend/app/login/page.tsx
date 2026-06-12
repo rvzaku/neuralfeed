@@ -36,7 +36,7 @@ export default function LoginPage() {
     <main className="min-h-dvh flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center space-y-1">
-          <h1 className="font-serif text-2xl font-semibold">NeuralFeed</h1>
+          <h1 className="font-serif text-2xl font-bold text-gradient-brand">NeuralFeed</h1>
           <p className="text-sm text-muted-foreground">
             {mode === "login" ? "Sign in to your account" : "Create an account"}
           </p>
@@ -81,7 +81,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={busy}
-            className="w-full min-h-[44px] rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-60"
+            className="w-full min-h-[44px] rounded-full bg-gradient-brand text-white text-sm font-semibold shadow-sm hover:opacity-90 transition-opacity disabled:opacity-60"
           >
             {busy ? "Please wait…" : mode === "login" ? "Sign in" : "Create account"}
           </button>

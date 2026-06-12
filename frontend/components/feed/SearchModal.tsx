@@ -58,7 +58,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
       className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-start justify-center pt-[10vh] px-4"
       onClick={handleBackdropClick}
     >
-      <div className="w-full max-w-xl bg-background border border-border rounded-xl shadow-2xl overflow-hidden">
+      <div className="w-full max-w-xl bg-background border border-border rounded-2xl shadow-2xl overflow-hidden">
         {/* Input row */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
           <Search className="h-4 w-4 text-muted-foreground shrink-0" />
