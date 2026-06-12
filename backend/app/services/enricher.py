@@ -76,6 +76,10 @@ async def enrich_article(article: Article, db: AsyncSession) -> bool:
     article.title = title[:512]
     if summary:
         article.summary = summary[:500]
+    # Invalidate cached AI summaries — they were generated from the old
+    # context-starved input; next open regenerates with README context
+    article.ai_summary = None
+    article.ai_deep_summary = None
     await db.commit()
     return True
 
