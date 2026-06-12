@@ -7,7 +7,6 @@ import { FeedCard } from "./FeedCard";
 import { FeedCardSkeleton } from "./FeedCardSkeleton";
 import { FilterBar } from "./FilterBar";
 import { FilterDrawer } from "./FilterDrawer";
-import { DesktopSidebar } from "./DesktopSidebar";
 import { RefreshIndicator } from "./RefreshIndicator";
 import { SavedViewSwitcher } from "./SavedViewSwitcher";
 import { SearchModal } from "./SearchModal";
@@ -73,15 +72,9 @@ export function FeedView() {
 
   return (
     <div className="flex min-h-screen">
-      {/* Desktop sidebar — hidden on mobile/tablet, visible lg+ */}
-      <DesktopSidebar />
-
-      {/* Main content column */}
+      {/* Single centered column on every breakpoint — no sidebar clutter */}
       <div className="flex flex-col flex-1 min-w-0">
-        {/* Saved view presets — mobile/tablet only (desktop uses sidebar) */}
-        <div className="lg:hidden">
-          <SavedViewSwitcher />
-        </div>
+        <SavedViewSwitcher />
 
         {/* Filter bar */}
         <FilterBar onFilterClick={() => setDrawerOpen(true)} />

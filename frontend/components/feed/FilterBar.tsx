@@ -72,7 +72,7 @@ export function FilterBar({ onFilterClick }: FilterBarProps) {
             <button
               onClick={onFilterClick}
               className={cn(
-                "lg:hidden shrink-0 flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium border transition-colors min-h-[32px]",
+                "shrink-0 flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium border transition-colors min-h-[32px]",
                 hasAdvanced
                   ? "bg-primary text-primary-foreground border-primary"
                   : "bg-muted/50 text-muted-foreground border-border hover:bg-muted hover:text-foreground"

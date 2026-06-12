@@ -25,7 +25,7 @@ export function FilterDrawer({ isOpen, onClose }: FilterDrawerProps) {
       {/* Backdrop — mobile only */}
       <div
         className={cn(
-          "lg:hidden fixed inset-0 z-30 bg-black/40 backdrop-blur-sm transition-opacity duration-200",
+          "fixed inset-0 z-30 bg-black/40 backdrop-blur-sm transition-opacity duration-200",
           isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         )}
         onClick={onClose}
@@ -34,7 +34,7 @@ export function FilterDrawer({ isOpen, onClose }: FilterDrawerProps) {
       {/* Drawer panel — slides up from bottom on mobile, from left on tablet */}
       <div
         className={cn(
-          "lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background rounded-t-2xl border-t border-border shadow-2xl",
+          "fixed bottom-0 left-0 right-0 z-40 bg-background rounded-t-2xl border-t border-border shadow-2xl",
           "transition-transform duration-300 ease-out",
           "max-h-[85vh] flex flex-col",
           "md:right-auto md:left-0 md:bottom-0 md:top-0 md:w-72 md:rounded-none md:rounded-r-xl md:border-r md:border-t-0 md:shadow-xl",
