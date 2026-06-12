@@ -10,6 +10,7 @@ class ArticleOut(BaseModel):
     source_id: str
     author: Optional[str]
     summary: Optional[str]
+    image_url: Optional[str] = None
     published_at: datetime
     fetched_at: datetime
     topic_tags: list[str]

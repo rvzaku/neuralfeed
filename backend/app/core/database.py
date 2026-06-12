@@ -55,6 +55,7 @@ _ADDITIVE_COLUMNS = [
     ("sources", "fetch_attempted_at", "TIMESTAMP"),
     ("articles", "ai_deep_summary", "TEXT"),
     ("articles", "ai_deep_summary_at", "TIMESTAMP"),
+    ("articles", "image_url", "TEXT"),  # V6 preview images (hotlinked URL metadata)
 ]
 
 

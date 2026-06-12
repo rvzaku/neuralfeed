@@ -31,6 +31,19 @@ LLM_TIMEOUT = 60.0
 _TAG_RE = re.compile(r"<(script|style|noscript)[^>]*>.*?</\1>", re.DOTALL | re.IGNORECASE)
 _HTML_RE = re.compile(r"<[^>]+>")
 _WS_RE = re.compile(r"\s+")
+_OG_IMAGE_RE = re.compile(
+    r'<meta[^>]+(?:property|name)=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']'
+    r'|<meta[^>]+content=["\']([^"\']+)["\'][^>]+(?:property|name)=["\']og:image["\']',
+    re.IGNORECASE,
+)
+
+
+def _extract_og_image(html: str) -> Optional[str]:
+    m = _OG_IMAGE_RE.search(html)
+    if not m:
+        return None
+    url = (m.group(1) or m.group(2) or "").strip()
+    return url if url.startswith("http") else None
 
 _PROMPT = (
     "You summarize AI/ML news and research for a busy reader. "
@@ -204,6 +217,12 @@ def _html_to_text(html: str) -> str:
 async def extract_article_text(url: str) -> Optional[str]:
     """Fetch a page and return readable text, or None if unusable.
     The text is used transiently for summarization and never stored."""
+    text, _ = await extract_text_and_image(url)
+    return text
+
+
+async def extract_text_and_image(url: str) -> "tuple[Optional[str], Optional[str]]":
+    """One fetch, two artifacts: readable text + og:image URL (V6)."""
     try:
         async with httpx.AsyncClient(
             timeout=FETCH_TIMEOUT,
@@ -228,10 +247,10 @@ async def extract_article_text(url: str) -> Optional[str]:
                 )
     except Exception as e:
         log.info("summary_page_fetch_failed", url=url, error=str(e))
-        return None
+        return None, None
 
     text = _html_to_text(body)
-    return text if text and len(text) > 200 else None
+    return (text if text and len(text) > 200 else None), _extract_og_image(body)
 
 
 async def _extract_reddit_thread(url: str) -> Optional[str]:
@@ -335,7 +354,10 @@ async def get_or_generate_summary(
     if article.source_id.startswith("arxiv") and article.summary:
         content = article.summary
     else:
-        content = await extract_article_text(article.url) or article.summary
+        page_text, og_image = await extract_text_and_image(article.url)
+        if og_image and not article.image_url:
+            article.image_url = og_image
+        content = page_text or article.summary
     if not content:
         content = _fallback_content(article)
 

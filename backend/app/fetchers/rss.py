@@ -10,6 +10,21 @@ log = structlog.get_logger()
 _TAG_RE = re.compile(r"<[^>]+>")
 
 
+def _rss_image(entry) -> "str | None":
+    """media:content / media:thumbnail / image enclosure → URL, else None."""
+    for media in entry.get("media_content", []) or []:
+        url = media.get("url")
+        if url and media.get("medium", "image") == "image":
+            return url
+    for thumb in entry.get("media_thumbnail", []) or []:
+        if thumb.get("url"):
+            return thumb["url"]
+    for enc in entry.get("enclosures", []) or []:
+        if enc.get("href") and "image" in (enc.get("type") or ""):
+            return enc["href"]
+    return None
+
+
 def _strip_html(text: str) -> str:
     return _TAG_RE.sub("", text).strip()
 
@@ -112,6 +127,7 @@ class RSSFetcher(BaseFetcher):
                 "summary": summary,
                 "published_at": published,
                 "trending_score": 0.0,
+                "image_url": _rss_image(entry),
             })
 
         log.info("rss_fetched", source_id=self.source_id, count=len(items))

@@ -66,6 +66,7 @@ async def ingest_items(items: list[dict], source_id: str, db: AsyncSession) -> i
             source_id=source_id,
             author=raw.get("author"),
             summary=summary,
+            image_url=raw.get("image_url") or None,
             published_at=published_at,
             fetched_at=now,
             topic_tags=topic_tags,

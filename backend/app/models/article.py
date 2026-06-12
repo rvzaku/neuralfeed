@@ -33,6 +33,8 @@ class Article(Base):
     source_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     author: Mapped[Optional[str]] = mapped_column(String(256), nullable=True)
     summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # Preview image URL (hotlinked, never stored as a file — V6)
+    image_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     published_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
     fetched_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     topic_tags: Mapped[list] = mapped_column(JSON, default=list, nullable=False)

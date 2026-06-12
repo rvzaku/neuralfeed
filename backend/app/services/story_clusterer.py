@@ -88,6 +88,7 @@ def cluster_articles(articles: list[Article], read_ids: Optional[set] = None) ->
             "id": story_id,
             "headline": lead.title,
             "lead_article_id": lead.id,
+            "image_url": lead.image_url,
             "article_count": len(arts),
             "source_count": len({a.source_id for a in arts}),
             "topic_tags": [t for t, _ in tag_counts.most_common(4)],
@@ -163,5 +164,6 @@ async def get_story_detail(
             "is_bookmarked": states[a.id].is_bookmarked if states and a.id in states else (a.is_bookmarked if states is None else False),
             "feedback": states[a.id].feedback if states and a.id in states else (a.feedback if states is None else None),
             "topic_tags": a.topic_tags or [],
+            "image_url": a.image_url,
         })
     return {"groups": groups}

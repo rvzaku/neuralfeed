@@ -39,6 +39,23 @@ SUBREDDITS = {
 }
 
 
+_FAKE_THUMBS = {"self", "default", "nsfw", "spoiler", "image", ""}
+
+
+def _reddit_image(post: dict) -> "str | None":
+    """Preview image URL from the post JSON, filtering Reddit's pseudo-thumbnails
+    (V6.1: junk thumbnails are noise, absence is the default)."""
+    try:
+        url = post["preview"]["images"][0]["source"]["url"]
+        return url.replace("&amp;", "&")
+    except (KeyError, IndexError, TypeError):
+        pass
+    thumb = post.get("thumbnail") or ""
+    if thumb in _FAKE_THUMBS or not thumb.startswith("http"):
+        return None
+    return thumb
+
+
 class RedditFetcher(BaseFetcher):
     def __init__(self, source_id: str):
         self.source_id = source_id
@@ -100,6 +117,7 @@ class RedditFetcher(BaseFetcher):
 
             summary = post.get("selftext", "")[:500] if is_self else None
             items.append({
+                "image_url": _reddit_image(post),
                 "title": post.get("title", "").strip(),
                 "url": url_out,
                 "author": post.get("author"),
