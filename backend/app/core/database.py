@@ -65,12 +65,20 @@ async def _ensure_additive_columns() -> None:
     # One transaction PER column: on Postgres a failed statement (duplicate
     # column) aborts its whole transaction, which would silently skip every
     # ALTER after the first existing column.
+    is_sqlite = "sqlite" in _db_url
     for table, column, ddl_type in _ADDITIVE_COLUMNS:
+        # Postgres supports IF NOT EXISTS natively — no exception games at all.
+        # SQLite doesn't, so there we rely on the swallowed duplicate error.
+        clause = "ADD COLUMN" if is_sqlite else "ADD COLUMN IF NOT EXISTS"
         try:
             async with engine.begin() as conn:
-                await conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {ddl_type}"))
-        except Exception:
-            pass  # column already exists — expected on every boot after the first
+                await conn.execute(text(f"ALTER TABLE {table} {clause} {column} {ddl_type}"))
+        except Exception as e:
+            if not is_sqlite:
+                import structlog
+                structlog.get_logger().error(
+                    "additive_column_failed", table=table, column=column, error=str(e)
+                )
 
 
 async def init_db() -> None:
