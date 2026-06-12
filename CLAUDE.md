@@ -11,8 +11,20 @@ Read it fully before starting any task.
 
 The core problem it solves: the AI field moves so fast that missing two weeks means falling behind. Every useful source (X, Reddit, arXiv, GitHub, company blogs, conferences) lives on a different platform designed to keep you inside it. NeuralFeed inverts that: it fetches the signal, ranks it by relevance, and sends you directly to the original source. You never read content here — you read it at the source; NeuralFeed simply decides *which* content deserves your attention today.
 
-**Phase 1 target**: personal use only, no auth, running locally.
-**Phase 2 target**: multi-user with per-user preference profiles and production hosting.
+**Phase 1 target**: personal use only, no auth, running locally. ✅ done
+**Phase 2 target**: multi-user with per-user preference profiles and production hosting. ✅ done
+
+### Current Status (2026-06-12)
+
+Deployed and live: backend on **Render free tier** (`neuralfeed-api.onrender.com`) with
+**Neon Postgres**, frontend on **Vercel** (`neuralfeed.vercel.app`). JWT auth enforced
+(`AUTH_REQUIRED=true`), registration closeable via `ALLOW_REGISTRATION`. At runtime,
+**APScheduler (in-process)** replaced Celery/Redis for scheduled fetching. UptimeRobot
+pings `/health` (HEAD) to keep the free instance warm. Sentry optional via `SENTRY_DSN`.
+
+**Pending (planned, not implemented): V6 "Apple News / Artifact" front-page redesign**
+— see `.claude/plans/neuralFeed.plan.md` (V6 section): top-story hero, themed topic
+sections, full-screen reader, article preview images (hotlinked `image_url` metadata).
 
 ---
 
@@ -23,13 +35,13 @@ The core problem it solves: the AI field moves so fast that missing two weeks me
 | **Frontend** | Next.js 15 (App Router) | React Server Components where possible |
 | **Styling** | Tailwind CSS + shadcn/ui | Design tokens via Tailwind config |
 | **Backend** | Python FastAPI | Async, type-annotated throughout |
-| **Task Queue** | Celery + Redis | Background fetching and scheduled jobs |
+| **Task Queue** | APScheduler (in-process) | Celery+Redis retired at runtime; revisit only at multi-instance scale |
 | **Database (dev)** | SQLite (via SQLAlchemy) | Zero config for local development |
 | **Database (prod)** | PostgreSQL | Migrate from SQLite at Phase 3 |
 | **ORM** | SQLAlchemy 2.x | Async session support |
 | **Package manager (FE)** | bun | Lockfile committed |
 | **Package manager (BE)** | uv | `pyproject.toml` with `uv.lock` |
-| **Hosting (prod)** | Vercel (frontend) + Railway (backend + DB + Redis) | Phase 3 only |
+| **Hosting (prod)** | Vercel (frontend) + Render free tier (backend) + Neon (Postgres) | Live — all free tiers |
 
 ---
 
@@ -212,6 +224,7 @@ The full source list lives in `docs/SOURCES.md`. Key rules:
 ### What gets stored
 
 - Title, URL, source, author, date, short snippet/abstract (≤ 500 chars)
+- Preview-image **URL** (`image_url`, hotlinked from the source — V6 requirement; the image file itself is never stored or proxied)
 - User feedback (thumbs up/down, bookmarked, read/unread)
 - Source registry and config
 - User preferences
@@ -258,6 +271,22 @@ The full source list lives in `docs/SOURCES.md`. Key rules:
 
 ### Design rules
 
+**The app must read as a premium, human-crafted product — never "AI-generated".**
+User-mandated (app-feedback-v2/v3, 2026-06-12):
+
+- **No gradients.** Flat ink-neutral palette; ONE restrained accent (refined indigo)
+  reserved for primary actions, focus rings, and the unread dot.
+- Active states are flat ink pills (`bg-foreground text-background`); hover is hairline
+  border emphasis + 1px shadow — no lift-and-glow, no emoji flourishes.
+- One clean grotesk (Geist) everywhere; hierarchy via weight + tight tracking, not
+  novelty display faces. Base radius 10px — large radii read "toy app".
+- Direction of record: V5 premium restraint (Linear/Stripe school); next step is the
+  V6 Apple News/Artifact front-page restructure (planned).
+- One seamless feed: **no saved-view preset strip** (Morning Digest/Papers/etc. were
+  removed at user request); filters live in chips + one advanced-filter drawer.
+- Infinite scroll on "All items" (digest stays finite by design); share button on every
+  card and in the reader (Web Share API, clipboard fallback).
+- Login-first: visitors without a token are redirected to `/login` before content renders.
 - Dark mode is required, not optional. System preference respected by default.
 - Typography: readable at small sizes. Minimum 16px body text on mobile.
 - Animations: subtle and fast (< 200ms). Use Tailwind's `transition` classes.
@@ -305,6 +334,16 @@ Unread · All content types · Last 7 days · High + Medium signal sources
 | Company Updates | News · Company blogs · 7d |
 
 ---
+
+## Summaries (user requirement)
+
+- **10-minute deep brief is the default reading mode** (structured markdown:
+  Context / What's New / How It Works / Results / Why It Matters / Limitations /
+  Who Should Care), with a 1-minute quick summary as fallback toggle.
+- Generated on demand via Groq (`SUMMARY_PROVIDER`, Ollama for offline dev), cached
+  on the article row; page text is fetched transiently and never persisted.
+- When extraction fails (e.g. Reddit blocks datacenter IPs), generate from stored
+  title + snippet rather than erroring.
 
 ## Feedback & Personalization
 
@@ -462,7 +501,16 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 
 ## Security Rules
 
-- Never store full article text or third-party images — link out only.
+Implemented (Phase 3, 2026-06-12): PBKDF2-600k password hashing; HS256 JWT (7-day
+expiry, `JWT_SECRET` env; server refuses to boot with the default secret when
+`AUTH_REQUIRED=true`); per-IP rate limiting (auth 10/min, writes 60/min);
+`ALLOW_REGISTRATION` kill-switch; security headers (HSTS, nosniff, frame-deny,
+no-referrer, no-store); CORS locked to explicit origins/methods/headers; per-user
+data authorization — every read/write scoped to the JWT's user id
+(`user_article_state`, prefs namespaced `u:{id}:{key}`).
+
+- Never store full article text or third-party image files — link out only (image
+  URLs as metadata are allowed).
 - Never hardcode API keys or tokens; use environment variables.
 - Sanitize all scraped content before storing (strip scripts/HTML).
 - Rate-limit all write endpoints in Phase 3 (auth required).
