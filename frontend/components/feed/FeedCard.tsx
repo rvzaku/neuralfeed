@@ -79,7 +79,7 @@ export function FeedCard({ article, onOpen }: FeedCardProps) {
       onClick={handleCardClick}
       onKeyDown={(e) => e.key === "Enter" && activate()}
       className={cn(
-        "group relative rounded-2xl border border-border bg-card p-4 cursor-pointer card-lift animate-in fade-in slide-in-from-bottom-2 duration-300",
+        "group relative rounded-xl border border-border bg-card p-4 cursor-pointer card-lift animate-in fade-in slide-in-from-bottom-2 duration-300",
         "hover:border-primary/40",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         article.is_read && "opacity-70"
@@ -103,10 +103,10 @@ export function FeedCard({ article, onOpen }: FeedCardProps) {
             <span className={cn(
               "text-[10px] font-semibold rounded-full px-1.5 py-0.5",
               article.trending_score >= 500
-                ? "bg-accent/10 text-accent"
+                ? "bg-secondary text-secondary-foreground"
                 : "text-muted-foreground"
             )}>
-              {article.trending_score >= 500 ? "🔥 " : "↑"}{Math.round(article.trending_score).toLocaleString()}
+              {"↑"}{Math.round(article.trending_score).toLocaleString()}
             </span>
           )}
           <span className="text-xs text-muted-foreground">{formatRelativeTime(article.published_at)}</span>

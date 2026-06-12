@@ -100,7 +100,7 @@ export function FeedView() {
         <main className="flex-1 px-4 pt-4 pb-24 md:pb-6 lg:pb-8 max-w-2xl lg:max-w-3xl xl:max-w-4xl mx-auto w-full space-y-3">
           {/* Mobile top bar */}
           <div className="flex items-center justify-between lg:hidden">
-            <h1 className="font-serif font-bold text-base tracking-tight text-gradient-brand">NeuralFeed</h1>
+            <h1 className="font-serif font-bold text-base tracking-tight text-foreground">NeuralFeed</h1>
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setSearchOpen(true)}
@@ -141,7 +141,7 @@ export function FeedView() {
                 className={cn(
                   "px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all min-h-[32px]",
                   digestMode === (value === "digest")
-                    ? "bg-gradient-brand text-white shadow-sm"
+                    ? "bg-foreground text-background shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -188,8 +188,8 @@ export function FeedView() {
               {storiesQuery.data && storiesQuery.data.stories.length > 0 && (
                 <div className="py-8 text-center space-y-2">
                   {storiesQuery.data.caught_up ? (
-                    <p className="font-serif text-base font-semibold text-gradient-brand">
-                      ✦ You&apos;re all caught up
+                    <p className="font-serif text-base font-semibold text-foreground">
+                      You&apos;re all caught up
                     </p>
                   ) : (
                     <p className="text-xs text-muted-foreground">

@@ -3,56 +3,52 @@
 @tailwind utilities;
 
 @layer base {
-  /* V4 vibrant palette: clean neutrals + vivid indigo→fuchsia brand gradient.
+  /* V5 premium-restraint palette: neutral ink on paper, one flat accent
+     (refined indigo) reserved for primary actions and active states.
      All colors live here — no hardcoded hex in components. */
   :root {
-    --background: 240 25% 99%;
-    --foreground: 240 12% 10%;
+    --background: 0 0% 99%;
+    --foreground: 240 6% 10%;
     --card: 0 0% 100%;
-    --card-foreground: 240 12% 10%;
+    --card-foreground: 240 6% 10%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 12% 10%;
-    --primary: 252 85% 58%;
+    --popover-foreground: 240 6% 10%;
+    --primary: 243 60% 50%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 248 35% 95%;
-    --secondary-foreground: 250 30% 25%;
-    --muted: 240 20% 95%;
-    --muted-foreground: 240 8% 44%;
-    --accent: 320 85% 58%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 78% 55%;
+    --secondary: 240 5% 95%;
+    --secondary-foreground: 240 6% 14%;
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 4% 44%;
+    --accent: 240 5% 95%;
+    --accent-foreground: 240 6% 14%;
+    --destructive: 0 65% 48%;
     --destructive-foreground: 0 0% 100%;
-    --border: 240 15% 90%;
-    --input: 240 15% 90%;
-    --ring: 252 85% 58%;
-    --radius: 1rem;
-    /* Brand gradient stops (indigo → fuchsia) */
-    --grad-from: 252 85% 58%;
-    --grad-to: 320 85% 58%;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 243 60% 50%;
+    --radius: 0.625rem;
   }
 
   .dark {
-    --background: 245 25% 7%;
-    --foreground: 240 20% 94%;
-    --card: 245 22% 10%;
-    --card-foreground: 240 20% 94%;
-    --popover: 245 24% 9%;
-    --popover-foreground: 240 20% 94%;
-    --primary: 252 90% 70%;
-    --primary-foreground: 245 25% 7%;
-    --secondary: 248 18% 17%;
-    --secondary-foreground: 240 20% 94%;
-    --muted: 245 16% 16%;
-    --muted-foreground: 240 10% 64%;
-    --accent: 320 85% 66%;
-    --accent-foreground: 245 25% 7%;
-    --destructive: 0 70% 56%;
-    --destructive-foreground: 240 20% 94%;
-    --border: 245 14% 19%;
-    --input: 245 14% 19%;
-    --ring: 252 90% 70%;
-    --grad-from: 252 90% 68%;
-    --grad-to: 320 85% 64%;
+    --background: 240 4% 7%;
+    --foreground: 240 6% 93%;
+    --card: 240 4% 9%;
+    --card-foreground: 240 6% 93%;
+    --popover: 240 4% 8%;
+    --popover-foreground: 240 6% 93%;
+    --primary: 243 75% 72%;
+    --primary-foreground: 240 4% 7%;
+    --secondary: 240 4% 14%;
+    --secondary-foreground: 240 6% 93%;
+    --muted: 240 4% 14%;
+    --muted-foreground: 240 4% 60%;
+    --accent: 240 4% 14%;
+    --accent-foreground: 240 6% 93%;
+    --destructive: 0 55% 55%;
+    --destructive-foreground: 240 6% 93%;
+    --border: 240 4% 17%;
+    --input: 240 4% 17%;
+    --ring: 243 75% 72%;
   }
 }
 
@@ -67,31 +63,13 @@
 }
 
 @layer utilities {
-  /* Brand gradient helpers — used for the wordmark, active chips, CTAs */
-  .bg-gradient-brand {
-    background-image: linear-gradient(
-      135deg,
-      hsl(var(--grad-from)),
-      hsl(var(--grad-to))
-    );
-  }
-  .text-gradient-brand {
-    background-image: linear-gradient(
-      135deg,
-      hsl(var(--grad-from)),
-      hsl(var(--grad-to))
-    );
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-  /* Lively card hover — translate + colored glow */
+  /* Quiet card hover — hairline emphasis, no lift, no glow */
   .card-lift {
-    transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+    transition: border-color 120ms ease, box-shadow 120ms ease;
   }
   .card-lift:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px -8px hsl(var(--grad-from) / 0.25);
+    border-color: hsl(var(--foreground) / 0.18);
+    box-shadow: 0 1px 2px hsl(var(--foreground) / 0.05);
   }
 }
 

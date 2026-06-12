@@ -30,7 +30,7 @@ export function MobileNav() {
               className={cn(
                 "flex-1 flex items-center justify-center gap-1.5 min-h-[44px] rounded-full text-[11px] font-semibold transition-all duration-200",
                 active
-                  ? "bg-gradient-brand text-white shadow-md"
+                  ? "bg-foreground text-background shadow-sm"
                   : "text-muted-foreground hover:text-foreground active:scale-95"
               )}
             >

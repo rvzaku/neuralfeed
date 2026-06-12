@@ -94,7 +94,7 @@ export function SummarySheet({ article, onClose }: SummarySheetProps) {
         aria-label={`Summary: ${article.title}`}
         className={cn(
           "fixed z-50 bg-background border-border shadow-xl flex flex-col",
-          "inset-x-0 bottom-0 max-h-[88dvh] rounded-t-2xl border-t animate-in slide-in-from-bottom duration-200",
+          "inset-x-0 bottom-0 max-h-[88dvh] rounded-t-xl border-t animate-in slide-in-from-bottom duration-200",
           "md:inset-y-0 md:left-auto md:right-0 md:bottom-auto md:h-full md:max-h-none md:w-[440px] lg:w-[500px] md:rounded-none md:border-l md:slide-in-from-right"
         )}
       >
@@ -139,7 +139,7 @@ export function SummarySheet({ article, onClose }: SummarySheetProps) {
                 className={cn(
                   "px-3 py-1.5 rounded-full text-xs font-semibold transition-all min-h-[32px]",
                   mode === value
-                    ? "bg-gradient-brand text-white shadow-sm"
+                    ? "bg-foreground text-background shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >

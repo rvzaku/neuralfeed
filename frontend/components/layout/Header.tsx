@@ -24,7 +24,7 @@ export function Header() {
     <>
       <header className="hidden md:flex items-center justify-between px-6 py-3 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-20">
         <div className="flex items-center gap-2">
-          <span className="font-serif font-bold text-lg tracking-tight text-gradient-brand">
+          <span className="font-serif font-bold text-lg tracking-tight text-foreground">
             NeuralFeed
           </span>
           <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
@@ -44,7 +44,7 @@ export function Header() {
                 className={cn(
                   "px-3.5 py-1.5 rounded-full text-sm font-semibold transition-all",
                   active
-                    ? "bg-gradient-brand text-white shadow-sm"
+                    ? "bg-foreground text-background shadow-sm"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 )}
               >

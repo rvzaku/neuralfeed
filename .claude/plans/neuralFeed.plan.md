@@ -338,3 +338,14 @@ User feedback (app-feedback-v2.md): not user-friendly enough, looks AI-generic, 
 ## Round 4 (feedback line 27): professional auth experience
 - Login page rebuilt: brand glow backdrop, sign-in/register pill toggle, icon inputs, show/hide password, confirm-password on register, inline alert errors, gradient CTA.
 - Settings → Account section: signed-in email + sign out (clears session, returns to /login).
+
+---
+
+# V5 — Premium restraint redesign (2026-06-12, app-feedback-v3.md)
+
+User verdict on V4: gradients read AI-generic/low-effort; wants premium, human-crafted.
+Direction: Linear/Stripe/Vercel restraint — restraint IS the premium signal.
+- Tokens: neutral ink-on-paper, ONE flat refined-indigo accent (primary actions/active states only), true-neutral dark mode, radius 10px.
+- All gradients removed; active states are flat ink pills (bg-foreground/text-background); CTAs ink buttons.
+- Typography: single clean grotesk (Geist) everywhere; Bricolage display face dropped; weight+tracking carry hierarchy.
+- Hover: hairline border emphasis + 1px shadow — no lift, no glow. Flourishes (🔥, ✦) removed.

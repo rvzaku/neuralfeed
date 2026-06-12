@@ -168,7 +168,7 @@ export default function SourcesPage() {
   return (
     <div className="flex flex-col min-h-screen">
       <header className="sticky top-0 md:static z-10 bg-background/80 backdrop-blur-md border-b border-border px-4 py-3 flex items-center gap-2.5">
-        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-brand text-white">
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-foreground text-background">
           <Database className="h-3.5 w-3.5" />
         </span>
         <h1 className="font-serif font-bold text-base">Sources</h1>
@@ -192,7 +192,7 @@ export default function SourcesPage() {
               className={cn(
                 "flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all min-h-[36px]",
                 tab === value
-                  ? "bg-gradient-brand text-white shadow-sm"
+                  ? "bg-foreground text-background shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >

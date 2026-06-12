@@ -52,7 +52,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
-        serif: ["var(--font-serif)", "Georgia", "serif"],
+        serif: ["var(--font-geist-sans)", "system-ui", "sans-serif"],  // headlines share the product face
         mono: ["var(--font-geist-mono)", "monospace"],
       },
     },

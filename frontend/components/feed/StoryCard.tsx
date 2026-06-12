@@ -32,7 +32,7 @@ export function StoryCard({ story, onOpenArticle }: StoryCardProps) {
   return (
     <div
       className={cn(
-        "rounded-2xl border border-border bg-card animate-in fade-in slide-in-from-bottom-2 duration-300",
+        "rounded-xl border border-border bg-card animate-in fade-in slide-in-from-bottom-2 duration-300",
         !expanded && "card-lift hover:border-primary/40",
         story.is_read && !expanded && "opacity-70"
       )}
@@ -40,7 +40,7 @@ export function StoryCard({ story, onOpenArticle }: StoryCardProps) {
       <button
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
-        className="w-full text-left p-4 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-2xl"
+        className="w-full text-left p-4 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl"
       >
         <div className="flex items-center justify-between gap-2 mb-1.5">
           <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -60,7 +60,7 @@ export function StoryCard({ story, onOpenArticle }: StoryCardProps) {
 
         <h3 className="font-serif font-bold text-[17px] leading-snug text-foreground">
           {!story.is_read && (
-            <span className="inline-block h-2 w-2 rounded-full bg-gradient-brand mr-2 mb-0.5" aria-label="Unread" />
+            <span className="inline-block h-2 w-2 rounded-full bg-primary mr-2 mb-0.5" aria-label="Unread" />
           )}
           {story.headline}
         </h3>

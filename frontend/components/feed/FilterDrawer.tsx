@@ -34,7 +34,7 @@ export function FilterDrawer({ isOpen, onClose }: FilterDrawerProps) {
       {/* Drawer panel — slides up from bottom on mobile, from left on tablet */}
       <div
         className={cn(
-          "fixed bottom-0 left-0 right-0 z-40 bg-background rounded-t-2xl border-t border-border shadow-2xl",
+          "fixed bottom-0 left-0 right-0 z-40 bg-background rounded-t-xl border-t border-border shadow-2xl",
           "transition-transform duration-300 ease-out",
           "max-h-[85vh] flex flex-col",
           "md:right-auto md:left-0 md:bottom-0 md:top-0 md:w-72 md:rounded-none md:rounded-r-xl md:border-r md:border-t-0 md:shadow-xl",

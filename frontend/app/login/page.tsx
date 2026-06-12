@@ -47,16 +47,16 @@ export default function LoginPage() {
     <main className="min-h-dvh flex items-center justify-center bg-background px-4 relative overflow-hidden">
       {/* Soft brand glow backdrop */}
       <div
-        className="absolute -top-32 left-1/2 -translate-x-1/2 h-72 w-[480px] rounded-full bg-gradient-brand opacity-15 blur-3xl"
+        className="absolute -top-32 left-1/2 -translate-x-1/2 h-72 w-[480px] rounded-full bg-primary/10 blur-3xl"
         aria-hidden
       />
 
       <div className="w-full max-w-sm space-y-7 relative">
         <div className="text-center space-y-2">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-brand text-white shadow-lg">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-foreground text-background shadow-sm">
             <Sparkles className="h-6 w-6" />
           </div>
-          <h1 className="font-serif text-3xl font-bold text-gradient-brand">NeuralFeed</h1>
+          <h1 className="font-serif text-3xl font-bold text-foreground">NeuralFeed</h1>
           <p className="text-sm text-muted-foreground">
             {mode === "login"
               ? "Welcome back — sign in to your feed"
@@ -75,7 +75,7 @@ export default function LoginPage() {
               className={cn(
                 "flex-1 min-h-[40px] rounded-full text-sm font-semibold transition-all",
                 mode === value
-                  ? "bg-gradient-brand text-white shadow-sm"
+                  ? "bg-foreground text-background shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
@@ -84,7 +84,7 @@ export default function LoginPage() {
           ))}
         </div>
 
-        <form onSubmit={onSubmit} className="space-y-3.5 rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <form onSubmit={onSubmit} className="space-y-3.5 rounded-xl border border-border bg-card p-5 shadow-sm">
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden />
             <input
@@ -148,7 +148,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={busy}
-            className="w-full min-h-[48px] rounded-full bg-gradient-brand text-white text-sm font-semibold shadow-md hover:opacity-90 active:scale-[0.99] transition-all disabled:opacity-60"
+            className="w-full min-h-[48px] rounded-full bg-foreground text-background text-sm font-semibold shadow-md hover:opacity-90 active:scale-[0.99] transition-all disabled:opacity-60"
           >
             {busy ? "Please wait…" : mode === "login" ? "Sign in" : "Create account"}
           </button>

@@ -1,6 +1,6 @@
 export function FeedCardSkeleton() {
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 animate-pulse space-y-3">
+    <div className="rounded-xl border border-border bg-card p-4 animate-pulse space-y-3">
       <div className="flex items-center gap-2">
         <div className="h-5 w-16 rounded-full bg-muted" />
         <div className="h-4 w-20 rounded bg-muted" />

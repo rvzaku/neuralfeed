@@ -58,7 +58,7 @@ export function FilterBar({ onFilterClick }: FilterBarProps) {
                   "shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors whitespace-nowrap",
                   "min-h-[32px] border",
                   activeCategory === t.value
-                    ? "bg-gradient-brand text-white border-transparent shadow-sm"
+                    ? "bg-foreground text-background border-transparent"
                     : "bg-muted/50 text-muted-foreground border-border hover:bg-muted hover:text-foreground"
                 )}
               >

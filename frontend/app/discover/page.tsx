@@ -74,7 +74,7 @@ function SuggestionsQueue() {
 
       <div className="space-y-2">
         {pending.slice(0, 6).map((a) => (
-          <div key={a.id} className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 card-lift">
+          <div key={a.id} className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 card-lift">
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{a.display_name}</p>
               <p className="text-xs text-muted-foreground truncate">
@@ -118,7 +118,7 @@ export default function DiscoverPage() {
   return (
     <div className="flex flex-col min-h-screen">
       <header className="sticky top-0 md:static z-10 bg-background/80 backdrop-blur-md border-b border-border px-4 py-3 flex items-center gap-2.5">
-        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-brand text-white">
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-foreground text-background">
           <Compass className="h-3.5 w-3.5" />
         </span>
         <h1 className="font-serif font-bold text-base">Discover</h1>
@@ -132,7 +132,7 @@ export default function DiscoverPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search everything fetched…"
-            className="w-full pl-10 pr-4 py-3 text-sm rounded-2xl border border-border bg-card outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 min-h-[48px] shadow-sm"
+            className="w-full pl-10 pr-4 py-3 text-sm rounded-xl border border-border bg-card outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 min-h-[48px] shadow-sm"
             aria-label="Search articles"
           />
         </div>
@@ -161,7 +161,7 @@ export default function DiscoverPage() {
                   <Link
                     key={t.tag}
                     href={`/?topic=${t.tag}`}
-                    className="flex items-center justify-center min-h-[48px] rounded-2xl border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground/90 card-lift hover:border-primary/40 hover:text-primary text-center"
+                    className="flex items-center justify-center min-h-[48px] rounded-xl border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground/90 card-lift hover:border-primary/40 hover:text-primary text-center"
                   >
                     {t.label}
                   </Link>

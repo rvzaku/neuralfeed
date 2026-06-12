@@ -62,7 +62,7 @@ function AccountSection() {
       <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
         Account
       </h2>
-      <div className="flex items-center justify-between py-2.5 border border-border rounded-2xl px-4 bg-card">
+      <div className="flex items-center justify-between py-2.5 border border-border rounded-xl px-4 bg-card">
         <div className="min-w-0">
           <p className="text-sm font-medium truncate">{email ?? "Signed in"}</p>
           <p className="text-xs text-muted-foreground">JWT session · this device</p>
@@ -129,7 +129,7 @@ export default function SettingsPage() {
   return (
     <div className="flex flex-col min-h-screen">
       <header className="sticky top-0 md:static z-10 bg-background/80 backdrop-blur-md border-b border-border px-4 py-3 flex items-center gap-2.5">
-        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-brand text-white">
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-foreground text-background">
           <Settings className="h-3.5 w-3.5" />
         </span>
         <h1 className="font-serif font-bold text-base">Settings</h1>
@@ -145,7 +145,7 @@ export default function SettingsPage() {
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="flex items-center gap-1 text-xs bg-gradient-brand text-white px-3.5 py-1.5 rounded-full font-semibold shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+              className="flex items-center gap-1 text-xs bg-foreground text-background px-3.5 py-1.5 rounded-full font-semibold shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50"
             >
               <Save className="h-3 w-3" />
               Save
@@ -162,7 +162,7 @@ export default function SettingsPage() {
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
             Appearance
           </h2>
-          <div className="flex items-center justify-between py-2.5 border border-border rounded-2xl px-4 bg-card">
+          <div className="flex items-center justify-between py-2.5 border border-border rounded-xl px-4 bg-card">
             <span className="text-sm">Theme</span>
             <ThemeToggle />
           </div>
@@ -236,7 +236,7 @@ export default function SettingsPage() {
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
             Feed Behavior
           </h2>
-          <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
+          <div className="rounded-xl border border-border bg-card p-4 space-y-2">
             <p className="text-sm font-medium">Smart Ranking</p>
             <p className="text-xs text-muted-foreground leading-relaxed">
               Enable smart ranking on the feed to sort articles by a score that combines
