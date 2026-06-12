@@ -304,6 +304,15 @@ async def extract_content_for(article: Article) -> Optional[str]:
     return await extract_article_text(url) or article.summary
 
 
+def _fallback_content(article: Article) -> str:
+    """Last-resort summary input when page/API extraction fails (e.g. Reddit
+    blocks datacenter IPs). Title + stored snippet is always available."""
+    parts = [article.title, article.summary or ""]
+    if article.topic_tags:
+        parts.append("Topics: " + ", ".join(article.topic_tags))
+    return "\n\n".join(p for p in parts if p)
+
+
 def _reading_minutes(text: str) -> int:
     return max(1, round(len(text.split()) / 200))
 
@@ -328,7 +337,7 @@ async def get_or_generate_summary(
     else:
         content = await extract_article_text(article.url) or article.summary
     if not content:
-        raise SummaryError("no readable text available for this article")
+        content = _fallback_content(article)
 
     result = await get_provider().summarize(article.title, content[:MAX_INPUT_CHARS])
 
@@ -348,9 +357,7 @@ async def _get_or_generate_deep(article: Article, db: AsyncSession) -> dict:
             "cached": True,
         }
 
-    content = await extract_content_for(article)
-    if not content:
-        raise SummaryError("no readable text available for this article")
+    content = await extract_content_for(article) or _fallback_content(article)
 
     markdown = await get_provider().summarize_deep(article.title, content[:MAX_INPUT_CHARS])
 
