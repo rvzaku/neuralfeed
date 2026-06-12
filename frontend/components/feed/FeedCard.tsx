@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useState } from "react";
 import { ThumbsUp, ThumbsDown, Bookmark, BookmarkCheck, ExternalLink, Share2, Check } from "lucide-react";
 import { shareUrl } from "@/lib/share";
 import { SourceBadge } from "@/components/ui/SourceBadge";
@@ -34,7 +34,7 @@ function isUnseen(article: Article): boolean {
   return ageHours > 48;
 }
 
-export function FeedCard({ article, onOpen }: FeedCardProps) {
+function FeedCardInner({ article, onOpen }: FeedCardProps) {
   const { mutate: postFeedback } = usePostFeedback();
   const { mutate: toggleBookmark } = useToggleBookmark();
   const unseen = isUnseen(article);
@@ -213,3 +213,7 @@ export function FeedCard({ article, onOpen }: FeedCardProps) {
     </div>
   );
 }
+
+// Infinite scroll appends pages; memo keeps existing cards from re-rendering
+// unless their own article object (or onOpen) changes.
+export const FeedCard = memo(FeedCardInner);

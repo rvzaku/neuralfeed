@@ -80,9 +80,10 @@ class TestRankArticles:
         medium = _make_article(source_id="s1", published_hours_ago=48)
 
         db = AsyncMock()
-        src_mock = MagicMock()
-        src_mock.signal_score = 0.5
-        db.get = AsyncMock(return_value=src_mock)
+        db.get = AsyncMock(return_value=None)
+        exec_result = MagicMock()
+        exec_result.all.return_value = [("s1", 0.5)]
+        db.execute = AsyncMock(return_value=exec_result)
 
         result = await rank_articles([old, medium, fresh], db)
         assert result[0] is fresh
@@ -102,6 +103,9 @@ class TestRankArticles:
 
         db = AsyncMock()
         db.get = AsyncMock(side_effect=fake_get)
+        exec_result = MagicMock()
+        exec_result.all.return_value = [("muted-src", 0.5)]
+        db.execute = AsyncMock(return_value=exec_result)
 
         result = await rank_articles([article], db)
         assert result == []

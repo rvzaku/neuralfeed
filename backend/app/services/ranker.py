@@ -73,9 +73,11 @@ async def rank_articles(articles: list, db: AsyncSession) -> list:
 
     source_ids = {a.source_id for a in articles}
     source_scores: dict = {}
-    for sid in source_ids:
-        src = await db.get(Source, sid)
-        source_scores[sid] = src.signal_score if src else 0.5
+    if source_ids:
+        result = await db.execute(
+            select(Source.id, Source.signal_score).where(Source.id.in_(source_ids))
+        )
+        source_scores = {sid: score for sid, score in result.all()}
 
     scored = [
         (a, score_article(a, source_scores.get(a.source_id, 0.5), topic_weights, muted_sources))

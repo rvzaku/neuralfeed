@@ -140,32 +140,60 @@ export function useSetPreference() {
   });
 }
 
+type FeedPage = { items: Array<{ id: string } & Record<string, unknown>> };
+type InfiniteFeedData = { pages: FeedPage[]; pageParams: unknown[] };
+
+// Both the plain feed (["feed", …]) and the infinite feed (["feed-infinite", …])
+// cache article rows; patch the matching article in either shape.
+function patchArticleInCaches(
+  queryClient: ReturnType<typeof useQueryClient>,
+  articleId: string,
+  patch: Record<string, unknown>
+) {
+  const patchPage = (page: FeedPage): FeedPage => ({
+    ...page,
+    items: page.items.map((item) => (item.id === articleId ? { ...item, ...patch } : item)),
+  });
+  queryClient.setQueriesData({ queryKey: ["feed"] }, (old: unknown) =>
+    old && typeof old === "object" && "items" in (old as object) ? patchPage(old as FeedPage) : old
+  );
+  queryClient.setQueriesData({ queryKey: ["feed-infinite"] }, (old: unknown) => {
+    if (!old || typeof old !== "object" || !("pages" in (old as object))) return old;
+    const data = old as InfiniteFeedData;
+    return { ...data, pages: data.pages.map(patchPage) };
+  });
+}
+
+async function snapshotFeedCaches(queryClient: ReturnType<typeof useQueryClient>) {
+  await Promise.all([
+    queryClient.cancelQueries({ queryKey: ["feed"] }),
+    queryClient.cancelQueries({ queryKey: ["feed-infinite"] }),
+  ]);
+  return [
+    ...queryClient.getQueriesData({ queryKey: ["feed"] }),
+    ...queryClient.getQueriesData({ queryKey: ["feed-infinite"] }),
+  ];
+}
+
+function restoreFeedCaches(
+  queryClient: ReturnType<typeof useQueryClient>,
+  previous: Array<[readonly unknown[], unknown]>
+) {
+  previous.forEach(([queryKey, data]) => queryClient.setQueryData(queryKey, data));
+}
+
 export function usePostFeedback() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ articleId, value }: { articleId: string; value: FeedbackValue }) =>
       postFeedback(articleId, value),
     onMutate: async ({ articleId, value }) => {
-      await queryClient.cancelQueries({ queryKey: ["feed"] });
-      const previous = queryClient.getQueriesData({ queryKey: ["feed"] });
-      queryClient.setQueriesData({ queryKey: ["feed"] }, (old: unknown) => {
-        if (!old || typeof old !== "object") return old;
-        const data = old as { items: Array<{ id: string; feedback: unknown }> };
-        return {
-          ...data,
-          items: data.items.map((item) =>
-            item.id === articleId ? { ...item, feedback: value } : item
-          ),
-        };
-      });
+      const previous = await snapshotFeedCaches(queryClient);
+      patchArticleInCaches(queryClient, articleId, { feedback: value });
       return { previous };
     },
     onError: (_err, _vars, context) => {
-      if (context?.previous) {
-        context.previous.forEach(([queryKey, data]) => {
-          queryClient.setQueryData(queryKey, data);
-        });
-      }
+      if (context?.previous) restoreFeedCaches(queryClient, context.previous);
     },
   });
 }
@@ -174,8 +202,27 @@ export function useToggleBookmark() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (articleId: string) => toggleBookmark(articleId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["feed"] });
+    onMutate: async (articleId) => {
+      const previous = await snapshotFeedCaches(queryClient);
+      // Flip optimistically; the server response settles the real value
+      const current = previous
+        .flatMap(([, data]) => {
+          if (!data || typeof data !== "object") return [];
+          if ("items" in data) return (data as FeedPage).items;
+          if ("pages" in data) return (data as InfiniteFeedData).pages.flatMap((p) => p.items);
+          return [];
+        })
+        .find((item) => item.id === articleId);
+      patchArticleInCaches(queryClient, articleId, {
+        is_bookmarked: !(current?.is_bookmarked ?? false),
+      });
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) restoreFeedCaches(queryClient, context.previous);
+    },
+    onSuccess: (article) => {
+      patchArticleInCaches(queryClient, article.id, { is_bookmarked: article.is_bookmarked });
     },
   });
 }
@@ -227,7 +274,12 @@ export function useTriggerRefresh() {
   return useMutation({
     mutationFn: triggerRefresh,
     onSuccess: () => {
-      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["feed"] }), 3000);
+      // Give the backend a moment to ingest, then refresh every feed-backed view
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["feed"] });
+        queryClient.invalidateQueries({ queryKey: ["feed-infinite"] });
+        queryClient.invalidateQueries({ queryKey: ["stories"] });
+      }, 3000);
     },
   });
 }
