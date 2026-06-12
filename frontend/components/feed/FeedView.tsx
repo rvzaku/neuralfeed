@@ -111,7 +111,7 @@ export function FeedView() {
           </div>
 
           {/* Digest / All toggle */}
-          <div className="flex items-center gap-1 rounded-lg bg-muted p-0.5 w-fit" role="tablist" aria-label="Feed view">
+          <div className="flex items-center gap-1 rounded-full bg-muted p-0.5 w-fit" role="tablist" aria-label="Feed view">
             {([["digest", "Digest"], ["all", "All items"]] as const).map(([value, label]) => (
               <button
                 key={value}
@@ -119,9 +119,9 @@ export function FeedView() {
                 aria-selected={digestMode === (value === "digest")}
                 onClick={() => setView(value)}
                 className={cn(
-                  "px-3 py-1.5 rounded-md text-xs font-medium transition-colors min-h-[32px]",
+                  "px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all min-h-[32px]",
                   digestMode === (value === "digest")
-                    ? "bg-background text-foreground shadow-sm"
+                    ? "bg-gradient-brand text-white shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -168,8 +168,8 @@ export function FeedView() {
               {storiesQuery.data && storiesQuery.data.stories.length > 0 && (
                 <div className="py-8 text-center space-y-2">
                   {storiesQuery.data.caught_up ? (
-                    <p className="font-serif italic text-sm text-muted-foreground">
-                      You&apos;re caught up — that&apos;s everything worth your attention.
+                    <p className="font-serif text-base font-semibold text-gradient-brand">
+                      ✦ You&apos;re all caught up
                     </p>
                   ) : (
                     <p className="text-xs text-muted-foreground">

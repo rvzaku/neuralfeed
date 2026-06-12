@@ -32,7 +32,7 @@ export function StoryCard({ story, onOpenArticle }: StoryCardProps) {
   return (
     <div
       className={cn(
-        "rounded-2xl border border-border bg-card",
+        "rounded-2xl border border-border bg-card animate-in fade-in slide-in-from-bottom-2 duration-300",
         !expanded && "card-lift hover:border-primary/40",
         story.is_read && !expanded && "opacity-70"
       )}
@@ -59,6 +59,9 @@ export function StoryCard({ story, onOpenArticle }: StoryCardProps) {
         </div>
 
         <h3 className="font-serif font-bold text-[17px] leading-snug text-foreground">
+          {!story.is_read && (
+            <span className="inline-block h-2 w-2 rounded-full bg-gradient-brand mr-2 mb-0.5" aria-label="Unread" />
+          )}
           {story.headline}
         </h3>
 

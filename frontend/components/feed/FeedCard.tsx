@@ -67,7 +67,7 @@ export function FeedCard({ article, onOpen }: FeedCardProps) {
       onClick={handleCardClick}
       onKeyDown={(e) => e.key === "Enter" && activate()}
       className={cn(
-        "group relative rounded-2xl border border-border bg-card p-4 cursor-pointer card-lift",
+        "group relative rounded-2xl border border-border bg-card p-4 cursor-pointer card-lift animate-in fade-in slide-in-from-bottom-2 duration-300",
         "hover:border-primary/40",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         article.is_read && "opacity-70"

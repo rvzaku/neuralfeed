@@ -55,7 +55,7 @@ def _similarity(a: frozenset, b: frozenset) -> float:
     return len(shared) / min(len(a), len(b))
 
 
-def cluster_articles(articles: list[Article]) -> list[dict]:
+def cluster_articles(articles: list[Article], read_ids: Optional[set] = None) -> list[dict]:
     """Greedy single-pass clustering on title signatures.
     Returns story dicts sorted by (size, total trending) descending."""
     clusters: list[dict] = []
@@ -93,7 +93,7 @@ def cluster_articles(articles: list[Article]) -> list[dict]:
             "topic_tags": [t for t, _ in tag_counts.most_common(4)],
             "latest_at": max(a.published_at for a in arts).isoformat(),
             "total_trending": sum(a.trending_score for a in arts),
-            "is_read": all(a.is_read for a in arts),
+            "is_read": all((a.id in read_ids) if read_ids is not None else a.is_read for a in arts),
             "article_ids": [a.id for a in arts],
         })
 
@@ -107,6 +107,7 @@ async def get_stories(
     limit: int = 12,
     unread_only: bool = True,
     topic: Optional[str] = None,
+    read_ids: Optional[set] = None,  # per-user read overlay (None = global columns)
 ) -> dict:
     """Bounded story digest: at most `limit` stories — the feed must end."""
     cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
@@ -119,11 +120,14 @@ async def get_stories(
     result = await db.execute(q)
     articles = list(result.scalars().all())
     if unread_only:
-        articles = [a for a in articles if not a.is_read]
+        if read_ids is not None:
+            articles = [a for a in articles if a.id not in read_ids]
+        else:
+            articles = [a for a in articles if not a.is_read]
     if topic:
         articles = [a for a in articles if topic in (a.topic_tags or [])]
 
-    stories = cluster_articles(articles)
+    stories = cluster_articles(articles, read_ids=read_ids)
     return {
         "stories": stories[:limit],
         "total_stories": len(stories),
@@ -132,7 +136,9 @@ async def get_stories(
     }
 
 
-async def get_story_detail(db: AsyncSession, article_ids: list[str]) -> dict:
+async def get_story_detail(
+    db: AsyncSession, article_ids: list[str], states: Optional[dict] = None
+) -> dict:
     """Everything related to one story, grouped by source category."""
     if not article_ids:
         return {"groups": {}}
@@ -153,9 +159,9 @@ async def get_story_detail(db: AsyncSession, article_ids: list[str]) -> dict:
             "summary": a.summary,
             "published_at": a.published_at.isoformat(),
             "trending_score": a.trending_score,
-            "is_read": a.is_read,
-            "is_bookmarked": a.is_bookmarked,
-            "feedback": a.feedback,
+            "is_read": states[a.id].is_read if states and a.id in states else (a.is_read if states is None else False),
+            "is_bookmarked": states[a.id].is_bookmarked if states and a.id in states else (a.is_bookmarked if states is None else False),
+            "feedback": states[a.id].feedback if states and a.id in states else (a.feedback if states is None else None),
             "topic_tags": a.topic_tags or [],
         })
     return {"groups": groups}
