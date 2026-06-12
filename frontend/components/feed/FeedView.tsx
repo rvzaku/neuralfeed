@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Search, AlertCircle, Inbox } from "lucide-react";
 import { FeedCard } from "./FeedCard";
@@ -11,7 +11,7 @@ import { RefreshIndicator } from "./RefreshIndicator";
 import { SearchModal } from "./SearchModal";
 import { StoryCard } from "./StoryCard";
 import { SummarySheet } from "./SummarySheet";
-import { useFeed, useStories } from "@/hooks/useFeed";
+import { useInfiniteFeed, useStories } from "@/hooks/useFeed";
 import { cn } from "@/lib/utils";
 import type { Article, FeedFilters } from "@/lib/types";
 
@@ -47,7 +47,27 @@ export function FeedView() {
     filters.feedback !== undefined;
   const digestMode = !wantsList;
 
-  const { data, isLoading, isError, refetch } = useFeed(filters);
+  const {
+    data: infData, isLoading, isError, refetch,
+    fetchNextPage, hasNextPage, isFetchingNextPage,
+  } = useInfiniteFeed(filters);
+  const allItems = infData?.pages.flatMap((p) => p.items) ?? [];
+  const total = infData?.pages[0]?.total ?? 0;
+
+  // Infinite scroll sentinel
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || digestMode) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) fetchNextPage();
+      },
+      { rootMargin: "600px" }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [digestMode, hasNextPage, isFetchingNextPage, fetchNextPage]);
   const storiesQuery = useStories({
     days: TIME_TO_DAYS[filters.time_range ?? "7d"] ?? 1,
     limit: 12,
@@ -200,7 +220,7 @@ export function FeedView() {
                 </div>
               )}
 
-              {!isLoading && !isError && data?.items.length === 0 && (
+              {!isLoading && !isError && allItems.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
                   <Inbox className="h-8 w-8 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">No items match your filters.</p>
@@ -208,16 +228,17 @@ export function FeedView() {
                 </div>
               )}
 
-              {!isLoading && !isError && data?.items.map((article) => (
+              {!isLoading && !isError && allItems.map((article) => (
                 <FeedCard key={article.id} article={article} onOpen={setOpenArticle} />
               ))}
 
-              {data?.has_more && (
-                <div className="py-4 text-center">
-                  <p className="text-xs text-muted-foreground">
-                    Showing {data.items.length} of {data.total} items
-                  </p>
-                </div>
+              {/* Infinite scroll sentinel + status */}
+              <div ref={sentinelRef} aria-hidden />
+              {isFetchingNextPage && Array.from({ length: 3 }).map((_, i) => <FeedCardSkeleton key={`p${i}`} />)}
+              {!hasNextPage && allItems.length > 0 && (
+                <p className="py-6 text-center text-xs text-muted-foreground">
+                  All {total} items loaded
+                </p>
               )}
             </>
           )}

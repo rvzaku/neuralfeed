@@ -33,6 +33,8 @@ services:
         value: "false"  # flip to "true" once accounts are created
       - key: SENTRY_DSN
         sync: false  # optional: paste a free sentry.io DSN to enable error monitoring
+      - key: ALLOW_REGISTRATION
+        value: "true"  # set "false" after creating your account to close signup
       - key: REDDIT_USER_AGENT
         value: NeuralFeed/0.1 (personal)
       - key: CORS_ORIGINS

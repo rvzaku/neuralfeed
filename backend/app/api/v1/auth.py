@@ -28,6 +28,9 @@ class UserOut(BaseModel):
 
 @router.post("/register", response_model=TokenOut, status_code=201)
 async def register(body: Credentials, db: AsyncSession = Depends(get_db)) -> TokenOut:
+    from app.core.config import settings
+    if not settings.allow_registration:
+        raise HTTPException(status_code=403, detail="registration is closed")
     try:
         user = await auth_service.register(db, body.email, body.password)
     except AuthError as e:

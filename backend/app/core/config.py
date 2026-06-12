@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     jwt_secret: str = "dev-secret-change-me"  # MUST override in production env
     jwt_expires_minutes: int = 60 * 24 * 7  # 7 days
 
+    # Set false after creating your account to close public signup
+    allow_registration: bool = True
+
     # Monitoring (Phase 3.3) — leave empty to disable
     sentry_dsn: str = ""
 

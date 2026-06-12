@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import {
-  X, ExternalLink, ThumbsUp, ThumbsDown, Bookmark, BookmarkCheck, AlertCircle,
+  X, ExternalLink, ThumbsUp, ThumbsDown, Bookmark, BookmarkCheck, AlertCircle, Share2, Check,
 } from "lucide-react";
+import { shareUrl } from "@/lib/share";
 import { SourceBadge } from "@/components/ui/SourceBadge";
 import { cn, formatRelativeTime } from "@/lib/utils";
 import { useDeepSummary, usePostFeedback, useSummary, useToggleBookmark } from "@/hooks/useFeed";
@@ -63,6 +64,7 @@ export function SummarySheet({ article, onClose }: SummarySheetProps) {
   const deep = useDeepSummary(mode === "deep" ? article?.id ?? null : null);
   const { mutate: postFeedback } = usePostFeedback();
   const { mutate: toggleBookmark } = useToggleBookmark();
+  const [shared, setShared] = useState(false);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -246,6 +248,19 @@ export function SummarySheet({ article, onClose }: SummarySheetProps) {
             )}
           >
             <ThumbsDown className="h-4 w-4" />
+          </button>
+          <button
+            aria-label={shared ? "Link copied" : "Share article"}
+            onClick={async () => {
+              const result = await shareUrl(article.url, article.title);
+              if (result === "copied") {
+                setShared(true);
+                setTimeout(() => setShared(false), 1500);
+              }
+            }}
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg border border-border transition-colors hover:bg-primary/10 text-muted-foreground"
+          >
+            {shared ? <Check className="h-4 w-4 text-green-600 dark:text-green-400" /> : <Share2 className="h-4 w-4" />}
           </button>
           <button
             aria-label="Bookmark"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getFeed,
   getSources,
@@ -28,6 +28,16 @@ export function useFeed(filters: FeedFilters = {}) {
   return useQuery({
     queryKey: ["feed", filters],
     queryFn: () => getFeed(filters),
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+export function useInfiniteFeed(filters: FeedFilters = {}) {
+  return useInfiniteQuery({
+    queryKey: ["feed-infinite", filters],
+    queryFn: ({ pageParam }) => getFeed({ ...filters, page: pageParam }),
+    initialPageParam: 1,
+    getNextPageParam: (last) => (last.has_more ? last.page + 1 : undefined),
     staleTime: 1000 * 60 * 5,
   });
 }

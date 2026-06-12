@@ -307,3 +307,25 @@ User feedback (app-feedback-v2.md): not user-friendly enough, looks AI-generic, 
 
 ## Reliability (root cause of "empty feed")
 - Render free instance sleeps → scheduler stops + first load times out. Fix: GitHub Actions keepalive ping every 10 min (.github/workflows/keepalive.yml) + manual refresh triggered.
+
+---
+
+# Feedback-v2 round 2 (2026-06-12, lines 17-21 of app-feedback-v2.md)
+
+## A. Infinite scroll (frontend)
+- `useInfiniteFeed` (useInfiniteQuery over /api/v1/feed pages) for the "All items" view.
+- IntersectionObserver sentinel triggers next page; digest stays finite by design (that's its differentiator).
+
+## B. Share links
+- Share button on FeedCard actions + SummarySheet footer: Web Share API on mobile, clipboard-copy fallback on desktop ("Link copied").
+- Shares the original article URL (NeuralFeed is a curator — link out). Topic/filter views are already shareable URLs (e.g. /?topic=llm).
+
+## C. Security hardening (backend)
+- Security headers middleware: HSTS, X-Content-Type-Options, X-Frame-Options DENY, Referrer-Policy, no-store on API responses.
+- Fail-fast guard: refuse AUTH_REQUIRED=true with the default JWT secret.
+- CORS tightened: explicit methods/headers instead of "*".
+- `ALLOW_REGISTRATION` flag (default true) — set false in Render after creating your account to close signup.
+- Existing: PBKDF2 600k, JWT HS256, per-IP rate limiting, no secrets in repo, input sanitization in fetchers.
+
+## Deferred (needs user/credentials or separate sprint)
+- LinkedIn/X sources (Phase 2.2 feasibility — X API tier, LinkedIn ToS), Reddit API credentials for richer briefs, daily auto-briefing differentiator.

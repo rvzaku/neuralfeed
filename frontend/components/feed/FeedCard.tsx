@@ -1,6 +1,8 @@
 "use client";
 
-import { ThumbsUp, ThumbsDown, Bookmark, BookmarkCheck, ExternalLink } from "lucide-react";
+import { useState } from "react";
+import { ThumbsUp, ThumbsDown, Bookmark, BookmarkCheck, ExternalLink, Share2, Check } from "lucide-react";
+import { shareUrl } from "@/lib/share";
 import { SourceBadge } from "@/components/ui/SourceBadge";
 import { cn, formatRelativeTime } from "@/lib/utils";
 import { usePostFeedback, useToggleBookmark } from "@/hooks/useFeed";
@@ -36,6 +38,16 @@ export function FeedCard({ article, onOpen }: FeedCardProps) {
   const { mutate: postFeedback } = usePostFeedback();
   const { mutate: toggleBookmark } = useToggleBookmark();
   const unseen = isUnseen(article);
+  const [shared, setShared] = useState(false);
+
+  async function handleShare(e: React.MouseEvent) {
+    e.stopPropagation();
+    const result = await shareUrl(article.url, article.title);
+    if (result === "copied") {
+      setShared(true);
+      setTimeout(() => setShared(false), 1500);
+    }
+  }
 
   function activate() {
     if (onOpen) onOpen(article);
@@ -163,6 +175,13 @@ export function FeedCard({ article, onOpen }: FeedCardProps) {
             )}
           >
             <ThumbsDown className="h-3.5 w-3.5" />
+          </button>
+          <button
+            aria-label={shared ? "Link copied" : "Share"}
+            onClick={handleShare}
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg transition-colors hover:bg-primary/10 text-muted-foreground"
+          >
+            {shared ? <Check className="h-3.5 w-3.5 text-green-600 dark:text-green-400" /> : <Share2 className="h-3.5 w-3.5" />}
           </button>
           <button
             aria-label="Bookmark"
