@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_db
+from app.core.deps import get_current_user, get_db
 from app.core.time import utcnow
 from app.models.article import Article
 from app.models.source import Source
@@ -30,8 +30,14 @@ async def get_feed(
     feedback: Optional[int] = Query(None, ge=-1, le=1),
     min_signal: Optional[float] = Query(None, ge=0.0, le=1.0),
     db: AsyncSession = Depends(get_db),
+    user=Depends(get_current_user),
 ) -> FeedResponse:
     q = select(Article)
+
+    # For authed users the state filters apply to *their* overlay, post-query
+    user_state_filters = (is_read, is_bookmarked, feedback) if user else None
+    if user:
+        is_read = is_bookmarked = feedback = None
 
     # Join Source once if any Source-column filter is active
     needs_source_join = bool(category or min_signal is not None)
@@ -71,8 +77,24 @@ async def get_feed(
         result = await db.execute(q)
         items = result.scalars().all()
 
+    out_items = [ArticleOut.model_validate(a) for a in items]
+
+    if user:
+        from app.services.user_state import overlay, state_map
+        states = await state_map(db, user.id, [a.id for a in items])
+        out_items = [
+            ArticleOut(**overlay(o.model_dump(), states.get(o.id))) for o in out_items
+        ]
+        f_read, f_bm, f_fb = user_state_filters
+        if f_read is not None:
+            out_items = [o for o in out_items if o.is_read == f_read]
+        if f_bm is not None:
+            out_items = [o for o in out_items if o.is_bookmarked == f_bm]
+        if f_fb is not None:
+            out_items = [o for o in out_items if o.feedback == f_fb]
+
     return FeedResponse(
-        items=[ArticleOut.model_validate(a) for a in items],
+        items=out_items,
         total=total,
         page=page,
         limit=limit,
