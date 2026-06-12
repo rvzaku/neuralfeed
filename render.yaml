@@ -34,4 +34,4 @@ services:
       - key: REDDIT_USER_AGENT
         value: NeuralFeed/0.1 (personal)
       - key: CORS_ORIGINS
-        value: '["http://localhost:3000"]'  # add your Vercel URL after first deploy
+        value: '["http://localhost:3000","https://neuralfeed.vercel.app"]'
