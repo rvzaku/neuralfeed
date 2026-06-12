@@ -13,8 +13,10 @@ export function Header() {
     <>
       <header className="hidden md:flex items-center justify-between px-6 py-3 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-20">
         <div className="flex items-center gap-2">
-          <span className="font-bold text-lg tracking-tight">NeuralFeed</span>
-          <span className="text-xs text-muted-foreground font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+          <span className="font-serif font-bold text-lg tracking-tight text-gradient-brand">
+            NeuralFeed
+          </span>
+          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
             beta
           </span>
         </div>

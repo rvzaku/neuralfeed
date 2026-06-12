@@ -89,7 +89,7 @@ export function FeedView() {
         <main className="flex-1 px-4 pt-4 pb-24 md:pb-6 lg:pb-8 max-w-2xl lg:max-w-3xl xl:max-w-4xl mx-auto w-full space-y-3">
           {/* Mobile top bar */}
           <div className="flex items-center justify-between lg:hidden">
-            <h1 className="font-bold text-base tracking-tight">NeuralFeed</h1>
+            <h1 className="font-serif font-bold text-base tracking-tight text-gradient-brand">NeuralFeed</h1>
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setSearchOpen(true)}
@@ -142,8 +142,14 @@ export function FeedView() {
           {digestMode ? (
             <>
               {/* Story digest — bounded, finite by design */}
-              {storiesQuery.isLoading &&
-                Array.from({ length: 5 }).map((_, i) => <FeedCardSkeleton key={i} />)}
+              {storiesQuery.isLoading && (
+                <>
+                  <p className="text-xs text-muted-foreground text-center">
+                    Loading your briefing — the free server naps when idle, first load can take a minute…
+                  </p>
+                  {Array.from({ length: 5 }).map((_, i) => <FeedCardSkeleton key={i} />)}
+                </>
+              )}
 
               {storiesQuery.isError && (
                 <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">

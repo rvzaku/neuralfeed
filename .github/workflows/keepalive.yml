@@ -1,0 +1,16 @@
+name: Keepalive
+
+# Render free instances sleep after ~15 min idle, which also stops the
+# in-process fetch scheduler — the feed goes stale and first loads time out.
+# Pinging /health keeps the instance (and scheduler) running.
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping backend health
+        run: curl -sf -m 120 https://neuralfeed-api.onrender.com/health

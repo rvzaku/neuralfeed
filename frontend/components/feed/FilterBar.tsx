@@ -58,7 +58,7 @@ export function FilterBar({ onFilterClick }: FilterBarProps) {
                   "shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors whitespace-nowrap",
                   "min-h-[32px] border",
                   activeCategory === t.value
-                    ? "bg-primary text-primary-foreground border-primary"
+                    ? "bg-gradient-brand text-white border-transparent shadow-sm"
                     : "bg-muted/50 text-muted-foreground border-border hover:bg-muted hover:text-foreground"
                 )}
               >
@@ -109,7 +109,7 @@ export function FilterBar({ onFilterClick }: FilterBarProps) {
                   "shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors whitespace-nowrap",
                   "min-h-[32px] border",
                   activeTime === t.value
-                    ? "bg-secondary text-secondary-foreground border-secondary"
+                    ? "bg-primary/10 text-primary border-primary/30 font-semibold"
                     : "bg-transparent text-muted-foreground border-transparent hover:border-border hover:text-foreground"
                 )}
               >

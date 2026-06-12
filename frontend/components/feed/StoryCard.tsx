@@ -32,15 +32,15 @@ export function StoryCard({ story, onOpenArticle }: StoryCardProps) {
   return (
     <div
       className={cn(
-        "rounded-xl border border-border bg-card transition-all duration-150",
-        !expanded && "hover:border-primary/40 hover:shadow-sm",
+        "rounded-2xl border border-border bg-card",
+        !expanded && "card-lift hover:border-primary/40",
         story.is_read && !expanded && "opacity-70"
       )}
     >
       <button
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
-        className="w-full text-left p-4 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl"
+        className="w-full text-left p-4 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-2xl"
       >
         <div className="flex items-center justify-between gap-2 mb-1.5">
           <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -58,7 +58,7 @@ export function StoryCard({ story, onOpenArticle }: StoryCardProps) {
           </span>
         </div>
 
-        <h3 className="font-serif font-semibold text-base leading-snug text-foreground">
+        <h3 className="font-serif font-bold text-[17px] leading-snug text-foreground">
           {story.headline}
         </h3>
 
@@ -67,7 +67,7 @@ export function StoryCard({ story, onOpenArticle }: StoryCardProps) {
             {story.topic_tags.slice(0, 3).map((tag) => (
               <span
                 key={tag}
-                className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium bg-muted text-muted-foreground"
+                className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-primary/10 text-primary"
               >
                 {tag.replace(/-/g, " ")}
               </span>

@@ -3,51 +3,56 @@
 @tailwind utilities;
 
 @layer base {
-  /* Editorial palette: warm paper neutrals + single ink-teal accent.
+  /* V4 vibrant palette: clean neutrals + vivid indigo→fuchsia brand gradient.
      All colors live here — no hardcoded hex in components. */
   :root {
-    --background: 40 33% 98%;
-    --foreground: 30 12% 12%;
-    --card: 40 33% 99.5%;
-    --card-foreground: 30 12% 12%;
-    --popover: 40 33% 99.5%;
-    --popover-foreground: 30 12% 12%;
-    --primary: 174 62% 25%;
-    --primary-foreground: 40 33% 98%;
-    --secondary: 36 18% 92%;
-    --secondary-foreground: 30 12% 16%;
-    --muted: 36 18% 93%;
-    --muted-foreground: 30 7% 42%;
-    --accent: 36 18% 92%;
-    --accent-foreground: 30 12% 16%;
-    --destructive: 0 72% 48%;
-    --destructive-foreground: 40 33% 98%;
-    --border: 36 14% 87%;
-    --input: 36 14% 87%;
-    --ring: 174 62% 25%;
-    --radius: 0.75rem;
+    --background: 240 25% 99%;
+    --foreground: 240 12% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 12% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 12% 10%;
+    --primary: 252 85% 58%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 248 35% 95%;
+    --secondary-foreground: 250 30% 25%;
+    --muted: 240 20% 95%;
+    --muted-foreground: 240 8% 44%;
+    --accent: 320 85% 58%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 78% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 15% 90%;
+    --input: 240 15% 90%;
+    --ring: 252 85% 58%;
+    --radius: 1rem;
+    /* Brand gradient stops (indigo → fuchsia) */
+    --grad-from: 252 85% 58%;
+    --grad-to: 320 85% 58%;
   }
 
   .dark {
-    --background: 30 10% 8%;
-    --foreground: 38 20% 92%;
-    --card: 30 9% 10.5%;
-    --card-foreground: 38 20% 92%;
-    --popover: 30 10% 9%;
-    --popover-foreground: 38 20% 92%;
-    --primary: 172 48% 56%;
-    --primary-foreground: 30 10% 8%;
-    --secondary: 30 8% 16%;
-    --secondary-foreground: 38 20% 92%;
-    --muted: 30 8% 16%;
-    --muted-foreground: 34 10% 62%;
-    --accent: 30 8% 16%;
-    --accent-foreground: 38 20% 92%;
-    --destructive: 0 62% 46%;
-    --destructive-foreground: 38 20% 92%;
-    --border: 30 8% 18%;
-    --input: 30 8% 18%;
-    --ring: 172 48% 56%;
+    --background: 245 25% 7%;
+    --foreground: 240 20% 94%;
+    --card: 245 22% 10%;
+    --card-foreground: 240 20% 94%;
+    --popover: 245 24% 9%;
+    --popover-foreground: 240 20% 94%;
+    --primary: 252 90% 70%;
+    --primary-foreground: 245 25% 7%;
+    --secondary: 248 18% 17%;
+    --secondary-foreground: 240 20% 94%;
+    --muted: 245 16% 16%;
+    --muted-foreground: 240 10% 64%;
+    --accent: 320 85% 66%;
+    --accent-foreground: 245 25% 7%;
+    --destructive: 0 70% 56%;
+    --destructive-foreground: 240 20% 94%;
+    --border: 245 14% 19%;
+    --input: 245 14% 19%;
+    --ring: 252 90% 70%;
+    --grad-from: 252 90% 68%;
+    --grad-to: 320 85% 64%;
   }
 }
 
@@ -58,6 +63,35 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer utilities {
+  /* Brand gradient helpers — used for the wordmark, active chips, CTAs */
+  .bg-gradient-brand {
+    background-image: linear-gradient(
+      135deg,
+      hsl(var(--grad-from)),
+      hsl(var(--grad-to))
+    );
+  }
+  .text-gradient-brand {
+    background-image: linear-gradient(
+      135deg,
+      hsl(var(--grad-from)),
+      hsl(var(--grad-to))
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  /* Lively card hover — translate + colored glow */
+  .card-lift {
+    transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+  }
+  .card-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px -8px hsl(var(--grad-from) / 0.25);
   }
 }
 

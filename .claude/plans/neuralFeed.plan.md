@@ -286,3 +286,24 @@ Status of CLAUDE.md Phase 3 items: 3.2 is largely done (Render backend + Neon Po
 
 ## Increment 2 (deferred)
 - Per-user article state (`user_article_state`: user_id, article_id, is_read, is_bookmarked, feedback) and user-scoped preferences; OAuth providers; Sentry; Lighthouse audit.
+
+---
+
+# V4 Frontend Redesign — "Vibrant app-like" (2026-06-12, user-selected direction)
+
+User feedback (app-feedback-v2.md): not user-friendly enough, looks AI-generic, must be mobile + desktop friendly, easy navigation, distinctive. Direction chosen via review: vibrant/app-like — gradient accents, large radius, bold topic colors, lively motion (Spotify/iOS feel).
+
+## Token layer
+- New palette: light = clean near-white + vivid indigo-violet primary with gradient (indigo→fuchsia); dark = deep blue-black, same gradient brightened.
+- Radius 1rem base; colored shadows on hover; per-topic accent colors kept but boldened.
+- Display font: Bricolage Grotesque (replaces Newsreader serif var — headlines go bold grotesque, kills the generic-AI look).
+
+## Components
+- MobileNav → floating pill dock with active-tab highlight + spring motion.
+- Header → gradient wordmark, rounded search.
+- FeedCard/StoryCard → rounded-2xl, hover lift, topic emoji chips, 🔥 trending badge.
+- FilterBar → chunky chips, gradient active state.
+- Skeletons → note about free-tier cold start ("waking the server…") so empty feed reads as loading, not broken.
+
+## Reliability (root cause of "empty feed")
+- Render free instance sleeps → scheduler stops + first load times out. Fix: GitHub Actions keepalive ping every 10 min (.github/workflows/keepalive.yml) + manual refresh triggered.
