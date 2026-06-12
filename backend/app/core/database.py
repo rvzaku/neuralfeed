@@ -59,12 +59,16 @@ _ADDITIVE_COLUMNS = [
 ]
 
 
-async def _ensure_additive_columns(conn) -> None:
+async def _ensure_additive_columns() -> None:
     from sqlalchemy import text
 
+    # One transaction PER column: on Postgres a failed statement (duplicate
+    # column) aborts its whole transaction, which would silently skip every
+    # ALTER after the first existing column.
     for table, column, ddl_type in _ADDITIVE_COLUMNS:
         try:
-            await conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {ddl_type}"))
+            async with engine.begin() as conn:
+                await conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {ddl_type}"))
         except Exception:
             pass  # column already exists — expected on every boot after the first
 
@@ -72,5 +76,4 @@ async def _ensure_additive_columns(conn) -> None:
 async def init_db() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    async with engine.begin() as conn:
-        await _ensure_additive_columns(conn)
+    await _ensure_additive_columns()
