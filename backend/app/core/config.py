@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     jwt_secret: str = "dev-secret-change-me"  # MUST override in production env
     jwt_expires_minutes: int = 60 * 24 * 7  # 7 days
 
+    # Monitoring (Phase 3.3) — leave empty to disable
+    sentry_dsn: str = ""
+
     # Rate limiting (per-IP, in-memory; single-instance deploys)
     rate_limit_enabled: bool = True
     rate_limit_auth_per_minute: int = 10

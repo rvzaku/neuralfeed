@@ -31,6 +31,8 @@ services:
         generateValue: true  # Render generates a strong secret on first deploy
       - key: AUTH_REQUIRED
         value: "false"  # flip to "true" once accounts are created
+      - key: SENTRY_DSN
+        sync: false  # optional: paste a free sentry.io DSN to enable error monitoring
       - key: REDDIT_USER_AGENT
         value: NeuralFeed/0.1 (personal)
       - key: CORS_ORIGINS

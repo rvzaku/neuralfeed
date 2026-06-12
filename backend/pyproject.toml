@@ -20,6 +20,7 @@ dependencies = [
     "python-dateutil==2.9.0",
     "trafilatura>=1.12",
     "pyjwt==2.10.1",  # Phase 3.1 auth tokens
+    "sentry-sdk[fastapi]>=2.0",  # Phase 3.3 — no-op unless SENTRY_DSN is set
 ]
 
 [project.optional-dependencies]

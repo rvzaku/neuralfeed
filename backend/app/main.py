@@ -31,6 +31,10 @@ async def lifespan(app: FastAPI):
     log.info("shutdown")
 
 
+if settings.sentry_dsn:
+    import sentry_sdk
+    sentry_sdk.init(dsn=settings.sentry_dsn, traces_sample_rate=0.1)
+
 app = FastAPI(title="NeuralFeed API", version="0.2.0", lifespan=lifespan)
 
 app.add_middleware(
