@@ -35,6 +35,13 @@ async def db(engine):
         yield session
 
 
+@pytest.fixture(autouse=True)
+def _no_rate_limit(monkeypatch):
+    # The shared in-memory limiter would couple tests; covered by its own unit tests
+    from app.core.config import settings
+    monkeypatch.setattr(settings, "rate_limit_enabled", False)
+
+
 @pytest.fixture
 async def client(db):
     app.dependency_overrides[get_db] = lambda: db

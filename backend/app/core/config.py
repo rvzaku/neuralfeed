@@ -31,6 +31,16 @@ class Settings(BaseSettings):
     # In-process scheduled fetching (replaces Celery beat for single-user deploys)
     scheduler_enabled: bool = True
 
+    # Auth (Phase 3.1) — gate is off by default so single-user deploys keep working
+    auth_required: bool = False
+    jwt_secret: str = "dev-secret-change-me"  # MUST override in production env
+    jwt_expires_minutes: int = 60 * 24 * 7  # 7 days
+
+    # Rate limiting (per-IP, in-memory; single-instance deploys)
+    rate_limit_enabled: bool = True
+    rate_limit_auth_per_minute: int = 10
+    rate_limit_write_per_minute: int = 60
+
     # Summarization — provider is swappable via env (groq | ollama)
     summary_provider: str = "groq"
     summary_model: str = ""  # empty → provider default

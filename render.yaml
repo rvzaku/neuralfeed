@@ -27,6 +27,10 @@ services:
         value: groq
       - key: GROQ_API_KEY
         sync: false  # set in the Render dashboard, never committed
+      - key: JWT_SECRET
+        generateValue: true  # Render generates a strong secret on first deploy
+      - key: AUTH_REQUIRED
+        value: "false"  # flip to "true" once accounts are created
       - key: REDDIT_USER_AGENT
         value: NeuralFeed/0.1 (personal)
       - key: CORS_ORIGINS

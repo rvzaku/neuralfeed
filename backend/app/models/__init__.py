@@ -3,5 +3,6 @@ from app.models.source import Source
 from app.models.user_preference import UserPreference
 from app.models.feedback_log import FeedbackLog
 from app.models.watched_account import WatchedAccount
+from app.models.user import User
 
-__all__ = ["Article", "make_article_id", "Source", "UserPreference", "FeedbackLog", "WatchedAccount"]
+__all__ = ["Article", "make_article_id", "Source", "UserPreference", "FeedbackLog", "WatchedAccount", "User"]
