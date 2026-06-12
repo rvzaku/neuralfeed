@@ -349,3 +349,105 @@ Direction: Linear/Stripe/Vercel restraint — restraint IS the premium signal.
 - All gradients removed; active states are flat ink pills (bg-foreground/text-background); CTAs ink buttons.
 - Typography: single clean grotesk (Geist) everywhere; Bricolage display face dropped; weight+tracking carry hierarchy.
 - Hover: hairline border emphasis + 1px shadow — no lift, no glow. Flourishes (🔥, ✦) removed.
+
+---
+
+# V6 — Apple News / Artifact full restructure (2026-06-12, user-selected)
+
+North star: a personal *front page*, journalistic not techy. Editor-arranged hierarchy:
+one dominant top story, then themed sections. Images where available (hotlinked URLs
+only — CLAUDE.md forbids storing image files; storing the og:image URL is metadata).
+
+## Phase A — Backend: article preview images
+1. Migration 0009: `articles.image_url TEXT NULL`.
+2. Capture at ingest (no extra requests):
+   - Reddit fetcher: `preview.images[0].source.url` / `thumbnail` from the JSON payload.
+   - RSS fetcher: `media:content` / `media:thumbnail` / first `enclosure` image.
+3. Lazy enrichment: the summarizer already fetches the article page — extract
+   `og:image` there and cache onto the row (covers blogs/arXiv on first open).
+4. Expose `image_url` in ArticleOut + story payloads (lead image = lead article's).
+
+## Phase B — Frontend: front-page restructure
+1. **Front page (feed)**:
+   - Masthead row: "For You" + dateline (e.g. "Thursday, June 12"), refresh + search.
+   - **Top Story hero**: largest/most-trending story cluster — full-width block,
+     image (if any) above, 28-32px bold headline, summary line, "N related items
+     from M sources" footer. Tap → reading view.
+   - **Sections**: remaining stories grouped by dominant topic into named sections
+     ("Large Language Models", "Open Source", "Research", "Industry & Funding", …).
+     Each section: small-caps rule header + 2-4 compact items (thumbnail right,
+     headline left, source·time metadata). No uniform card grid anywhere.
+   - End: quiet "You're caught up" dateline rule.
+2. **Reading view**: story tap opens a full-screen article reader (mobile full-page,
+   desktop centered overlay): headline block → image → 10-min brief (default) with
+   1-min toggle → related items list → actions (share/save/feedback) as a bottom bar.
+3. **List view ("All items")**: Artifact-style rows — thumbnail right, headline +
+   metadata left, hairline dividers; infinite scroll retained.
+4. **Typography**: Geist, headline-weight-driven: hero 28-32/700 tight, section
+   items 16/600, metadata 12/500 muted, small-caps section labels.
+5. **Color**: keep V5 ink-neutral tokens (they fit Apple News); accent only for
+   small "live" details (unread dot, section label hover).
+
+## Phase C — Cleanup
+- Remove now-unused digest/all pill toggle from front page (All items moves to a
+  text link under the caught-up rule + stays a URL state).
+- Smoke tests updated; SOURCES.md untouched; coverage maintained.
+
+## Acceptance
+- Front page shows hero + ≥2 themed sections with real data; images render when
+  image_url present and never break layout when absent.
+- Reading flow: front page → reader → back, one tap each way, mobile and desktop.
+- No stored image files; only URLs hotlinked with referrerpolicy + lazy loading.
+
+---
+
+# V6.1 — Image discipline addendum (2026-06-12, supersedes V6 image notes)
+
+Core tension: images raise scannability and warmth, but NeuralFeed's identity is
+signal-over-noise. Resolution: **images are typographic furniture, never content**.
+The page must work identically with zero images; an image may make one story easier
+to recognize, never louder.
+
+## Where images appear (exhaustive — nowhere else)
+1. **Top Story hero — one image per page, max.** Full-width, fixed 16:9 crop above
+   the hero headline. This is the only "large" image in the entire app.
+2. **Section rows & All-items rows — small fixed thumbnail**, 64×64 (mobile) /
+   72×72 (desktop), right-aligned, rounded-lg, object-cover. Constant size whether
+   the source image is a meme or a paper figure — uniformity kills visual noise.
+3. **Reader view — single header image** under the headline, same 16:9 crop,
+   only when the article has one. Never inline images inside the brief.
+
+## Where images never appear
+- No images in the summary/brief body, no galleries, no avatars, no source logos
+  as images (SourceBadge stays typographic), no video embeds, no GIF playback
+  (static frame only if a GIF URL lands in image_url — `loading=lazy`, no autoplay).
+
+## Noise-control rules
+- **Absence is the default.** Layouts are text-first; a missing image collapses to
+  pure text with zero reserved whitespace (no gray placeholder boxes — placeholders
+  ARE noise). Width/height attrs prevent layout shift only when an image exists.
+- **Reddit thumbnails are filtered**: drop `self`, `default`, `nsfw`, `spoiler`
+  pseudo-thumbnails and any URL not matching an image extension/preview host.
+- **Muted rendering**: thumbnails get a 1px hairline border and slight desaturation
+  (`saturate-[.85]`) so mixed-quality web images sit quietly in the ink palette;
+  hero gets no decoration at all.
+- **No images in dark-pattern positions**: never under action buttons, never as
+  tap targets distinct from the story (the whole row stays one tap target).
+- Lazy-load everything below the hero (`loading="lazy" decoding="async"
+  referrerpolicy="no-referrer"`); broken images self-remove via onError → text-only
+  row (no broken-glyph noise).
+
+## Technical capture (unchanged from V6, recap)
+- `articles.image_url` (migration 0009) — URL metadata only, files never stored.
+- Free capture at ingest: Reddit JSON `preview`/`thumbnail` (post-filtering above),
+  RSS `media:content`/`media:thumbnail`/image enclosure.
+- Lazy enrichment: summarizer's existing page fetch also extracts `og:image`.
+- Exposed in ArticleOut + story payloads; story hero image = lead article's.
+
+## Acceptance additions
+- A page with zero images must look intentional, not degraded (test with images
+  feature-flagged off).
+- Max one large image per viewport on the front page; thumbnails uniform.
+- Lighthouse CLS ≈ 0 with and without images.
+
+STATUS: PLAN ONLY — implementation awaits explicit go-ahead.
