@@ -14,6 +14,7 @@ import {
   getStories,
   getStoryDetail,
   getSummary,
+  getDeepSummary,
   getSourcesHealth,
   getAccounts,
   addAccount,
@@ -36,6 +37,21 @@ export function useStories(params: { days?: number; limit?: number; unread_only?
     queryKey: ["stories", params],
     queryFn: () => getStories(params),
     staleTime: 1000 * 60 * 5,
+    // Render free tier cold-starts can exceed one request timeout — keep
+    // retrying with backoff and show stale data instead of an error flash
+    retry: 3,
+    retryDelay: (attempt) => Math.min(2000 * 2 ** attempt, 15000),
+    placeholderData: (prev) => prev,
+  });
+}
+
+export function useDeepSummary(articleId: string | null) {
+  return useQuery({
+    queryKey: ["deep-summary", articleId],
+    queryFn: () => getDeepSummary(articleId as string),
+    enabled: !!articleId,
+    staleTime: Infinity,
+    retry: 1,
   });
 }
 

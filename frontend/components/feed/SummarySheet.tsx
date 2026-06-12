@@ -1,13 +1,45 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   X, ExternalLink, ThumbsUp, ThumbsDown, Bookmark, BookmarkCheck, AlertCircle,
 } from "lucide-react";
 import { SourceBadge } from "@/components/ui/SourceBadge";
 import { cn, formatRelativeTime } from "@/lib/utils";
-import { usePostFeedback, useSummary, useToggleBookmark } from "@/hooks/useFeed";
+import { useDeepSummary, usePostFeedback, useSummary, useToggleBookmark } from "@/hooks/useFeed";
 import type { Article } from "@/lib/types";
+
+function DeepMarkdown({ markdown }: { markdown: string }) {
+  const blocks = markdown.split(/\n{2,}/);
+  return (
+    <div className="space-y-3">
+      {blocks.map((block, i) => {
+        const t = block.trim();
+        if (t.startsWith("## ")) {
+          return (
+            <h3 key={i} className="font-serif font-bold text-base pt-2">
+              {t.replace(/^## /, "")}
+            </h3>
+          );
+        }
+        if (/^[-*] /m.test(t)) {
+          return (
+            <ul key={i} className="list-disc pl-5 space-y-1 text-sm leading-relaxed text-foreground/90">
+              {t.split(/\n/).map((line, j) => (
+                <li key={j}>{line.replace(/^[-*] /, "")}</li>
+              ))}
+            </ul>
+          );
+        }
+        return (
+          <p key={i} className="text-sm leading-relaxed text-foreground/90">
+            {t}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
 
 interface SummarySheetProps {
   article: Article | null;
@@ -26,7 +58,9 @@ function SummarySkeleton() {
 }
 
 export function SummarySheet({ article, onClose }: SummarySheetProps) {
+  const [mode, setMode] = useState<"quick" | "deep">("deep");
   const { data, isLoading, isError } = useSummary(article?.id ?? null);
+  const deep = useDeepSummary(mode === "deep" ? article?.id ?? null : null);
   const { mutate: postFeedback } = usePostFeedback();
   const { mutate: toggleBookmark } = useToggleBookmark();
 
@@ -37,6 +71,8 @@ export function SummarySheet({ article, onClose }: SummarySheetProps) {
     if (article) document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [article, onClose]);
+
+  useEffect(() => setMode("deep"), [article?.id]);
 
   if (!article) return null;
 
@@ -90,7 +126,54 @@ export function SummarySheet({ article, onClose }: SummarySheetProps) {
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-5 pb-4">
-          {isLoading && (
+          {/* 1-min / 10-min toggle */}
+          <div className="flex items-center gap-1 rounded-full bg-muted p-0.5 w-fit mb-4" role="tablist" aria-label="Summary depth">
+            {([["deep", "10-min brief"], ["quick", "1-min"]] as const).map(([value, label]) => (
+              <button
+                key={value}
+                role="tab"
+                aria-selected={mode === value}
+                onClick={() => setMode(value)}
+                className={cn(
+                  "px-3 py-1.5 rounded-full text-xs font-semibold transition-all min-h-[32px]",
+                  mode === value
+                    ? "bg-gradient-brand text-white shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {mode === "deep" && (
+            <>
+              {deep.isLoading && (
+                <div className="space-y-4">
+                  <p className="text-xs text-muted-foreground">
+                    Writing your 10-minute brief — this can take up to a minute the first time…
+                  </p>
+                  <SummarySkeleton />
+                </div>
+              )}
+              {deep.isError && (
+                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <p className="text-xs">Couldn&apos;t generate a deep brief — try the 1-min summary or read at source.</p>
+                </div>
+              )}
+              {deep.data && (
+                <div className="space-y-4">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+                    ~{deep.data.reading_minutes} min read · AI-generated
+                  </p>
+                  <DeepMarkdown markdown={deep.data.markdown} />
+                </div>
+              )}
+            </>
+          )}
+
+          {mode === "quick" && isLoading && (
             <div className="space-y-4">
               <p className="text-xs text-muted-foreground">
                 Summarizing — first open takes a few seconds…
@@ -99,7 +182,7 @@ export function SummarySheet({ article, onClose }: SummarySheetProps) {
             </div>
           )}
 
-          {isError && (
+          {mode === "quick" && isError && (
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
                 <AlertCircle className="h-4 w-4 shrink-0" />
@@ -111,7 +194,7 @@ export function SummarySheet({ article, onClose }: SummarySheetProps) {
             </div>
           )}
 
-          {data && (
+          {mode === "quick" && data && (
             <div className="space-y-5">
               {data.takeaways.length > 0 && (
                 <ul className="space-y-2">

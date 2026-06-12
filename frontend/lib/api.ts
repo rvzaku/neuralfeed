@@ -120,6 +120,20 @@ export async function getSummary(articleId: string): Promise<ArticleSummary> {
   return data;
 }
 
+export interface DeepSummary {
+  markdown: string;
+  reading_minutes: number;
+  cached: boolean;
+}
+
+export async function getDeepSummary(articleId: string): Promise<DeepSummary> {
+  const { data } = await api.get<DeepSummary>(`/api/v1/articles/${articleId}/summary`, {
+    params: { mode: "deep" },
+    timeout: 120000,
+  });
+  return data;
+}
+
 // Source health
 export async function getSourcesHealth(): Promise<SourceHealth[]> {
   const { data } = await api.get<SourceHealth[]>("/api/v1/sources/health");
