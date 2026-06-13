@@ -41,22 +41,46 @@ export function DeepMarkdown({ markdown }: { markdown: string }) {
     <div className="space-y-3">
       {blocks.map((block, i) => {
         const t = block.trim();
-        if (/^#{2,3} /.test(t)) {
+        if (!t) return null;
+
+        // TL;DR callout — the one-line takeaway gets a distinct, scannable card
+        if (/^\*\*TL;DR/i.test(t)) {
+          const body = t.replace(/^\*\*TL;DR:?\*\*:?\s*/i, "").replace(/^TL;DR:?\s*/i, "");
           return (
-            <h3 key={i} className="font-semibold tracking-tight text-base pt-3 border-b border-border pb-1.5">
-              {t.replace(/^#{2,3} /, "")}
+            <div key={i} className="rounded-lg border-l-2 border-primary bg-muted/50 px-4 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-primary mb-1">TL;DR</p>
+              <p className="text-[15px] leading-[1.6] text-foreground font-medium">
+                <Inline text={body} />
+              </p>
+            </div>
+          );
+        }
+
+        // Headings: #, ##, ### all render as a section header
+        if (/^#{1,3} /.test(t)) {
+          return (
+            <h3 key={i} className="font-semibold tracking-tight text-[15px] pt-2 text-foreground">
+              {t.replace(/^#{1,3} /, "")}
             </h3>
           );
         }
-        if (/^[-*] /m.test(t)) {
+
+        // Bullet or numbered list block
+        if (/^([-*]|\d+\.) /m.test(t)) {
+          const ordered = /^\d+\. /.test(t);
+          const Tag = ordered ? "ol" : "ul";
           return (
-            <ul key={i} className="list-disc pl-5 space-y-1 text-sm leading-relaxed text-foreground/90">
-              {t.split(/\n/).map((line, j) => (
-                <li key={j}><Inline text={line.replace(/^[-*] |^\d+\. /, "")} /></li>
+            <Tag key={i} className={cn(
+              "pl-5 space-y-1.5 text-sm leading-relaxed text-foreground/90",
+              ordered ? "list-decimal" : "list-disc"
+            )}>
+              {t.split(/\n/).filter(Boolean).map((line, j) => (
+                <li key={j}><Inline text={line.replace(/^([-*]|\d+\.) /, "")} /></li>
               ))}
-            </ul>
+            </Tag>
           );
         }
+
         return (
           <p key={i} className="text-[15px] leading-[1.7] text-foreground/90">
             <Inline text={t} />

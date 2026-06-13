@@ -111,13 +111,30 @@ def _article(**kw):
 class TestGetOrGenerateSummary:
     @pytest.mark.asyncio
     async def test_markdown_cache_hit_skips_provider(self):
-        article = _article(ai_summary="Cached five-minute story.")
+        # V6: only a *structured* cache (## heading / TL;DR) is served as-is
+        cached = "**TL;DR:** It runs fast.\n\n## What it is\nA model."
+        article = _article(ai_summary=cached)
         db = AsyncMock()
         with patch("app.services.summarizer.get_provider") as mock_provider:
             result = await get_or_generate_summary(article, db)
         mock_provider.assert_not_called()
         assert result["cached"] is True
-        assert result["markdown"] == "Cached five-minute story."
+        assert result["markdown"] == cached
+
+    @pytest.mark.asyncio
+    async def test_unstructured_cache_is_regenerated(self):
+        # V6: old free-form prose caches regenerate into the structured format
+        article = _article(ai_summary="Just some old prose with no headings.")
+        db = AsyncMock()
+        provider = AsyncMock()
+        provider.summarize = AsyncMock(return_value="## What it is\nNew structured brief.")
+        with patch("app.services.summarizer.get_provider", return_value=provider):
+            with patch("app.services.summarizer.extract_content_for",
+                       new=AsyncMock(return_value="page text " * 50)):
+                result = await get_or_generate_summary(article, db)
+        provider.summarize.assert_awaited_once()
+        assert result["cached"] is False
+        assert "## What it is" in result["markdown"]
 
     @pytest.mark.asyncio
     async def test_legacy_json_cache_is_regenerated(self):
