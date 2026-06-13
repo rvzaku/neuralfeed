@@ -566,3 +566,28 @@ before any feed/aesthetic/content change.
 6. B1 — deferred until X API funded.
 
 STATUS: plan committed; increment B2 executing this session.
+
+---
+
+# v0.3.0 / v0.3.1 — executed (2026-06-13)
+
+- v0.3.0: baseline tag at deployed Phase-3 app.
+- v0.3.1 fixes:
+  - GitHub stars: SVG-path-digit scraping bug fixed in _to_int; read-time
+    engagement clamp in ArticleOut sanitizes already-poisoned DB rows (no
+    migration). NOTE: a poisoned row shows no star chip until the next fetch
+    cycle overwrites it with the clean API count (or user hits "Refresh now").
+  - Summary formatting: DeepMarkdown rewritten line-based (headings/lists/bold
+    render even with single-newline spacing).
+  - Relevance + label accuracy UNIFIED: ranker.score_article now uses the same
+    recency x normalized-popularity relevance shown as "% match"; personalization
+    rides on top; sub-threshold stale/untracted items culled (never-empty guard).
+  - Verbose titles: _concise_title trims LinkedIn/long RSS headlines to first
+    sentence, full text kept in summary.
+
+## Still open (next, single-purpose sessions)
+- E1: topic/title LLM quality — entity-level topics, richer slug enrichment.
+- Stars auto-repair job (optional) if refetch latency proves annoying.
+- Git history: pushed main NOT rewritten (force-push to main is forbidden);
+  discipline enforced going forward via conventional-commit types + semver tags.
+- D1 design pass; G1 security gate; H1 enricher efficiency.
