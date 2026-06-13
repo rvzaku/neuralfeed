@@ -86,7 +86,7 @@ async def get_feed(
         )
         # V8: display-time cross-source dedupe — the same story fetched via
         # two sources must never appear twice in one feed (app-feedback-v5)
-        from app.services.story_clusterer import dedupe_cross_source
+        from app.services.dedupe import dedupe_cross_source
         capped = dedupe_cross_source(capped)
 
         user_id = user.id if user else None

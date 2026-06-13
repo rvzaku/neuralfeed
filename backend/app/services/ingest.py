@@ -40,6 +40,18 @@ async def ingest_items(items: list[dict], source_id: str, db: AsyncSession) -> i
                 existing.trending_score = new_score
             if raw.get("engagement"):
                 existing.engagement = json.dumps(raw["engagement"])
+            # V9: backfill the REAL release date onto rows stamped with fetch
+            # time before the fetchers learned true created_at dates — the
+            # user only ever cares about original publication time
+            raw_published = raw.get("published_at")
+            if raw_published and abs((existing.published_at - existing.fetched_at).total_seconds()) < 120:
+                try:
+                    from dateutil import parser as dtparser
+                    real = to_naive_utc(dtparser.parse(raw_published) if isinstance(raw_published, str) else raw_published)
+                    if abs((real - existing.published_at).total_seconds()) > 3600:
+                        existing.published_at = real
+                except Exception:
+                    pass
             continue
 
         title = raw.get("title", "").strip()[:512]

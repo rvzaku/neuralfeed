@@ -13,7 +13,6 @@ import { FeedCardSkeleton } from "./FeedCardSkeleton";
 import { FilterDrawer } from "./FilterDrawer";
 import { RefreshIndicator } from "./RefreshIndicator";
 import { SearchModal } from "./SearchModal";
-import { RecapSheet } from "./RecapSheet";
 import { SummarySheet } from "./SummarySheet";
 import { useInfiniteFeed } from "@/hooks/useFeed";
 import { cn } from "@/lib/utils";
@@ -26,7 +25,6 @@ export function FeedView() {
   const router = useRouter();
   const [searchOpen, setSearchOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [recapOpen, setRecapOpen] = useState(false);
   const [openArticle, setOpenArticle] = useState<Article | null>(null);
 
   // "For You" = ranked + personalized; "All" = raw chronological
@@ -111,12 +109,6 @@ export function FeedView() {
                 {label}
               </button>
             ))}
-            <button
-              onClick={() => setRecapOpen(true)}
-              className="ml-auto px-3 py-1.5 rounded-full text-sm border border-border text-muted-foreground hover:bg-muted transition-colors"
-            >
-              ✦ Recap
-            </button>
           </div>
 
           {isLoading && (
@@ -173,7 +165,6 @@ export function FeedView() {
 
       <FilterDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
       <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
-      <RecapSheet isOpen={recapOpen} onClose={() => setRecapOpen(false)} />
       <SummarySheet article={openArticle} onClose={() => setOpenArticle(null)} />
     </div>
   );

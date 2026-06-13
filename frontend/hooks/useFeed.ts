@@ -12,9 +12,6 @@ import {
   toggleBookmark,
   getPreferences,
   setPreference,
-  getRecap,
-  getStories,
-  getStoryDetail,
   getSummary,
   getSourcesHealth,
   getAccounts,
@@ -39,32 +36,6 @@ export function useInfiniteFeed(filters: FeedFilters = {}) {
     queryFn: ({ pageParam }) => getFeed({ ...filters, page: pageParam }),
     initialPageParam: 1,
     getNextPageParam: (last) => (last.has_more ? last.page + 1 : undefined),
-    staleTime: 1000 * 60 * 5,
-  });
-}
-
-export function useStories(params: { days?: number; limit?: number; unread_only?: boolean; topic?: string } = {}) {
-  return useQuery({
-    queryKey: ["stories", params],
-    queryFn: () => getStories(params),
-    staleTime: 1000 * 60 * 5,
-    // Render free tier cold-starts can exceed one request timeout — keep
-    // retrying with backoff and show stale data instead of an error flash
-    retry: (failureCount, error: unknown) => {
-      const status = (error as { response?: { status?: number } })?.response?.status;
-      if (status === 401) return false;
-      return failureCount < 3;
-    },
-    retryDelay: (attempt) => Math.min(2000 * 2 ** attempt, 15000),
-    placeholderData: (prev) => prev,
-  });
-}
-
-export function useStoryDetail(storyId: string | null, days = 7) {
-  return useQuery({
-    queryKey: ["story", storyId, days],
-    queryFn: () => getStoryDetail(storyId as string, days),
-    enabled: !!storyId,
     staleTime: 1000 * 60 * 5,
   });
 }
@@ -120,16 +91,6 @@ export function useSearch(q: string, enabled = true) {
     queryFn: () => searchArticles(q),
     enabled: enabled && q.trim().length >= 2,
     staleTime: 1000 * 30,
-  });
-}
-
-export function useRecap(days: number, enabled: boolean) {
-  return useQuery({
-    queryKey: ["recap", days],
-    queryFn: () => getRecap(days),
-    enabled,
-    staleTime: 1000 * 60 * 60, // server caches per day; don't refetch on focus
-    retry: 1,
   });
 }
 

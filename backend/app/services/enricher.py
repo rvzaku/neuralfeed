@@ -20,7 +20,7 @@ from app.services.summarizer import extract_content_for
 log = structlog.get_logger()
 
 SLUG_SOURCES = ("github-trending", "hf-spaces", "hf-models")
-BATCH_SIZE = 20
+BATCH_SIZE = 40  # V9: drain the slug backlog faster; Groq 429 still breaks early
 
 # Acronyms/tokens that should stay uppercase when humanizing a slug
 _ACRONYMS = {

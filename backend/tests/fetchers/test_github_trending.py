@@ -92,3 +92,33 @@ async def test_github_trending_http_error():
 
     assert not result.ok
     assert result.error is not None
+
+
+REAL_SHAPE_HTML = """
+<article class="Box-row">
+  <h2 class="h3 lh-condensed">
+    <a href="/vllm-project/vllm" data-view-component="true">vllm-project / vllm</a>
+  </h2>
+  <p class="col-9 color-fg-muted my-1 pr-4">High-throughput LLM serving</p>
+  <div>
+    <a class="Link--muted d-inline-block mr-3" href="/vllm-project/vllm/stargazers">
+      <svg aria-label="star"></svg> 41,238
+    </a>
+    <a class="Link--muted d-inline-block mr-3" href="/vllm-project/vllm/forks">
+      <svg aria-label="fork"></svg> 6,102
+    </a>
+    <span class="d-inline-block float-sm-right"><svg></svg> 412 stars today</span>
+  </div>
+</article>
+"""
+
+
+def test_parse_trending_extracts_stars_total_and_today():
+    from app.fetchers.github_trending import parse_trending
+    repos = parse_trending(REAL_SHAPE_HTML)
+    assert len(repos) == 1
+    repo = repos[0]
+    assert repo["owner"] == "vllm-project" and repo["repo"] == "vllm"
+    assert repo["stars_total"] == 41238   # comma-separated count parsed
+    assert repo["stars_today"] == 412
+    assert repo["description"] == "High-throughput LLM serving"

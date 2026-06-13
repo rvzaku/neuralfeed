@@ -73,6 +73,8 @@ ALL_SOURCES = [
     # ── Phase V4 — Products ──────────────────────────────────────────────────
     {"id": "producthunt-ai",     "name": "Product Hunt — AI",                 "category": "product",     "url": "https://www.producthunt.com/feed?category=artificial-intelligence", "access": "rss", "priority": "medium", "refresh_interval": "daily"},
     {"id": "hf-spaces",          "name": "HuggingFace Trending Spaces",       "category": "product",     "url": "https://huggingface.co/api/spaces",                           "access": "api",    "priority": "medium", "refresh_interval": "daily"},
+    # ── Phase V9 — LinkedIn (Google News proxy, no LinkedIn scraping) ────────
+    {"id": "linkedin-pulse",     "name": "LinkedIn (via Google News)",        "category": "social",      "url": "https://news.google.com/rss/search?q=site%3Alinkedin.com%20(AI%20OR%20LLM%20OR%20%22machine%20learning%22)%20when%3A7d&hl=en-US&gl=US&ceid=US:en", "access": "rss", "priority": "medium", "refresh_interval": "12h"},
     # ── Phase V7 — Aggregators & relevance signals ───────────────────────────
     {"id": "hackernews-ai",      "name": "Hacker News (AI)",                  "category": "social",      "url": "https://news.ycombinator.com",                                "access": "api",    "priority": "high",   "refresh_interval": "6h"},
     {"id": "hf-papers",          "name": "HF Daily Papers",                   "category": "research",    "url": "https://huggingface.co/papers",                               "access": "api",    "priority": "high",   "refresh_interval": "daily"},

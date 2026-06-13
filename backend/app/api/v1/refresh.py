@@ -29,3 +29,17 @@ async def trigger_backfill(
 @router.get("/backfill/status")
 async def backfill_status() -> dict:
     return get_backfill_progress()
+
+
+async def _enrich_in_background() -> None:
+    from app.core.database import AsyncSessionLocal
+    from app.services.enricher import enrich_slug_titles
+    async with AsyncSessionLocal() as db:
+        await enrich_slug_titles(db, limit=100)
+
+
+@router.post("/enrich", status_code=202)
+async def trigger_enrich(background_tasks: BackgroundTasks) -> dict:
+    """Manually drain the slug-title rewrite queue (V9)."""
+    background_tasks.add_task(_enrich_in_background)
+    return {"queued": True, "message": "Title enrichment started"}

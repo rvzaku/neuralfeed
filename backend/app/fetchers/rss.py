@@ -74,6 +74,9 @@ RSS_SOURCES = {
     # Funding / business
     "rss-techcrunch-ai":      "https://techcrunch.com/category/artificial-intelligence/feed/",
     "rss-venturebeat-ai":     "https://venturebeat.com/category/ai/feed/",
+    # LinkedIn (V9) — ToS-safe proxy: Google News indexes public LinkedIn
+    # posts/articles; we read Google's RSS, never touch LinkedIn itself
+    "linkedin-pulse":         "https://news.google.com/rss/search?q=site%3Alinkedin.com%20(AI%20OR%20LLM%20OR%20%22machine%20learning%22)%20when%3A7d&hl=en-US&gl=US&ceid=US:en",
     # Conferences (V4)
     "conf-neurips":           "https://blog.neurips.cc/feed/",
     "conf-iclr":              "https://blog.iclr.cc/feed/",

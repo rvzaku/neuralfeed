@@ -25,4 +25,14 @@ async def search_articles(
         .limit(limit)
     )
     result = await db.execute(stmt)
-    return [ArticleOut.model_validate(a) for a in result.scalars().all()]
+    articles = list(result.scalars().all())
+
+    # V9: relevance is visible on every card surface, not just the feed
+    from app.services.relevance import explain
+    out = []
+    for a in articles:
+        o = ArticleOut.model_validate(a)
+        o.relevance, why = explain(a, window_days=30)
+        o.why = why or None
+        out.append(o)
+    return out

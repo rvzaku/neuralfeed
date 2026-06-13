@@ -121,38 +121,7 @@ export async function triggerRefresh(): Promise<void> {
   await api.post("/api/v1/refresh");
 }
 
-// Stories (event clusters)
-import type { ArticleSummary, SourceHealth, StoryDetail, StoryDigest, WatchedAccount } from "./types";
-
-export async function getStories(params: {
-  days?: number;
-  limit?: number;
-  unread_only?: boolean;
-  topic?: string;
-} = {}): Promise<StoryDigest> {
-  const { data } = await api.get<StoryDigest>("/api/v1/stories", { params });
-  return data;
-}
-
-export interface Recap {
-  markdown: string;
-  window_days: number;
-  cached: boolean;
-}
-
-// LLM "what happened" brief — first generation of the day takes a few seconds
-export async function getRecap(days = 7): Promise<Recap> {
-  const { data } = await api.get<Recap>("/api/v1/stories/recap", {
-    params: { days },
-    timeout: 90000,
-  });
-  return data;
-}
-
-export async function getStoryDetail(storyId: string, days = 7): Promise<StoryDetail> {
-  const { data } = await api.get<StoryDetail>(`/api/v1/stories/${storyId}`, { params: { days } });
-  return data;
-}
+import type { ArticleSummary, SourceHealth, WatchedAccount } from "./types";
 
 // AI "5-minute read" summary (generation can take a minute on first open)
 export async function getSummary(articleId: string): Promise<ArticleSummary> {

@@ -190,21 +190,6 @@ export default function SettingsPage() {
           </section>
         )}
 
-        {/* Ranked feed toggle info */}
-        <section>
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-            Feed Behavior
-          </h2>
-          <div className="rounded-xl border border-border bg-card p-4 space-y-2">
-            <p className="text-sm font-medium">Smart Ranking</p>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Smart ranking is on by default: items are scored by recency × platform
-              popularity (upvotes, stars, points), gated to the daily density above, and
-              interleaved across sources. Opt out per-view via{" "}
-              <code className="px-1 py-0.5 bg-muted rounded text-xs">?ranked=false</code> in the feed URL.
-            </p>
-          </div>
-        </section>
       </main>
 
     </div>

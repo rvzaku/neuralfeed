@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Newspaper, Compass, Database, Settings } from "lucide-react";
+import { Newspaper, Compass, Tags, Database, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { href: "/",         label: "Feed",     icon: Newspaper },
   { href: "/discover", label: "Discover", icon: Compass },
+  { href: "/topics",   label: "Topics",   icon: Tags },
   { href: "/sources",  label: "Sources",  icon: Database },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

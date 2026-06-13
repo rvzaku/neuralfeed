@@ -101,35 +101,6 @@ export interface FeedFilters {
   min_signal?: number;
 }
 
-export interface Story {
-  id: string;
-  headline: string;
-  lead_article_id: string;
-  image_url?: string | null;
-  article_count: number;
-  source_count: number;
-  source_ids: string[];
-  topic_tags: string[];
-  latest_at: string;
-  total_trending: number;
-  relevance: number;
-  summary: string | null;
-  context_line: string | null;
-  is_read: boolean;
-  article_ids: string[];
-}
-
-export interface StoryDigest {
-  stories: Story[];
-  total_stories: number;
-  window_days: number;
-  caught_up: boolean;
-}
-
-export interface StoryDetail extends Story {
-  groups: Record<string, Article[]>;
-}
-
 export interface ArticleSummary {
   article_id: string;
   url: string;
