@@ -52,15 +52,14 @@ async def toggle_bookmark(
     from app.services.preference_learner import learn
 
     if user:
-        from app.services.user_state import overlay, state_map, upsert_state
+        from app.services.user_state import overlay_model, state_map, upsert_state
         current = (await state_map(db, user.id, [article_id])).get(article_id)
         now_bookmarked = not (current.is_bookmarked if current else False)
         state = await upsert_state(db, user.id, article_id, is_bookmarked=now_bookmarked)
         if now_bookmarked:  # saving teaches the ranker; un-saving is just tidying
             await learn(db, user, article, "bookmark")
             await db.commit()
-        out = ArticleOut.model_validate(article).model_dump()
-        return ArticleOut(**overlay(out, state))
+        return overlay_model(ArticleOut.model_validate(article), state)
 
     article.is_bookmarked = not article.is_bookmarked
     if article.is_bookmarked:

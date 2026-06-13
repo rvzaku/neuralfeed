@@ -172,11 +172,16 @@ def explain(
     return match, reasons[:3]
 
 
-def _score_map(articles: list[Article], window_days: int) -> dict:
+def score_map(articles: list[Article], window_days: int) -> dict:
     """Relevance per article id, computed once — scoring involves a JSON
     parse of the engagement column, so the hot path must not repeat it
-    inside every sort comparator."""
+    inside every sort comparator. Pass the result into apply_daily_caps /
+    interleave_by_group to score each article a single time per request."""
     return {a.id: relevance_score(a, window_days) for a in articles}
+
+
+# Back-compat alias: the underscore name was the original private API.
+_score_map = score_map
 
 
 def apply_daily_caps(
@@ -184,12 +189,18 @@ def apply_daily_caps(
     per_day: int = DEFAULT_PER_SOURCE_PER_DAY,
     window_days: int = 7,
     category_of: Optional[dict] = None,
+    scores: Optional[dict] = None,
 ) -> list[Article]:
     """Keep only the top-N most relevant items per source group per day.
 
     Group = source category when a mapping is provided (so 18 subreddits
-    share one daily budget), else the source family prefix."""
-    scores = _score_map(articles, window_days)
+    share one daily budget), else the source family prefix.
+
+    `scores` may be a precomputed id→relevance map (keyed for at least every
+    article here) to avoid re-parsing the engagement JSON the caller already
+    scored — pass None to compute it locally."""
+    if scores is None:
+        scores = _score_map(articles, window_days)
     buckets: dict = defaultdict(list)
     for a in articles:
         group = (category_of or {}).get(a.source_id) or _source_family(a.source_id)
@@ -208,11 +219,15 @@ def interleave_by_group(
     articles: list[Article],
     window_days: int = 7,
     category_of: Optional[dict] = None,
+    scores: Optional[dict] = None,
 ) -> list[Article]:
     """Round-robin across source groups within each publication day, newest
     day first — so the 'All' tab mixes arXiv/Reddit/GitHub instead of
-    presenting one long column per source (app-feedback-v4)."""
-    scores = _score_map(articles, window_days)
+    presenting one long column per source (app-feedback-v4).
+
+    `scores`: optional precomputed id→relevance map, reused from the caller."""
+    if scores is None:
+        scores = _score_map(articles, window_days)
     by_day: dict = defaultdict(lambda: defaultdict(list))
     for a in articles:
         group = (category_of or {}).get(a.source_id) or _source_family(a.source_id)

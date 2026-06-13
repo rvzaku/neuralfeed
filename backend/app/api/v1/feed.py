@@ -134,11 +134,12 @@ async def get_feed(
             o.why = why or None
 
     if user:
-        from app.services.user_state import overlay, state_map
+        from app.services.user_state import overlay_model, state_map
         states = await state_map(db, user.id, [a.id for a in items])
-        out_items = [
-            ArticleOut(**overlay(o.model_dump(), states.get(o.id))) for o in out_items
-        ]
+        # Mutate the three per-user fields on the existing models — no second
+        # round-trip through model_dump()+model_validate() per item.
+        for o in out_items:
+            overlay_model(o, states.get(o.id))
         f_read, f_bm, f_fb = user_state_filters
         if f_read is not None:
             out_items = [o for o in out_items if o.is_read == f_read]
@@ -182,7 +183,9 @@ async def _compute_ranked_order(
     from app.services.ranker import (
         _get_muted_sources, _get_source_affinity, _get_topic_weights, rank_articles,
     )
-    from app.services.relevance import apply_daily_caps, interleave_by_group
+    from app.services.relevance import (
+        apply_daily_caps, interleave_by_group, score_map,
+    )
 
     # Bound the candidate set: rank the newest 2000, not the whole table
     all_result = await db.execute(q.order_by(Article.published_at.desc()).limit(2000))
@@ -199,10 +202,15 @@ async def _compute_ranked_order(
 
     category_of = await _category_map(db)
 
+    # Score every candidate ONCE (each call parses the engagement JSON); the
+    # caps + interleave passes below reuse this map instead of recomputing it.
+    scores = score_map(all_items, window_days)
+
     # V7 anti-overwhelm: only the top-N most relevant items per source category
     # per day survive — the rest stay queryable via ranked=false.
     capped = apply_daily_caps(
-        all_items, per_day=per_day, window_days=window_days, category_of=category_of
+        all_items, per_day=per_day, window_days=window_days,
+        category_of=category_of, scores=scores,
     )
     # V8 display-time cross-source dedupe; count coverage BEFORE collapsing so the
     # survivor can show how many sources carry the story (traction).
@@ -221,7 +229,8 @@ async def _compute_ranked_order(
     # source/category (a single column is then the point).
     if not source_id and not category:
         ranked_items = interleave_by_group(
-            ranked_items, window_days=window_days, category_of=category_of
+            ranked_items, window_days=window_days,
+            category_of=category_of, scores=scores,
         )
     ids = [a.id for a in ranked_items]
     # Keep only the buzz entries for survivors, so the cached payload stays small.
