@@ -95,7 +95,7 @@ async def enrich_article(article: Article, db: AsyncSession) -> bool:
                 "https://api.groq.com/openai/v1/chat/completions",
                 headers={"Authorization": f"Bearer {settings.groq_api_key}"},
                 json={
-                    "model": "llama-3.1-8b-instant",
+                    "model": settings.enrich_model,
                     "messages": [{"role": "user", "content": prompt}],
                     "temperature": 0.2,
                     "response_format": {"type": "json_object"},
