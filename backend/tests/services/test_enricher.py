@@ -54,6 +54,22 @@ def test_humanize_slug():
     assert not looks_like_slug(humanize_slug("owner/some-long-repo-name"))
 
 
+def test_descriptive_fallback_uses_description():
+    from app.services.enricher import _descriptive_fallback
+    art = Article(
+        id="gh-1", title="vllm-project/vllm",
+        url="https://github.com/vllm-project/vllm",
+        source_id="github-trending", published_at=utcnow(), fetched_at=utcnow(),
+        topic_tags=[], is_read=False, is_bookmarked=False, feedback=None,
+        trending_score=1.0,
+        summary="A high-throughput and memory-efficient inference engine for LLMs. Used widely in production.",
+    )
+    title = _descriptive_fallback(art)
+    # Title now says what it does, not the bare slug
+    assert "inference engine" in title.lower()
+    assert not looks_like_slug(title)
+
+
 def _make_slug_article(i: int) -> Article:
     return Article(
         id=f"enrich-fb-{i}", title=f"owner/some-model-name-{i}",

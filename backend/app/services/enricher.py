@@ -127,23 +127,50 @@ async def enrich_article(article: Article, db: AsyncSession) -> bool:
     return True
 
 
+def _descriptive_fallback(article: Article) -> str:
+    """Title that says what the thing DOES, without an LLM call.
+
+    A GitHub/HF item's own description (stored as summary) is usually a plain
+    "A framework for serving LLMs"-style line — far more useful than the bare
+    "owner/repo" slug. Prefer it; fall back to the humanized slug only when no
+    description exists. The readable name is appended as context so the repo is
+    still identifiable (V6: titles must sell relevance, not show a slug)."""
+    name = humanize_slug(article.title)
+    desc = (article.summary or "").strip()
+    if desc:
+        # First sentence/clause, capped — enough to convey purpose
+        first = re.split(r"(?<=[.!?])\s+", desc)[0].strip().rstrip(".")
+        if len(first) > 8:
+            lead = first[:90].rstrip()
+            # Avoid "Name — Name" when the description just echoes the slug
+            if name.lower() not in lead.lower():
+                return f"{lead} — {name}"[:512]
+            return lead[:512]
+    return name[:512]
+
+
 async def _enrich_or_fallback(article: Article, db: AsyncSession) -> bool:
-    """LLM rewrite, else deterministic humanized title so the item leaves the
-    slug queue instead of blocking it forever. Raises RateLimited untouched —
-    rate-limited items WILL succeed later, so they keep their retry slot."""
+    """LLM rewrite, else a descriptive deterministic title so the item leaves
+    the slug queue instead of blocking it forever. Raises RateLimited untouched
+    — rate-limited items WILL succeed later, so they keep their retry slot."""
     if await enrich_article(article, db):
         return True
     article.original_title = article.original_title or article.title
-    article.title = humanize_slug(article.title)[:512]
+    article.title = _descriptive_fallback(article)
     await db.commit()
     return False
 
 
 async def enrich_slug_titles(db: AsyncSession, limit: int = BATCH_SIZE) -> int:
     """Rewrite up to `limit` slug-titled articles, newest first. Returns count."""
+    from sqlalchemy import or_
     result = await db.execute(
         select(Article)
-        .where(Article.source_id.in_(SLUG_SOURCES))
+        .where(or_(
+            Article.source_id.in_(SLUG_SOURCES),
+            Article.source_id.like("github%"),  # user-added GitHub topic/org sources
+            Article.source_id.like("hf-%"),
+        ))
         .order_by(Article.published_at.desc())
         .limit(200)
     )
