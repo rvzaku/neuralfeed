@@ -77,28 +77,3 @@ async def test_preferences_are_namespaced(client, db):
     assert "topic_weights" not in anon.json() or anon.json() != mine.json()
 
 
-async def test_seen_articles_drop_from_dynamic_feed(client, db):
-    art = await _make_article(db, "ustate-seen")
-    headers = await _register(client, "u-seen@example.com")
-
-    # Visible in the ranked dynamic feed before being seen
-    before = await client.get("/api/v1/feed?limit=100", headers=headers)
-    assert any(i["id"] == art.id for i in before.json()["items"])
-
-    # Mark it seen (impression) — 204, idempotent
-    resp = await client.post(
-        "/api/v1/feed/seen", json={"article_ids": [art.id, art.id]}, headers=headers
-    )
-    assert resp.status_code == 204
-
-    # Now excluded from the dynamic feed...
-    after = await client.get("/api/v1/feed?limit=100", headers=headers)
-    assert all(i["id"] != art.id for i in after.json()["items"])
-
-    # ...but is_seen must NOT pollute the Read filter (it's a distinct signal)
-    await db.refresh(art)
-    assert art.is_read is False
-    read_view = await client.get(
-        "/api/v1/feed?limit=100&ranked=false&is_read=true", headers=headers
-    )
-    assert all(i["id"] != art.id for i in read_view.json()["items"])

@@ -4,7 +4,6 @@ from datetime import timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -254,19 +253,14 @@ async def _category_map(db: AsyncSession) -> dict:
 
 
 async def _read_article_ids(db: AsyncSession, user_id: str) -> set:
-    """Ids the user has already opened (is_read) OR had on screen long enough to
-    count as seen (is_seen) — both drop out of the dynamic feed so the user
-    isn't shown the same items again."""
-    from sqlalchemy import or_
+    """Ids the user has already opened — excluded from the dynamic feed.
+    Opening is the only 'viewed' signal (no impression tracking)."""
     from app.models.user_article_state import UserArticleState
 
     result = await db.execute(
         select(UserArticleState.article_id).where(
             UserArticleState.user_id == user_id,
-            or_(
-                UserArticleState.is_read.is_(True),
-                UserArticleState.is_seen.is_(True),
-            ),
+            UserArticleState.is_read.is_(True),
         )
     )
     return {row[0] for row in result.all()}
@@ -287,24 +281,6 @@ async def _feed_density(db: AsyncSession, user) -> int:
             except Exception:
                 continue
     return DEFAULT_PER_SOURCE_PER_DAY
-
-
-class SeenRequest(BaseModel):
-    article_ids: list[str]
-
-
-@router.post("/seen", status_code=204)
-async def mark_articles_seen(
-    body: SeenRequest,
-    db: AsyncSession = Depends(get_db),
-    user=Depends(get_current_user),
-) -> None:
-    """Record that these articles were on the user's screen, so they drop from
-    the next dynamic-feed load. No-op for anonymous sessions (nothing to scope
-    to). Capped so a single call can't bulk-suppress the whole table."""
-    if user and body.article_ids:
-        from app.services.user_state import mark_seen
-        await mark_seen(db, user.id, body.article_ids[:200])
 
 
 @router.get("/{article_id}", response_model=ArticleOut)

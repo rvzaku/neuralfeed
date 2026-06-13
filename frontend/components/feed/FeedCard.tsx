@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useState } from "react";
 import { ThumbsUp, ThumbsDown, Bookmark, BookmarkCheck, ExternalLink, Share2, Check, Star, MessageSquare, ArrowBigUp, TrendingUp, Flame, Download, Heart } from "lucide-react";
 import { shareUrl } from "@/lib/share";
 import { SourceBadge } from "@/components/ui/SourceBadge";
@@ -12,9 +12,6 @@ interface FeedCardProps {
   article: Article;
   /** Opens the 1-minute summary sheet; falls back to direct link-out when absent */
   onOpen?: (article: Article) => void;
-  /** Called once the card has dwelled on screen — marks it seen so it drops
-   *  from the next feed load. Must be a stable reference (memoized card). */
-  onSeen?: (id: string) => void;
 }
 
 const TOPIC_COLORS: Record<string, string> = {
@@ -130,41 +127,11 @@ function isUnseen(article: Article): boolean {
   return ageHours > 48;
 }
 
-function FeedCardInner({ article, onOpen, onSeen }: FeedCardProps) {
+function FeedCardInner({ article, onOpen }: FeedCardProps) {
   const { mutate: postFeedback } = usePostFeedback();
   const { mutate: toggleBookmark } = useToggleBookmark();
   const unseen = isUnseen(article);
   const [shared, setShared] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-
-  // Mark the card "seen" only after it has stayed ≥50% visible for ~1s, so
-  // flicking past at speed doesn't suppress items the user never looked at.
-  // Fires at most once, then disconnects.
-  useEffect(() => {
-    const el = rootRef.current;
-    if (!onSeen || !el || typeof IntersectionObserver === "undefined") return;
-    let dwell: ReturnType<typeof setTimeout> | null = null;
-    const obs = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-          if (!dwell)
-            dwell = setTimeout(() => {
-              onSeen(article.id);
-              obs.disconnect();
-            }, 1000);
-        } else if (dwell) {
-          clearTimeout(dwell);
-          dwell = null;
-        }
-      },
-      { threshold: [0, 0.5, 1] }
-    );
-    obs.observe(el);
-    return () => {
-      if (dwell) clearTimeout(dwell);
-      obs.disconnect();
-    };
-  }, [onSeen, article.id]);
 
   async function handleShare(e: React.MouseEvent) {
     e.stopPropagation();
@@ -200,7 +167,6 @@ function FeedCardInner({ article, onOpen, onSeen }: FeedCardProps) {
 
   return (
     <div
-      ref={rootRef}
       role="article"
       tabIndex={0}
       onClick={handleCardClick}

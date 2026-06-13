@@ -60,8 +60,6 @@ _ADDITIVE_COLUMNS = [
     ("articles", "engagement_at", "TIMESTAMP"),  # V10 engagement freshness gate
     ("articles", "context_line", "TEXT"),  # V7 cached LLM "why this matters" line
     ("articles", "original_title", "VARCHAR(512)"),  # V8 pre-rewrite slug title
-    ("user_article_state", "is_seen", "BOOLEAN"),  # impression-based feed dedupe
-    ("user_article_state", "seen_at", "TIMESTAMP"),
 ]
 
 

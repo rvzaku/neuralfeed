@@ -65,13 +65,6 @@ export async function getArticle(id: string): Promise<Article> {
   return data;
 }
 
-// Record that these articles were on screen, so they drop from the next feed
-// load. Best-effort and fire-and-forget — never block or surface errors.
-export async function markArticlesSeen(articleIds: string[]): Promise<void> {
-  if (articleIds.length === 0) return;
-  await api.post("/api/v1/feed/seen", { article_ids: articleIds });
-}
-
 // Search
 export async function searchArticles(q: string, limit = 20): Promise<Article[]> {
   const { data } = await api.get<Article[]>("/api/v1/search", { params: { q, limit } });

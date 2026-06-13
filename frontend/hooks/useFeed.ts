@@ -1,11 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
 import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   createSource,
   getFeed,
-  markArticlesSeen,
   getSources,
   patchSource,
   searchArticles,
@@ -30,47 +28,6 @@ export function useFeed(filters: FeedFilters = {}) {
     queryFn: () => getFeed(filters),
     staleTime: 1000 * 60 * 5,
   });
-}
-
-/**
- * Batches "article seen" impressions and flushes them on a debounce (and on
- * unmount). Fire-and-forget: the backend drops seen items from the NEXT feed
- * load, so we never invalidate the query here — that would yank cards out from
- * under the user mid-scroll. Returns a STABLE callback so memoized FeedCards
- * don't re-render. No-op while logged out (the backend can't scope it anyway).
- */
-export function useMarkSeen() {
-  const pending = useRef<Set<string>>(new Set());
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const flush = useCallback(() => {
-    if (timer.current) {
-      clearTimeout(timer.current);
-      timer.current = null;
-    }
-    const ids = Array.from(pending.current);
-    pending.current.clear();
-    if (ids.length === 0) return;
-    if (typeof window !== "undefined" && !localStorage.getItem("neuralfeed_token")) return;
-    markArticlesSeen(ids).catch(() => {});
-  }, []);
-
-  const markSeen = useCallback(
-    (id: string) => {
-      pending.current.add(id);
-      if (!timer.current) {
-        timer.current = setTimeout(() => {
-          timer.current = null;
-          flush();
-        }, 2500);
-      }
-    },
-    [flush]
-  );
-
-  useEffect(() => () => flush(), [flush]);
-
-  return markSeen;
 }
 
 export function useInfiniteFeed(filters: FeedFilters = {}) {

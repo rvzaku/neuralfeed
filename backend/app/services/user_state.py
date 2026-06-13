@@ -38,35 +38,6 @@ async def upsert_state(
     return state
 
 
-async def mark_seen(db: AsyncSession, user_id: str, article_ids: Iterable[str]) -> int:
-    """Batch-mark articles as seen (impression). One SELECT + in-transaction
-    upserts, so a whole screen's worth of impressions costs a single round of
-    queries. Idempotent: already-seen rows are left untouched."""
-    ids = list(dict.fromkeys(article_ids))  # dedupe, preserve order
-    if not ids:
-        return 0
-    existing = await db.execute(
-        select(UserArticleState).where(
-            UserArticleState.user_id == user_id,
-            UserArticleState.article_id.in_(ids),
-        )
-    )
-    by_id = {s.article_id: s for s in existing.scalars().all()}
-    now = utcnow()
-    for aid in ids:
-        state = by_id.get(aid)
-        if state is None:
-            db.add(UserArticleState(
-                user_id=user_id, article_id=aid, is_seen=True, seen_at=now, updated_at=now,
-            ))
-        elif not state.is_seen:
-            state.is_seen = True
-            state.seen_at = now
-            state.updated_at = now
-    await db.commit()
-    return len(ids)
-
-
 async def state_map(
     db: AsyncSession, user_id: str, article_ids: Iterable[str]
 ) -> dict[str, UserArticleState]:

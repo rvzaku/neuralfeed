@@ -92,12 +92,23 @@ def recency(published_at: datetime, half_life_days: float) -> float:
     return math.exp(-age_days * math.log(2) / half_life_days)
 
 
+def _half_life(window_days: int) -> float:
+    """Recency half-life for the browsing window. Tuned short (window/6) so the
+    feed leads with FRESH content — newly published items outrank older ones —
+    while popularity still differentiates among items of similar age (freshness
+    first, but still relevant). A 30-day view stays lenient; a 1-day view is
+    strict. Used by both the score and the displayed match %, so order and
+    label never diverge."""
+    return max(0.75, window_days / 6)
+
+
 def relevance_score(article: Article, window_days: int = 7) -> float:
     """Recency × popularity. The half-life scales with the browsing window:
     in a 30-day view a week-old item is still 'recent'; in a 1-day view it
     is ancient. Popularity floor keeps zero-vote items rankable, not zero."""
-    half_life = max(1.0, window_days / 4)
-    return recency(article.published_at, half_life) * (0.25 + 0.75 * popularity(article))
+    return recency(article.published_at, _half_life(window_days)) * (
+        0.25 + 0.75 * popularity(article)
+    )
 
 
 _FAMILY_LABEL = {"reddit": "Reddit", "hackernews": "Hacker News", "github": "GitHub",
@@ -118,7 +129,7 @@ def explain(
     several independent sources is genuinely gaining traction, so it earns a
     leading reason and a bounded match boost."""
     pop = popularity(article)
-    rec = recency(article.published_at, max(1.0, window_days / 4))
+    rec = recency(article.published_at, _half_life(window_days))
     # Cross-source coverage is hard proof of traction — lift match up to +12
     buzz_boost = min(max(mentions - 1, 0) * 6, 12)
     match = min(100, int(round(100 * rec * (0.25 + 0.75 * pop))) + buzz_boost)
