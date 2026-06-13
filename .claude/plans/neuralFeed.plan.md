@@ -485,3 +485,84 @@ Problem: HF Spaces/models and GitHub items surface as bare slugs
   stripped, prepended enriched summary); default Groq model → llama-3.3-70b-versatile.
 - Brief formatting: inline GFM rendering (bold/italic/code/links), ###-heading support,
   consistent 15px/1.7 reading type with bordered section headings.
+
+---
+
+# V10–V12 — Comprehensive Roadmap from app-feedback v1–v6 (2026-06-13)
+
+Derived by re-reading ALL feedback docs and reconciling against shipped code.
+Legend: ✅ done · 🟡 partial · ⬜ open · 🚫 blocked (external constraint).
+Durable principles captured in agent memory (feedback_* notes) — consult them
+before any feed/aesthetic/content change.
+
+## Theme A — Anti-overwhelm feed (v1/v4/v5/v6) — mostly ✅
+- ✅ Finite feed, top-N per source/category/day (relevance.py daily caps)
+- ✅ Interleave sources in "All" tab; no single-source columns
+- ✅ Infinite scroll removed from curated feed (v5 reversal)
+- ✅ Dynamic feed: viewed items drop out; cross-source dedupe; read = dull
+- ✅ 30-day backfill, refresh ≤4h
+- ⬜ A1: per-user feed-density UI polish in Settings (value persists; verify the
+  control is discoverable and labeled in plain language)
+
+## Theme B — Traction + relevance on every source (v4/v5/v6)
+- ✅ GitHub stars (total + fresh-gated velocity, V10), Reddit/HN votes+comments
+- ✅ arXiv via HF Daily Papers upvotes; HF downloads/likes
+- ✅ Editorial (blogs/newsletters) external traction = HN points + Reddit upvotes
+  + "covered by N sources" (V10 traction.py)
+- ✅ "% match" + human "why" reasons per card; honest velocity freshness gate
+- 🚫 B1: X/Twitter likes/retweets/replies — Nitter RSS exposes none; requires the
+  paid X API v2. Hold until an API tier is funded; until then social ranks on
+  recency + any cross-post traction.
+- ⬜ B2: surface the HN discussion permalink (already captured as engagement.hn_url)
+  as a "Discussed on HN" link on the card/reader — proof the traction is real.
+  → EXECUTE THIS INCREMENT NOW (low risk, fully in our control).
+
+## Theme C — Content quality: titles & summary (v3/v5/v6)
+- ✅ Slug→plain-English title enrichment (enricher.py) + descriptive fallback
+- ✅ Single 5-min formatted summary; quick/deep modes collapsed; no feed-list LLM
+- 🟡 C1: title enrichment backlog can lag (Groq 429). Add observability: count of
+  still-slug titles, surfaced in a health endpoint, so drain rate is visible.
+- 🟡 C2: summary formatting fidelity — periodic spot-check that GFM renders
+  (headings/bold/lists) and that "assume zero AI knowledge" holds.
+
+## Theme D — Aesthetic / "not AI-made" (v2/v3/v5/v6) — ongoing
+- ✅ No gradients, ink palette, one indigo accent, color-coded chips, icons
+- ⬜ D1: full design pass with ecc:design-is / ecc:make-interfaces-feel-better
+  against the live build; target Lighthouse >90 mobile, CLS≈0
+- ⬜ D2: empty/loading/error states audited as intentional (skeletons, not spinners)
+
+## Theme E — Topics page (v1/v4/v5/v6)
+- ✅ Separate /topics page; date + per-source item-count icons
+- 🟡 E1: topic keywords must be specific & relevant (no "Microsoft"/"fine-tuning"
+  vagueness). Improve topic extraction to event/entity-level (e.g. "Qwen3",
+  "OpenClaw release") with a one-line relevance blurb per topic card.
+- ⬜ E2: tag drill-down (v1 original ask) — clicking a topic shows the related
+  repos/papers/posts clustered together.
+
+## Theme F — Sources management (v5/v6)
+- ✅ User can add/edit sources; GitHub topic/org sources; LinkedIn via RSSHub
+- ⬜ F1: remove "suggest follow targets" if still user-facing as useless (v6);
+  confirm FollowTargets placement — keep only if it earns its space.
+- ⬜ F2: curated list of additional subreddits + AI-news aggregators to offer.
+
+## Theme G — Security (v2/v6) — core pillar, ✅ baseline
+- ✅ JWT, per-user scoping, rate limiting, secure headers, no secrets in code
+- ⬜ G1: run ecc:security-review + ecc:security-scan before next deploy; treat all
+  RSS/scrape/API input as untrusted (sanitize on store). Add to release checklist.
+
+## Theme H — Engineering quality (every version)
+- ✅ V10: summary call coalescing (no duplicate paid LLM calls)
+- ⬜ H1: enricher efficiency — avoid re-extracting content for items that will
+  fall back; add a "last attempted" guard so 429'd items retry without re-fetch.
+- ⬜ H2: test coverage ≥80% on services/fetchers; add traction.py edge cases (done),
+  social/editorial ranking integration tests.
+
+## Execution order (next increments)
+1. B2 (HN discussion link) — now.
+2. F1 + A1 (prune useless UI, surface density control) — quick wins.
+3. E1/E2 (topic specificity + drill-down) — highest user-perceived value.
+4. D1/D2 (design pass) — with GAN/design skills.
+5. G1 (security gate), H1/H2 (efficiency + coverage) — pre-deploy hardening.
+6. B1 — deferred until X API funded.
+
+STATUS: plan committed; increment B2 executing this session.

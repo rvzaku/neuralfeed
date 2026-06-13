@@ -53,6 +53,8 @@ export interface Article {
     comments?: number;
     downloads?: number;
     likes?: number;
+    /** Permalink to the Hacker News discussion (editorial traction lookup) */
+    hn_url?: string;
   } | null;
   /** When `engagement` was last refreshed — velocity chips ("+N today") are
    *  only shown while this is fresh, so a stale number never reads as "today" */

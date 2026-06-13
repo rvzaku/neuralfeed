@@ -85,7 +85,25 @@ function EngagementStats({ article }: { article: Article }) {
   // HN points and Reddit upvotes are distinct signals — show both when present
   // (editorial posts surfaced via traction lookup carry both).
   if (e.points) {
-    stats.push(<span key="hn" className={cn(CHIP, CHIP_STYLES.votes)}><Flame className="h-3 w-3" />{compact(e.points)} HN</span>);
+    // Link straight to the HN thread when we found one — proof the traction is
+    // real and a one-tap route to the discussion (stops card-open propagation).
+    stats.push(
+      e.hn_url ? (
+        <a
+          key="hn"
+          href={e.hn_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(ev) => ev.stopPropagation()}
+          className={cn(CHIP, CHIP_STYLES.votes, "hover:underline")}
+          aria-label={`${compact(e.points)} points — open Hacker News discussion`}
+        >
+          <Flame className="h-3 w-3" />{compact(e.points)} HN
+        </a>
+      ) : (
+        <span key="hn" className={cn(CHIP, CHIP_STYLES.votes)}><Flame className="h-3 w-3" />{compact(e.points)} HN</span>
+      )
+    );
   }
   if (e.upvotes) {
     stats.push(<span key="v" className={cn(CHIP, CHIP_STYLES.votes)}><ArrowBigUp className="h-3.5 w-3.5" />{compact(e.upvotes)}</span>);
