@@ -99,6 +99,8 @@ export interface FeedFilters {
   time_range?: "1d" | "3d" | "7d" | "30d";
   ranked?: boolean;
   min_signal?: number;
+  /** V6: include already-viewed items (the "All items" archive view) */
+  include_read?: boolean;
 }
 
 export interface ArticleSummary {

@@ -1,9 +1,10 @@
 "use client";
 
 // V8 (app-feedback-v5): one For You page — ranked, capped, personalized
-// card list (pre-Apple-News structure restored). "All" tab is the raw
-// chronological escape hatch. Filters live behind one button, never
-// permanently on screen.
+// card list. V6: smart ranking is always on and cannot be disabled. The two
+// tabs differ only in freshness: "For You" hides items you've already opened;
+// "All items" is the same ranking with viewed items kept, so you can browse
+// back over what you've read. Filters live behind one button.
 
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -39,7 +40,8 @@ export function FeedView() {
     is_bookmarked: params.get("is_bookmarked") === "true" ? true : undefined,
     feedback:    params.get("feedback") ? Number(params.get("feedback")) as FeedFilters["feedback"] : undefined,
     min_signal:  params.get("min_signal") ? Number(params.get("min_signal")) : undefined,
-    ranked:      view === "foryou",
+    ranked:      true,            // V6: smart ranking is never disabled
+    include_read: view === "all", // "All items" = ranked archive incl. viewed
     limit: 30,
   }), [params, view]);
 
