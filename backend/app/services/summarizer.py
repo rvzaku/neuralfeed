@@ -9,6 +9,7 @@ Providers are swappable via settings.summary_provider:
   ollama — local model for offline dev
 """
 
+import asyncio
 import json
 import re
 from typing import Optional, Protocol
@@ -310,24 +311,54 @@ def _is_structured(markdown: str) -> bool:
     return bool(re.search(r"(?m)^#{1,3} ", markdown)) or "TL;DR" in markdown
 
 
+# Per-article in-process locks coalesce concurrent summary requests. Opening
+# the same article from two tabs (or a double-tap) would otherwise fire two
+# identical paid LLM calls; the second waiter serves the first's cached result.
+# The dict holds one Lock per article summarized this process lifetime — bounded
+# in practice (single-user app, periodic restarts on the free tier).
+_summary_locks: dict[str, asyncio.Lock] = {}
+
+
+def _usable_cache(article: Article) -> Optional[str]:
+    """The cached markdown if it's the current structured format, else None.
+    Pre-V8 summaries were JSON; old free-form prose lacks `##`/TL;DR — both are
+    regenerated so every reader gets the scannable brief (app-feedback-v6)."""
+    cached = article.ai_summary or article.ai_deep_summary
+    if cached and not cached.lstrip().startswith("{") and _is_structured(cached):
+        return cached
+    return None
+
+
 async def get_or_generate_summary(
     article: Article, db: AsyncSession, mode: str = "default"
 ) -> dict:
     """Single '5-minute read' summary: {"markdown", "reading_minutes",
     "cached"}. Generates and caches on miss; `mode` is accepted for backward
     compatibility but ignored (V8 collapsed quick/deep into one mode)."""
-    cached = article.ai_summary or article.ai_deep_summary
-    # Serve the cache only when it is BOTH non-JSON (pre-V8 quick summaries were
-    # JSON) AND already in the V6 structured format (has a `##` heading or a
-    # TL;DR). Old free-form prose summaries are regenerated so every reader gets
-    # the scannable, formatted brief (app-feedback-v6).
-    if cached and not cached.lstrip().startswith("{") and _is_structured(cached):
+    cached = _usable_cache(article)
+    if cached:
         return {
             "markdown": cached,
             "reading_minutes": _reading_minutes(cached),
             "cached": True,
         }
 
+    lock = _summary_locks.setdefault(article.id, asyncio.Lock())
+    async with lock:
+        # A concurrent request may have generated and committed it while we
+        # waited — re-read from our own session before paying for an LLM call.
+        await db.refresh(article)
+        cached = _usable_cache(article)
+        if cached:
+            return {
+                "markdown": cached,
+                "reading_minutes": _reading_minutes(cached),
+                "cached": True,
+            }
+        return await _generate_summary(article, db)
+
+
+async def _generate_summary(article: Article, db: AsyncSession) -> dict:
     content = await extract_content_for(article) or _fallback_content(article)
     if article.source_id.startswith("arxiv") and article.summary:
         content = f"{article.summary}\n\n{content}"

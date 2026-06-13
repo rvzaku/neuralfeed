@@ -25,6 +25,16 @@ class TestPopularity:
     def test_editorial_sources_get_baseline(self):
         assert popularity(_article("rss-openai")) == 0.45
 
+    def test_editorial_with_external_traction_beats_baseline(self):
+        # A blog post the community surfaced on HN/Reddit outranks a quiet one
+        hot = popularity(_article("rss-openai", engagement={"points": 600, "upvotes": 400}))
+        quiet = popularity(_article("rss-openai"))
+        assert hot > quiet == 0.45
+
+    def test_editorial_external_traction_never_below_baseline(self):
+        # Tiny external numbers must not drag an editorial post below baseline
+        assert popularity(_article("rss-openai", engagement={"points": 2})) >= 0.45
+
     def test_reddit_scales_with_upvotes(self):
         low = popularity(_article(engagement={"upvotes": 10}))
         high = popularity(_article(engagement={"upvotes": 900}))

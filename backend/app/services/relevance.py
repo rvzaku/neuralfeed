@@ -28,6 +28,7 @@ _SATURATION = {
     "github": 4.0,    # ~10k stars (or 2.5 ≈ 300 stars today, see below)
     "hf": 2.0,        # ~100 HF upvotes
     "arxiv": 2.0,     # traction-boosted upvotes via HF Daily Papers
+    "editorial": 2.7,  # external HN/Reddit discussion of a blog post (~500 pts)
 }
 _EDITORIAL_BASELINE = 0.45  # blogs/newsletters/podcasts: curated, no votes
 
@@ -50,8 +51,6 @@ def _log_norm(value: float, saturation_log10: float) -> float:
 def popularity(article: Article) -> float:
     """0..1 popularity normalized per source family."""
     family = _source_family(article.source_id)
-    if family == "editorial":
-        return _EDITORIAL_BASELINE
 
     engagement: dict = {}
     if article.engagement:
@@ -59,6 +58,15 @@ def popularity(article: Article) -> float:
             engagement = json.loads(article.engagement)
         except (json.JSONDecodeError, TypeError):
             pass
+
+    if family == "editorial":
+        # External traction (HN points + Reddit upvotes) when the wider
+        # community picked the post up; otherwise the curated baseline — the
+        # publication itself is the selectivity signal.
+        external = float(engagement.get("points", 0)) * 1.5 + float(engagement.get("upvotes", 0))
+        if external > 0:
+            return max(_EDITORIAL_BASELINE, _log_norm(external, _SATURATION["editorial"]))
+        return _EDITORIAL_BASELINE
 
     if family == "github":
         # Stars-today (velocity) is a stronger trending signal than the
@@ -131,9 +139,15 @@ def explain(
         reasons.append(f"+{engagement['stars_today']:,} stars today")
     elif engagement.get("stars_total"):
         reasons.append(f"{engagement['stars_total']:,} stars")
-    votes = engagement.get("upvotes") or engagement.get("points")
-    if votes:
-        reasons.append(f"{votes:,} upvotes on {_FAMILY_LABEL.get(family, 'the source')}")
+    # HN points are a distinct, named signal (esp. for editorial posts the
+    # community surfaced) — don't fold them into a generic "upvotes" line.
+    if engagement.get("points"):
+        reasons.append(f"{engagement['points']:,} points on Hacker News")
+    if engagement.get("upvotes"):
+        # For editorial posts the upvotes came from Reddit; native social
+        # sources name their own platform.
+        platform = "Reddit" if family == "editorial" else _FAMILY_LABEL.get(family, "the source")
+        reasons.append(f"{engagement['upvotes']:,} upvotes on {platform}")
     if engagement.get("comments"):
         reasons.append(f"{engagement['comments']:,} comments")
     if family == "arxiv" and article.trending_score > 0:

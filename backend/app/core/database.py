@@ -57,6 +57,7 @@ _ADDITIVE_COLUMNS = [
     ("articles", "ai_deep_summary_at", "TIMESTAMP"),
     ("articles", "image_url", "TEXT"),  # V6 preview images (hotlinked URL metadata)
     ("articles", "engagement", "TEXT"),    # V7 platform engagement (JSON string)
+    ("articles", "engagement_at", "TIMESTAMP"),  # V10 engagement freshness gate
     ("articles", "context_line", "TEXT"),  # V7 cached LLM "why this matters" line
     ("articles", "original_title", "VARCHAR(512)"),  # V8 pre-rewrite slug title
 ]

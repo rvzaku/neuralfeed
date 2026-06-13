@@ -55,6 +55,11 @@ class Article(Base):
     #  "points": int} — keys present only when the source provides them.
     # Text (not JSON type) so the additive-column boot migration stays portable.
     engagement: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # When `engagement` was last written/refreshed. Velocity metrics like GitHub
+    # "stars today" are only truthful while fresh — once a repo drops off the
+    # trending page it is never re-fetched, so the display gates the "+N today"
+    # chip on this timestamp instead of showing a week-old number as "today".
+    engagement_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     # One-line LLM "why this matters" context, cached forever once generated
     context_line: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     # Slug/raw title as fetched, kept when the enricher rewrites `title` (V8)

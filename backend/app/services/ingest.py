@@ -36,10 +36,15 @@ async def ingest_items(items: list[dict], source_id: str, db: AsyncSession) -> i
         existing = await db.get(Article, article_id)
         if existing:
             new_score = float(raw.get("trending_score", 0.0))
-            if new_score > existing.trending_score:
+            # Refresh to the CURRENT value, not the all-time peak. Velocity
+            # metrics like GitHub "stars today" fall as well as rise, so a
+            # ratchet would freeze a repo at its busiest day forever. Only an
+            # empty/failed re-fetch (score 0) preserves the prior number.
+            if new_score > 0:
                 existing.trending_score = new_score
             if raw.get("engagement"):
                 existing.engagement = json.dumps(raw["engagement"])
+                existing.engagement_at = now
             # V9: backfill the REAL release date onto rows stamped with fetch
             # time before the fetchers learned true created_at dates — the
             # user only ever cares about original publication time
@@ -97,6 +102,7 @@ async def ingest_items(items: list[dict], source_id: str, db: AsyncSession) -> i
             trending_score=float(raw.get("trending_score", 0.0)),
             title_hash=title_hash,
             engagement=json.dumps(raw["engagement"]) if raw.get("engagement") else None,
+            engagement_at=now if raw.get("engagement") else None,
         )
         try:
             async with db.begin_nested():  # savepoint — only rolls back this one article

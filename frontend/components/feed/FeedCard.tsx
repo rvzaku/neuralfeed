@@ -47,8 +47,18 @@ const CHIP_STYLES = {
   likes:     "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300",
 };
 
+/** Velocity metrics ("+N stars today") only tell the truth while fresh: once a
+ *  repo drops off the trending page it is never re-fetched, so an old number
+ *  must not keep claiming to be "today". 48h matches the daily fetch cadence. */
+function engagementIsFresh(article: Article): boolean {
+  if (!article.engagement_at) return false;
+  const ageHours = (Date.now() - new Date(article.engagement_at).getTime()) / 3_600_000;
+  return ageHours < 48;
+}
+
 function EngagementStats({ article }: { article: Article }) {
   const e = article.engagement;
+  const fresh = engagementIsFresh(article);
   // arXiv has no native votes — traction comes from HF Daily Papers upvotes
   if (!e) {
     if (article.source_id.startsWith("arxiv") && article.trending_score > 0) {
@@ -66,12 +76,19 @@ function EngagementStats({ article }: { article: Article }) {
   if (e.stars_total) {
     stats.push(<span key="st" className={cn(CHIP, CHIP_STYLES.stars)}><Star className="h-3 w-3" />{compact(e.stars_total)} stars</span>);
   }
-  if (e.stars_today) {
+  // "+N today" is a live velocity claim — drop it once the data is stale so a
+  // week-old number never masquerades as today's gain (the lifetime star total
+  // above stays, since it's still roughly accurate).
+  if (e.stars_today && fresh) {
     stats.push(<span key="sd" className={cn(CHIP, CHIP_STYLES.velocity)}><TrendingUp className="h-3 w-3" />+{compact(e.stars_today)} today</span>);
   }
-  const votes = e.upvotes ?? e.points;
-  if (votes) {
-    stats.push(<span key="v" className={cn(CHIP, CHIP_STYLES.votes)}><ArrowBigUp className="h-3.5 w-3.5" />{compact(votes)}</span>);
+  // HN points and Reddit upvotes are distinct signals — show both when present
+  // (editorial posts surfaced via traction lookup carry both).
+  if (e.points) {
+    stats.push(<span key="hn" className={cn(CHIP, CHIP_STYLES.votes)}><Flame className="h-3 w-3" />{compact(e.points)} HN</span>);
+  }
+  if (e.upvotes) {
+    stats.push(<span key="v" className={cn(CHIP, CHIP_STYLES.votes)}><ArrowBigUp className="h-3.5 w-3.5" />{compact(e.upvotes)}</span>);
   }
   if (e.comments) {
     stats.push(<span key="c" className={cn(CHIP, CHIP_STYLES.comments)}><MessageSquare className="h-3 w-3" />{compact(e.comments)}</span>);

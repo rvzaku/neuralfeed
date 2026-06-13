@@ -58,6 +58,12 @@ async def _enrich_job() -> None:
         await enrich_slug_titles(db)
 
 
+async def _traction_job() -> None:
+    from app.services.traction import enrich_editorial_traction
+    async with AsyncSessionLocal() as db:
+        await enrich_editorial_traction(db)
+
+
 async def _discovery_job() -> None:
     from app.fetchers.account_discovery import discover_accounts
     async with AsyncSessionLocal() as db:
@@ -98,8 +104,15 @@ async def start_scheduler() -> None:
         max_instances=1, coalesce=True,
     )
 
+    scheduler.add_job(
+        _traction_job, "interval", hours=1,
+        start_date=now + timedelta(minutes=5),
+        id="editorial-traction", replace_existing=True,
+        max_instances=1, coalesce=True,
+    )
+
     scheduler.start()
-    log.info("scheduler_started", jobs=len(sources) + 2)
+    log.info("scheduler_started", jobs=len(sources) + 3)
 
 
 def stop_scheduler() -> None:

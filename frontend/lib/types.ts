@@ -54,6 +54,9 @@ export interface Article {
     downloads?: number;
     likes?: number;
   } | null;
+  /** When `engagement` was last refreshed — velocity chips ("+N today") are
+   *  only shown while this is fresh, so a stale number never reads as "today" */
+  engagement_at?: string | null;
   /** Cached one-line LLM "why this matters" context */
   context_line?: string | null;
   /** Slug/raw title as fetched, kept when the title was rewritten */

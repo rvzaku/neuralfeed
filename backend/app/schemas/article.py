@@ -20,6 +20,7 @@ class ArticleOut(BaseModel):
     feedback: Optional[int]
     trending_score: float
     engagement: Optional[dict] = None
+    engagement_at: Optional[datetime] = None
     context_line: Optional[str] = None
     original_title: Optional[str] = None
     # V8: visible relevance — match percentage + human-readable reasons
