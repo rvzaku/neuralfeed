@@ -81,7 +81,9 @@ export default function DiscoverPage() {
 
             {/* Trending */}
             <section className="space-y-3">
-              <SectionTitle icon={Flame}>Trending now</SectionTitle>
+              <SectionTitle icon={Flame}>
+                Trending now{trending?.items.length ? ` (${Math.min(trending.items.length, 10)})` : ""}
+              </SectionTitle>
               {trendingLoading && Array.from({ length: 3 }).map((_, i) => <FeedCardSkeleton key={i} />)}
               {trending?.items.slice(0, 10).map((a) => (
                 <FeedCard key={a.id} article={a} onOpen={setOpenArticle} />

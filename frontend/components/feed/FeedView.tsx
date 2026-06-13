@@ -95,22 +95,29 @@ export function FeedView() {
             </div>
           </div>
 
-          {/* View tabs */}
-          <div className="flex items-center gap-1.5">
-            {([["foryou", "For You"], ["all", "All items"]] as const).map(([key, label]) => (
-              <button
-                key={key}
-                onClick={() => setView(key)}
-                className={cn(
-                  "px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors",
-                  view === key
-                    ? "bg-foreground text-background border-foreground"
-                    : "border-border text-muted-foreground hover:bg-muted"
-                )}
-              >
-                {label}
-              </button>
-            ))}
+          {/* View tabs + a precise, calm count — never a firehose (V6) */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              {([["foryou", "For You"], ["all", "All items"]] as const).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => setView(key)}
+                  className={cn(
+                    "px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors",
+                    view === key
+                      ? "bg-foreground text-background border-foreground"
+                      : "border-border text-muted-foreground hover:bg-muted"
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {!isLoading && !isError && total > 0 && (
+              <span className="text-xs text-muted-foreground tabular-nums">
+                {total} {total === 1 ? "article" : "articles"}
+              </span>
+            )}
           </div>
 
           {isLoading && (
