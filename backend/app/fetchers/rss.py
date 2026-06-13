@@ -10,8 +10,13 @@ log = structlog.get_logger()
 _TAG_RE = re.compile(r"<[^>]+>")
 
 
+_IMG_SRC_RE = re.compile(r'<img[^>]+src=["\']([^"\']+)["\']', re.IGNORECASE)
+
+
 def _rss_image(entry) -> "str | None":
-    """media:content / media:thumbnail / image enclosure → URL, else None."""
+    """media:content / media:thumbnail / image enclosure → URL, else the first
+    inline <img> in the entry HTML. Returns a hotlinkable URL or None — the
+    image file is never stored, only its source URL (CLAUDE.md)."""
     for media in entry.get("media_content", []) or []:
         url = media.get("url")
         if url and media.get("medium", "image") == "image":
@@ -22,6 +27,11 @@ def _rss_image(entry) -> "str | None":
     for enc in entry.get("enclosures", []) or []:
         if enc.get("href") and "image" in (enc.get("type") or ""):
             return enc["href"]
+    # Many blog feeds embed the hero image inline in the content HTML
+    html = entry.get("content", [{}])[0].get("value", "") or entry.get("summary", "")
+    m = _IMG_SRC_RE.search(html or "")
+    if m and m.group(1).startswith("http"):
+        return m.group(1)
     return None
 
 
