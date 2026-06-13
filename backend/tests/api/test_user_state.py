@@ -64,6 +64,27 @@ async def test_feedback_overlay_in_feed(client, db):
     assert item_anon["feedback"] == 1 or item_anon["feedback"] is None
 
 
+async def test_opening_article_is_per_user(client, db):
+    """Opening (GET /feed/{id}) marks read for THAT user only — never the global
+    Article row, and never another user."""
+    art = await _make_article(db, "ustate-open")
+    h1 = await _register(client, "u-open1@example.com")
+    h2 = await _register(client, "u-open2@example.com")
+
+    resp = await client.get(f"/api/v1/feed/{art.id}", headers=h1)
+    assert resp.status_code == 200
+    assert resp.json()["is_read"] is True  # user 1's overlay
+
+    # Global column untouched (no cross-user leak)
+    await db.refresh(art)
+    assert art.is_read is False
+
+    # User 2 still sees it unread in their overlay
+    feed2 = await client.get("/api/v1/feed?limit=100&ranked=false", headers=h2)
+    item2 = next(i for i in feed2.json()["items"] if i["id"] == art.id)
+    assert item2["is_read"] is False
+
+
 async def test_preferences_are_namespaced(client, db):
     h1 = await _register(client, "u4@example.com")
 

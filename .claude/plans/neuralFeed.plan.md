@@ -1,5 +1,7 @@
 # Plan: NeuralFeed V4 — Full Coverage, Deep Summaries, Editorial Redesign
 
+> **Active plan (2026-06):** multi-user launch — see `docs/MULTI_USER_PLAN.md`.
+
 **Source docs**: `app-feedback-v2.md`, `ideas-v2.md` (V4 section), `CLAUDE.md`
 **Date**: 2026-06-12 (replaces the V1 greenfield plan, which shipped)
 **Complexity**: Large (≈4 working sessions)
