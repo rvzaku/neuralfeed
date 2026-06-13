@@ -62,20 +62,26 @@ def parse_trending(html: str) -> list[dict]:
 class GithubTrendingFetcher(BaseFetcher):
     source_id = "github-trending"
 
-    async def _repo_created_at(self, client: httpx.AsyncClient, owner: str, repo: str) -> "str | None":
-        """The trending page has no dates; the repo API gives created_at —
-        the 'when was this actually made' date the feed must show."""
+    async def _repo_meta(self, client: httpx.AsyncClient, owner: str, repo: str) -> dict:
+        """The trending page has no dates and its scraped star counts are
+        unreliable (HTML drift). The repo API gives the authoritative
+        created_at and live stargazers_count — the numbers the feed shows."""
         try:
             resp = await client.get(
                 f"https://api.github.com/repos/{owner}/{repo}", headers=_gh_headers()
             )
             if resp.status_code == 200:
-                created = resp.json().get("created_at")
-                if isinstance(created, str):
-                    return created
+                data = resp.json()
+                return {
+                    "created_at": data.get("created_at"),
+                    "stars_total": int(data.get("stargazers_count", 0)),
+                    "forks": int(data.get("forks_count", 0)),
+                    "topics": data.get("topics") or [],
+                    "language": data.get("language"),
+                }
         except Exception as e:
             log.debug("github_repo_meta_failed", owner=owner, repo=repo, error=str(e))
-        return None
+        return {}
 
     async def fetch(self) -> FetchResult:
         url = "https://github.com/trending/python?since=daily"
@@ -94,17 +100,21 @@ class GithubTrendingFetcher(BaseFetcher):
         items = []
         async with httpx.AsyncClient(timeout=15) as client:
             for r in repos:
-                created_at = await self._repo_created_at(client, r["owner"], r["repo"])
+                meta = await self._repo_meta(client, r["owner"], r["repo"])
+                # Authoritative API star count; fall back to the scrape only if
+                # the API call failed (rate limit / network).
+                stars_total = meta.get("stars_total") or r["stars_total"]
                 items.append({
                     "title": f"{r['owner']}/{r['repo']}",
                     "url": r["url"],
                     "author": r["owner"],
                     "summary": r["description"] or None,
-                    "published_at": created_at or now,
-                    "trending_score": float(r["stars_today"] or r["stars_total"]),
+                    "published_at": meta.get("created_at") or now,
+                    "trending_score": float(r["stars_today"] or stars_total),
                     "engagement": {
-                        "stars_total": r["stars_total"],
+                        "stars_total": stars_total,
                         "stars_today": r["stars_today"],
+                        "forks": meta.get("forks", 0),
                     },
                 })
 

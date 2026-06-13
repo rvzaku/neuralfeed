@@ -101,12 +101,19 @@ def explain(
     window_days: int = 7,
     topic_weights: Optional[dict] = None,
     source_affinity: Optional[dict] = None,
+    mentions: int = 1,
 ) -> "tuple[int, list[str]]":
     """(match 0-100, human reasons) — the v5 'why am I seeing this' line.
-    Reasons lead with traction (proof it isn't junk), then personal fit."""
+    Reasons lead with traction (proof it isn't junk), then personal fit.
+
+    `mentions` is the cross-source coverage count (V6): a story carried by
+    several independent sources is genuinely gaining traction, so it earns a
+    leading reason and a bounded match boost."""
     pop = popularity(article)
     rec = recency(article.published_at, max(1.0, window_days / 4))
-    match = int(round(100 * rec * (0.25 + 0.75 * pop)))
+    # Cross-source coverage is hard proof of traction — lift match up to +12
+    buzz_boost = min(max(mentions - 1, 0) * 6, 12)
+    match = min(100, int(round(100 * rec * (0.25 + 0.75 * pop))) + buzz_boost)
 
     engagement: dict = {}
     if article.engagement:
@@ -118,6 +125,8 @@ def explain(
     family = _source_family(article.source_id)
     reasons: list[str] = []
 
+    if mentions >= 2:
+        reasons.append(f"covered by {mentions} sources")
     if engagement.get("stars_today"):
         reasons.append(f"+{engagement['stars_today']:,} stars today")
     elif engagement.get("stars_total"):

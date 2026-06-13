@@ -30,6 +30,7 @@ async def get_feed(
     ranked: bool = Query(True),  # smart ranking on by default (V4 Phase 2b)
     feedback: Optional[int] = Query(None, ge=-1, le=1),
     min_signal: Optional[float] = Query(None, ge=0.0, le=1.0),
+    include_read: bool = Query(False),  # V6 dynamic feed: viewed items drop out
     db: AsyncSession = Depends(get_db),
     user=Depends(get_current_user),
 ) -> FeedResponse:
@@ -75,6 +76,15 @@ async def get_feed(
         all_result = await db.execute(q.order_by(Article.published_at.desc()).limit(2000))
         all_items = list(all_result.scalars().all())
 
+        # V6 dynamic feed: articles the user has already opened drop out, so the
+        # feed always presents fresh material (unless they explicitly browse
+        # read items or a bookmarked/feedback view, handled post-overlay).
+        _f_read, _f_bm, _f_fb = user_state_filters or (None, None, None)
+        if user and not include_read and _f_read is None and _f_bm is None and _f_fb is None:
+            read_ids = await _read_article_ids(db, user.id)
+            if read_ids:
+                all_items = [a for a in all_items if a.id not in read_ids]
+
         window_days = TIME_RANGE_DAYS.get(time_range or "7d", 7)
         category_of = await _category_map(db)
         per_day = await _feed_density(db, user)
@@ -85,8 +95,11 @@ async def get_feed(
             all_items, per_day=per_day, window_days=window_days, category_of=category_of
         )
         # V8: display-time cross-source dedupe — the same story fetched via
-        # two sources must never appear twice in one feed (app-feedback-v5)
-        from app.services.dedupe import dedupe_cross_source
+        # two sources must never appear twice in one feed (app-feedback-v5).
+        # V6: count cross-source coverage *before* collapsing duplicates so the
+        # survivor can show how many sources are talking about it (traction).
+        from app.services.dedupe import cross_source_buzz, dedupe_cross_source
+        buzz = cross_source_buzz(capped)
         capped = dedupe_cross_source(capped)
 
         user_id = user.id if user else None
@@ -106,7 +119,10 @@ async def get_feed(
         topic_w = await _get_topic_weights(db, user_id)
         affinity = await _get_source_affinity(db, user_id)
         explanations = {
-            a.id: explain(a, window_days, topic_weights=topic_w, source_affinity=affinity)
+            a.id: explain(
+                a, window_days, topic_weights=topic_w, source_affinity=affinity,
+                mentions=buzz.get(a.id, 1),
+            )
             for a in items
         }
     else:
@@ -147,6 +163,19 @@ async def get_feed(
 async def _category_map(db: AsyncSession) -> dict:
     result = await db.execute(select(Source.id, Source.category))
     return {sid: cat for sid, cat in result.all()}
+
+
+async def _read_article_ids(db: AsyncSession, user_id: str) -> set:
+    """Ids the user has already opened — excluded from the dynamic feed."""
+    from app.models.user_article_state import UserArticleState
+
+    result = await db.execute(
+        select(UserArticleState.article_id).where(
+            UserArticleState.user_id == user_id,
+            UserArticleState.is_read.is_(True),
+        )
+    )
+    return {row[0] for row in result.all()}
 
 
 async def _feed_density(db: AsyncSession, user) -> int:

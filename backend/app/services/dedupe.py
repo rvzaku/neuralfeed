@@ -8,6 +8,23 @@ the other's topic tags.
 from app.models.article import Article
 
 
+def cross_source_buzz(articles: list[Article]) -> dict:
+    """Map article id -> number of *distinct sources* covering the same story.
+
+    A story independently surfaced by arXiv, Reddit, and HF is gaining real
+    traction; this 'mention count' is the cross-source buzz signal the feed
+    uses to lift genuinely-discussed items above single-source noise (V6).
+    """
+    sources_by_story: dict = {}
+    for a in articles:
+        key = a.title_hash or a.id
+        sources_by_story.setdefault(key, set()).add(a.source_id)
+    return {
+        a.id: len(sources_by_story.get(a.title_hash or a.id, {a.source_id}))
+        for a in articles
+    }
+
+
 def dedupe_cross_source(articles: list[Article]) -> list[Article]:
     by_hash: dict = {}
     for a in articles:
