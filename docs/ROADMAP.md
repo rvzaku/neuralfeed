@@ -1,9 +1,5 @@
 # NeuralFeed — Roadmap
 
-> **Multi-user launch plan:** see [MULTI_USER_PLAN.md](./MULTI_USER_PLAN.md) — phased
-> plan (Phase 0 correctness blockers → account lifecycle → abuse controls → scale →
-> onboarding → launch).
-
 ## Phase 1 — Foundation (MVP, local only)
 
 ### 1.0 Scaffolding

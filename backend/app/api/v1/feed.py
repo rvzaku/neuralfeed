@@ -284,21 +284,15 @@ async def _feed_density(db: AsyncSession, user) -> int:
 
 
 @router.get("/{article_id}", response_model=ArticleOut)
-async def get_article(
-    article_id: str,
-    db: AsyncSession = Depends(get_db),
-    user=Depends(get_current_user),
-) -> ArticleOut:
+async def get_article(article_id: str, db: AsyncSession = Depends(get_db)) -> ArticleOut:
     article = await db.get(Article, article_id)
     if not article:
         raise HTTPException(status_code=404, detail="Article not found")
-    # Opening marks the article read. Authed → per-user state (no cross-user
-    # leak); anonymous → the legacy global column as the single-user fallback.
-    if user:
-        from app.services.user_state import overlay_model, upsert_state
-        state = await upsert_state(db, user.id, article.id, is_read=True)
-        return overlay_model(ArticleOut.model_validate(article), state)
-    if not article.is_read:
-        article.is_read = True
-        await db.commit()
+    # KNOWN BUG (flagged, behavior intentionally unchanged for now): this mutates
+    # the GLOBAL Article.is_read column, so in a multi-user deploy one user
+    # opening an article marks it read for everyone. The correct fix routes
+    # read-state through user_article_state (per-user overlay) — same issue in
+    # articles.py. Deferred pending explicit go-ahead.
+    article.is_read = True
+    await db.commit()
     return ArticleOut.model_validate(article)
