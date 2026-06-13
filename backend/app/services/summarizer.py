@@ -164,9 +164,15 @@ async def extract_article_text(url: str) -> Optional[str]:
 
 
 async def extract_text_and_image(url: str) -> "tuple[Optional[str], Optional[str]]":
-    """One fetch, two artifacts: readable text + og:image URL (V6)."""
+    """One fetch, two artifacts: readable text + og:image URL (V6).
+
+    URLs come from untrusted feeds, so the fetch goes through safe_client, which
+    blocks private/loopback/metadata addresses on the initial request and on
+    every redirect hop (SSRF guard)."""
+    from app.core.net import safe_client
+
     try:
-        async with httpx.AsyncClient(
+        async with safe_client(
             timeout=FETCH_TIMEOUT,
             follow_redirects=True,
             headers={"User-Agent": "NeuralFeed/0.1 (summary fetch)"},
