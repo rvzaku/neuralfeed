@@ -15,7 +15,7 @@ import { FilterDrawer } from "./FilterDrawer";
 import { RefreshIndicator } from "./RefreshIndicator";
 import { SearchModal } from "./SearchModal";
 import { SummarySheet } from "./SummarySheet";
-import { useInfiniteFeed } from "@/hooks/useFeed";
+import { useInfiniteFeed, useMarkSeen } from "@/hooks/useFeed";
 import { cn } from "@/lib/utils";
 import type { Article, FeedFilters } from "@/lib/types";
 
@@ -51,6 +51,7 @@ export function FeedView() {
     data: infData, isLoading, isError, refetch,
     fetchNextPage, hasNextPage, isFetchingNextPage,
   } = useInfiniteFeed(filters);
+  const markSeen = useMarkSeen();
   const allItems = infData?.pages.flatMap((p) => p.items) ?? [];
   const total = infData?.pages[0]?.total ?? 0;
 
@@ -148,7 +149,7 @@ export function FeedView() {
           )}
 
           {!isLoading && !isError && allItems.map((article) => (
-            <FeedCard key={article.id} article={article} onOpen={setOpenArticle} />
+            <FeedCard key={article.id} article={article} onOpen={setOpenArticle} onSeen={markSeen} />
           ))}
 
           {/* No infinite scroll (app-feedback-v5): the feed is finite and
