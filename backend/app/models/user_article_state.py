@@ -23,4 +23,9 @@ class UserArticleState(Base):
     is_read: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_bookmarked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     feedback: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    # Impression signal (distinct from is_read = opened): set once a card has
+    # dwelled on screen, so already-seen items drop from the NEXT feed load
+    # without polluting the "Read" filter.
+    is_seen: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    seen_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)

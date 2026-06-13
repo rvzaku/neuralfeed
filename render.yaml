@@ -23,6 +23,8 @@ services:
         sync: false  # paste your Neon connection string in the dashboard
       - key: SCHEDULER_ENABLED
         value: "true"
+      - key: REFRESH_MAX_HOURS
+        value: "2"  # every source re-fetched at least this often (lower = fresher)
       - key: SUMMARY_PROVIDER
         value: groq
       - key: GROQ_API_KEY
