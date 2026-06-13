@@ -39,3 +39,23 @@ services:
         value: NeuralFeed/0.1 (personal)
       - key: CORS_ORIGINS
         value: '["http://localhost:3000","https://neuralfeed.vercel.app"]'
+      # Feed ranked-order cache, wired from the Key Value instance below so the
+      # feed stops recomputing the ranking pipeline on every paginated request.
+      # If REDIS_URL is ever unset, app/core/cache.py degrades to a no-op (the
+      # feed just recomputes) — it never breaks the service.
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: neuralfeed-cache
+          property: connectionString
+
+  # Managed Redis (Render "Key Value") — a ~45s throwaway cache, NOT a datastore,
+  # so the free plan's small size and eviction are fine. allkeys-lru drops the
+  # oldest keys under memory pressure instead of erroring; an empty ipAllowList
+  # keeps it reachable only from inside Render's private network (the API uses
+  # the internal connectionString — no public exposure).
+  - type: keyvalue
+    name: neuralfeed-cache
+    plan: free
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []
