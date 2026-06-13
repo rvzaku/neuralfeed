@@ -1,3 +1,4 @@
+import asyncio
 import re
 from typing import Optional
 import feedparser
@@ -28,7 +29,9 @@ def _rss_image(entry) -> "str | None":
         if enc.get("href") and "image" in (enc.get("type") or ""):
             return enc["href"]
     # Many blog feeds embed the hero image inline in the content HTML
-    html = entry.get("content", [{}])[0].get("value", "") or entry.get("summary", "")
+    # `content` may be absent OR present-but-empty; `or [{}]` covers both, where
+    # `get("content", [{}])` alone would IndexError on an empty list.
+    html = (entry.get("content") or [{}])[0].get("value", "") or entry.get("summary", "")
     m = _IMG_SRC_RE.search(html or "")
     if m and m.group(1).startswith("http"):
         return m.group(1)
@@ -159,14 +162,16 @@ class RSSFetcher(BaseFetcher):
             log.warning("rss_fetch_error", source_id=self.source_id, error=str(e))
             return FetchResult(source_id=self.source_id, error=str(e))
 
-        feed = feedparser.parse(raw_content)
+        # feedparser.parse is synchronous CPU work; off the event loop it would
+        # stall the other sources being fetched concurrently in a refresh.
+        feed = await asyncio.to_thread(feedparser.parse, raw_content)
         items = []
         for entry in feed.entries:
             link = entry.get("link", "").strip()
             if not link:
                 continue
 
-            summary_raw = entry.get("summary") or entry.get("content", [{}])[0].get("value", "")
+            summary_raw = entry.get("summary") or (entry.get("content") or [{}])[0].get("value", "")
             summary = _strip_html(summary_raw)[:500] or None
 
             published = None

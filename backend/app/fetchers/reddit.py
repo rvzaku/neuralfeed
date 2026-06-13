@@ -5,7 +5,7 @@ import urllib.request
 import feedparser
 import structlog
 from app.core.config import settings
-from app.fetchers.base import BaseFetcher, FetchError, FetchResult, fetch_with_backoff
+from app.fetchers.base import BaseFetcher, FetchResult, fetch_with_backoff
 from app.fetchers.rss import _strip_html
 
 log = structlog.get_logger()
@@ -149,7 +149,7 @@ class RedditFetcher(BaseFetcher):
             await _pace()
             resp = await fetch_with_backoff(url, headers=headers)
             return self._parse_listing(resp.json())
-        except (FetchError, Exception) as e:
+        except Exception as e:  # FetchError is an Exception; one clause covers both
             log.warning("reddit_listing_failed", source_id=self.source_id, path=path, error=str(e))
             return None
 
