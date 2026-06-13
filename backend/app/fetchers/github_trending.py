@@ -19,13 +19,29 @@ _TODAY_RE = re.compile(r'([\d,]+)\s+stars\s+(?:today|this\s+week|this\s+month)')
 _TAG_RE = re.compile(r"<[^>]+>")
 
 
-def _to_int(text: str) -> int:
-    digits = re.sub(r"[^\d]", "", text)
-    return int(digits) if digits else 0
+# A repo cannot plausibly exceed this many stars (the most-starred repo on
+# GitHub is ~400k). Anything above is corrupt scraping, not a real count.
+_MAX_PLAUSIBLE_STARS = 50_000_000
 
 
 def _clean(html: str) -> str:
     return re.sub(r"\s+", " ", _TAG_RE.sub(" ", html)).strip()
+
+
+def _to_int(text: str) -> int:
+    """Parse the star count from a (possibly tag-laden) fragment.
+
+    GitHub wraps the count in an <a> that also contains an inline SVG whose
+    path coordinates are full of digits. Stripping ALL non-digits would glue
+    those coordinates onto the real count and yield an astronomical number, so
+    we strip tags first, then take only the FIRST standalone number token, and
+    finally reject anything implausibly large."""
+    cleaned = _clean(text)
+    m = re.search(r"\d[\d,]*", cleaned)
+    if not m:
+        return 0
+    value = int(m.group(0).replace(",", ""))
+    return value if value <= _MAX_PLAUSIBLE_STARS else 0
 
 
 def _gh_headers() -> dict:

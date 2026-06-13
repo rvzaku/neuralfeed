@@ -47,6 +47,6 @@ Neural Feed should be unique and really distinguishable and differentiate from o
 
 Neural Feed should be really intuitive to use and to navigate through 
 
-Use all the relevant skills and hooks and whatever you need from the ECC directory. And use the plugins and skills I have included in workspace. 
+Use all the relevant skills and hooks and whatever you need from the ECC directory. And use the plugins and skills I have included in workspace
 
 make sure that app fetches new relevant information every 3-4 hours as to make me updated.

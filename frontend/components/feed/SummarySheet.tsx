@@ -35,57 +35,103 @@ function Inline({ text }: { text: string }) {
   );
 }
 
+type MdBlock =
+  | { kind: "tldr"; text: string }
+  | { kind: "heading"; text: string }
+  | { kind: "ul" | "ol"; items: string[] }
+  | { kind: "p"; text: string };
+
+/** Parse line-by-line, not on blank-line blocks. The LLM frequently emits a
+ *  heading and its body separated by a SINGLE newline ("## What it is\nA skill
+ *  is…"); a blank-line split would glue them into one block and render the whole
+ *  thing — body and literal `**` — as a heading. Walking lines makes headings,
+ *  lists, and paragraphs robust regardless of blank-line spacing. */
+function parseMarkdown(markdown: string): MdBlock[] {
+  const blocks: MdBlock[] = [];
+  let para: string[] = [];
+  let list: { kind: "ul" | "ol"; items: string[] } | null = null;
+
+  const flushPara = () => {
+    if (para.length) { blocks.push({ kind: "p", text: para.join(" ") }); para = []; }
+  };
+  const flushList = () => {
+    if (list) { blocks.push(list); list = null; }
+  };
+
+  for (const rawLine of markdown.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line) { flushPara(); flushList(); continue; }
+
+    if (/^\*\*TL;DR/i.test(line) || /^TL;DR:/i.test(line)) {
+      flushPara(); flushList();
+      const text = line.replace(/^\*\*TL;DR:?\*\*:?\s*/i, "").replace(/^TL;DR:?\s*/i, "");
+      blocks.push({ kind: "tldr", text });
+      continue;
+    }
+    if (/^#{1,3}\s+/.test(line)) {
+      flushPara(); flushList();
+      blocks.push({ kind: "heading", text: line.replace(/^#{1,3}\s+/, "") });
+      continue;
+    }
+    const bullet = line.match(/^([-*])\s+(.*)$/);
+    const ordered = line.match(/^\d+\.\s+(.*)$/);
+    if (bullet || ordered) {
+      flushPara();
+      const kind = ordered ? "ol" : "ul";
+      const item = (ordered ? ordered[1] : bullet![2]);
+      if (!list || list.kind !== kind) { flushList(); list = { kind, items: [] }; }
+      list.items.push(item);
+      continue;
+    }
+    // Plain text line — accumulate into the current paragraph
+    flushList();
+    para.push(line);
+  }
+  flushPara(); flushList();
+  return blocks;
+}
+
 export function DeepMarkdown({ markdown }: { markdown: string }) {
-  const blocks = markdown.split(/\n{2,}/);
+  const blocks = parseMarkdown(markdown);
   return (
     <div className="space-y-3">
-      {blocks.map((block, i) => {
-        const t = block.trim();
-        if (!t) return null;
-
-        // TL;DR callout — the one-line takeaway gets a distinct, scannable card
-        if (/^\*\*TL;DR/i.test(t)) {
-          const body = t.replace(/^\*\*TL;DR:?\*\*:?\s*/i, "").replace(/^TL;DR:?\s*/i, "");
+      {blocks.map((b, i) => {
+        if (b.kind === "tldr") {
           return (
             <div key={i} className="rounded-lg border-l-2 border-primary bg-muted/50 px-4 py-3">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-primary mb-1">TL;DR</p>
               <p className="text-[15px] leading-[1.6] text-foreground font-medium">
-                <Inline text={body} />
+                <Inline text={b.text} />
               </p>
             </div>
           );
         }
-
-        // Headings: #, ##, ### all render as a section header
-        if (/^#{1,3} /.test(t)) {
+        if (b.kind === "heading") {
           return (
             <h3 key={i} className="font-semibold tracking-tight text-[15px] pt-2 text-foreground">
-              {t.replace(/^#{1,3} /, "")}
+              <Inline text={b.text} />
             </h3>
           );
         }
-
-        // Bullet or numbered list block
-        if (/^([-*]|\d+\.) /m.test(t)) {
-          const ordered = /^\d+\. /.test(t);
-          const Tag = ordered ? "ol" : "ul";
+        if (b.kind === "ul" || b.kind === "ol") {
+          const Tag = b.kind === "ol" ? "ol" : "ul";
           return (
             <Tag key={i} className={cn(
               "pl-5 space-y-1.5 text-sm leading-relaxed text-foreground/90",
-              ordered ? "list-decimal" : "list-disc"
+              b.kind === "ol" ? "list-decimal" : "list-disc"
             )}>
-              {t.split(/\n/).filter(Boolean).map((line, j) => (
-                <li key={j}><Inline text={line.replace(/^([-*]|\d+\.) /, "")} /></li>
-              ))}
+              {b.items.map((item, j) => <li key={j}><Inline text={item} /></li>)}
             </Tag>
           );
         }
-
-        return (
-          <p key={i} className="text-[15px] leading-[1.7] text-foreground/90">
-            <Inline text={t} />
-          </p>
-        );
+        if (b.kind === "p") {
+          return (
+            <p key={i} className="text-[15px] leading-[1.7] text-foreground/90">
+              <Inline text={b.text} />
+            </p>
+          );
+        }
+        return null;
       })}
     </div>
   );

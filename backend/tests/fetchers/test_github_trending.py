@@ -122,3 +122,39 @@ def test_parse_trending_extracts_stars_total_and_today():
     assert repo["stars_total"] == 41238   # comma-separated count parsed
     assert repo["stars_today"] == 412
     assert repo["description"] == "High-throughput LLM serving"
+
+
+# Regression: GitHub's stargazers <a> wraps an inline SVG whose path data is
+# full of digits. Stripping all non-digits glued those onto the count and
+# produced an astronomical, card-breaking number. The count must be parsed
+# cleanly past the icon.
+SVG_LADEN_HTML = """
+<article class="Box-row">
+  <h2 class="h3 lh-condensed">
+    <a href="/anthropics/skills" data-view-component="true">anthropics / skills</a>
+  </h2>
+  <p class="col-9 color-fg-muted my-1 pr-4">Custom skills for an AI model</p>
+  <div>
+    <a class="Link--muted d-inline-block mr-3" href="/anthropics/skills/stargazers">
+      <svg aria-hidden="true" height="16" viewBox="0 0 16 16" width="16">
+        <path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192z"></path>
+      </svg>
+      1,600
+    </a>
+  </div>
+</article>
+"""
+
+
+def test_parse_trending_ignores_svg_path_digits():
+    from app.fetchers.github_trending import parse_trending
+    repos = parse_trending(SVG_LADEN_HTML)
+    assert len(repos) == 1
+    assert repos[0]["stars_total"] == 1600  # NOT a concatenation of SVG coords
+
+
+def test_to_int_rejects_implausible_counts():
+    from app.fetchers.github_trending import _to_int
+    assert _to_int("1,600") == 1600
+    assert _to_int("99,999,999,999,999") == 0  # above the plausible cap
+    assert _to_int("no digits here") == 0

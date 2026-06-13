@@ -3,6 +3,21 @@ from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, field_validator
 
+# Upper bounds per engagement metric — anything above is corrupt data (e.g. a
+# GitHub star count that swallowed inline-SVG path digits during scraping).
+# Clamped at read time so historical garbage in the DB never reaches the UI,
+# with no migration or refetch needed.
+_ENGAGEMENT_CAPS = {
+    "stars_total": 50_000_000,
+    "stars_today": 1_000_000,
+    "forks": 10_000_000,
+    "upvotes": 10_000_000,
+    "points": 1_000_000,
+    "comments": 1_000_000,
+    "downloads": 10_000_000_000,
+    "likes": 50_000_000,
+}
+
 
 class ArticleOut(BaseModel):
     id: str
@@ -41,10 +56,26 @@ class ArticleOut(BaseModel):
     def _parse_engagement(cls, v):
         if isinstance(v, str):
             try:
-                return json.loads(v)
+                v = json.loads(v)
             except (json.JSONDecodeError, TypeError):
                 return None
-        return v
+        if not isinstance(v, dict):
+            return v
+        cleaned: dict = {}
+        for key, val in v.items():
+            cap = _ENGAGEMENT_CAPS.get(key)
+            if cap is not None:
+                # Drop non-numeric or implausible counts rather than show them
+                try:
+                    num = int(val)
+                except (TypeError, ValueError):
+                    continue
+                if num < 0 or num > cap:
+                    continue
+                cleaned[key] = num
+            else:
+                cleaned[key] = val
+        return cleaned or None
 
     model_config = {"from_attributes": True}
 
