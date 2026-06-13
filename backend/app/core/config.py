@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     # Monitoring (Phase 3.3) — leave empty to disable
     sentry_dsn: str = ""
 
+    # Feed ranked-order cache (Redis). Degrades to a no-op if Redis is
+    # unreachable, so the feed still works without it — see app/core/cache.py.
+    feed_cache_enabled: bool = True
+    feed_cache_ttl_seconds: int = 45
+
     # Rate limiting (per-IP, in-memory; single-instance deploys)
     rate_limit_enabled: bool = True
     rate_limit_auth_per_minute: int = 10

@@ -42,6 +42,15 @@ def _no_rate_limit(monkeypatch):
     monkeypatch.setattr(settings, "rate_limit_enabled", False)
 
 
+@pytest.fixture(autouse=True)
+def _no_feed_cache(monkeypatch):
+    # The feed cache is process-global and keyed by filters, not DB contents, so
+    # a stray dev Redis could leak one test's ranked order into another. Tests
+    # always recompute; the cache has its own unit coverage.
+    from app.core.config import settings
+    monkeypatch.setattr(settings, "feed_cache_enabled", False)
+
+
 @pytest.fixture
 async def client(db):
     app.dependency_overrides[get_db] = lambda: db

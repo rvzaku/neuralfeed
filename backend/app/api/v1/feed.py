@@ -1,3 +1,4 @@
+import hashlib
 import json
 from datetime import timedelta
 from typing import Optional
@@ -6,6 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import cache
+from app.core.config import settings
 from app.core.deps import get_current_user, get_db
 from app.core.time import utcnow
 from app.models.article import Article
@@ -69,64 +72,46 @@ async def get_feed(
     total = 0
 
     if ranked:
-        from app.services.ranker import (
-            _get_muted_sources, _get_source_affinity, _get_topic_weights, rank_articles,
-        )
-        from app.services.relevance import apply_daily_caps, explain, interleave_by_group
-        # Bound the candidate set: rank the newest 2000, not the whole table
-        all_result = await db.execute(q.order_by(Article.published_at.desc()).limit(2000))
-        all_items = list(all_result.scalars().all())
-
-        # V6 dynamic feed: articles the user has already opened drop out, so the
-        # feed always presents fresh material (unless they explicitly browse
-        # read items or a bookmarked/feedback view, handled post-overlay).
-        _f_read, _f_bm, _f_fb = user_state_filters or (None, None, None)
-        if user and not include_read and _f_read is None and _f_bm is None and _f_fb is None:
-            read_ids = await _read_article_ids(db, user.id)
-            if read_ids:
-                all_items = [a for a in all_items if a.id not in read_ids]
+        from app.services.ranker import _get_source_affinity, _get_topic_weights
+        from app.services.relevance import explain
 
         window_days = TIME_RANGE_DAYS.get(time_range or "7d", 7)
-        category_of = await _category_map(db)
+        user_id = user.id if user else None
         per_day = await _feed_density(db, user)
 
-        # V7 anti-overwhelm: only the top-N most relevant items per source
-        # category per day survive — the rest stay queryable via ranked=false
-        capped = apply_daily_caps(
-            all_items, per_day=per_day, window_days=window_days, category_of=category_of
+        # The ranked ORDER (and cross-source buzz) is identical across the pages
+        # of one scroll session, so cache it and let page 2..N just slice + load
+        # 20 rows by id, instead of recomputing the whole pipeline each page.
+        cache_key = _ranked_cache_key(
+            user_id=user_id, source_id=source_id, category=category, topic=topic,
+            time_range=time_range, min_signal=min_signal, include_read=include_read,
+            per_day=per_day, state_filters=user_state_filters,
+            anon_filters=None if user else (is_read, is_bookmarked, feedback),
         )
-        # V8: display-time cross-source dedupe — the same story fetched via
-        # two sources must never appear twice in one feed (app-feedback-v5).
-        # V6: count cross-source coverage *before* collapsing duplicates so the
-        # survivor can show how many sources are talking about it (traction).
-        from app.services.dedupe import cross_source_buzz, dedupe_cross_source
-        buzz = cross_source_buzz(capped)
-        capped = dedupe_cross_source(capped)
+        cached = await cache.get_json(cache_key)
+        if cached is not None:
+            ordered_ids = cached["ids"]
+            buzz = cached["buzz"]
+            total = cached["total"]
+        else:
+            ordered_ids, buzz = await _compute_ranked_order(
+                db, q, user, user_id, window_days, per_day,
+                include_read, user_state_filters, source_id, category,
+            )
+            total = len(ordered_ids)
+            await cache.set_json(
+                cache_key,
+                {"ids": ordered_ids, "buzz": buzz, "total": total},
+                settings.feed_cache_ttl_seconds,
+            )
 
-        user_id = user.id if user else None
-        # Fetch the user's preferences ONCE — rank_articles and the "why" line
-        # below both need topic_weights/source_affinity; querying them here and
-        # passing them in saves three redundant preference lookups per request.
+        offset = (page - 1) * limit
+        page_ids = ordered_ids[offset: offset + limit]
+        items = await _load_in_order(db, page_ids)
+
+        # Visible relevance: match % + why, only for the page being returned.
         topic_w = await _get_topic_weights(db, user_id)
         affinity = await _get_source_affinity(db, user_id)
-        muted = await _get_muted_sources(db, user_id)
-        ranked_items = await rank_articles(
-            capped, db, user_id=user_id, window_days=window_days,
-            topic_weights=topic_w, source_affinity=affinity, muted_sources=muted,
-        )
-        total = len(ranked_items)
-
-        # Mix categories within each day unless the user already narrowed
-        # to one source/category (a single column is then the point)
-        if not source_id and not category:
-            ranked_items = interleave_by_group(
-                ranked_items, window_days=window_days, category_of=category_of
-            )
-        offset = (page - 1) * limit
-        items = ranked_items[offset: offset + limit]
-
-        # Visible relevance: match % + why, only for the page being returned
-        # (topic_w/affinity already fetched above — reused, not re-queried)
         explanations = {
             a.id: explain(
                 a, window_days, topic_weights=topic_w, source_affinity=affinity,
@@ -169,6 +154,88 @@ async def get_feed(
         limit=limit,
         has_more=(page * limit) < total,
     )
+
+
+def _ranked_cache_key(**parts) -> str:
+    """Stable key over every input that changes the ranked ORDER. Page/limit are
+    deliberately excluded — one cached order serves all pages of a scroll."""
+    blob = json.dumps(parts, sort_keys=True, default=str, separators=(",", ":"))
+    digest = hashlib.sha256(blob.encode()).hexdigest()[:24]
+    return f"feed:ranked:{digest}"
+
+
+async def _compute_ranked_order(
+    db: AsyncSession,
+    q,
+    user,
+    user_id,
+    window_days: int,
+    per_day: int,
+    include_read: bool,
+    user_state_filters,
+    source_id: Optional[str],
+    category: Optional[str],
+) -> "tuple[list[str], dict]":
+    """The heavy pipeline: load candidates → per-day caps → cross-source dedupe
+    → personalized rank → category interleave. Returns (ordered_ids, buzz)."""
+    from app.services.dedupe import cross_source_buzz, dedupe_cross_source
+    from app.services.ranker import (
+        _get_muted_sources, _get_source_affinity, _get_topic_weights, rank_articles,
+    )
+    from app.services.relevance import apply_daily_caps, interleave_by_group
+
+    # Bound the candidate set: rank the newest 2000, not the whole table
+    all_result = await db.execute(q.order_by(Article.published_at.desc()).limit(2000))
+    all_items = list(all_result.scalars().all())
+
+    # V6 dynamic feed: articles the user has already opened drop out, so the feed
+    # always presents fresh material (unless they explicitly browse read items or
+    # a bookmarked/feedback view, handled post-overlay).
+    _f_read, _f_bm, _f_fb = user_state_filters or (None, None, None)
+    if user and not include_read and _f_read is None and _f_bm is None and _f_fb is None:
+        read_ids = await _read_article_ids(db, user.id)
+        if read_ids:
+            all_items = [a for a in all_items if a.id not in read_ids]
+
+    category_of = await _category_map(db)
+
+    # V7 anti-overwhelm: only the top-N most relevant items per source category
+    # per day survive — the rest stay queryable via ranked=false.
+    capped = apply_daily_caps(
+        all_items, per_day=per_day, window_days=window_days, category_of=category_of
+    )
+    # V8 display-time cross-source dedupe; count coverage BEFORE collapsing so the
+    # survivor can show how many sources carry the story (traction).
+    buzz = cross_source_buzz(capped)
+    capped = dedupe_cross_source(capped)
+
+    topic_w = await _get_topic_weights(db, user_id)
+    affinity = await _get_source_affinity(db, user_id)
+    muted = await _get_muted_sources(db, user_id)
+    ranked_items = await rank_articles(
+        capped, db, user_id=user_id, window_days=window_days,
+        topic_weights=topic_w, source_affinity=affinity, muted_sources=muted,
+    )
+
+    # Mix categories within each day unless the query already narrowed to one
+    # source/category (a single column is then the point).
+    if not source_id and not category:
+        ranked_items = interleave_by_group(
+            ranked_items, window_days=window_days, category_of=category_of
+        )
+    ids = [a.id for a in ranked_items]
+    # Keep only the buzz entries for survivors, so the cached payload stays small.
+    survivors = set(ids)
+    return ids, {aid: n for aid, n in buzz.items() if aid in survivors and n > 1}
+
+
+async def _load_in_order(db: AsyncSession, ids: list) -> list:
+    """Load the given article ids and return them in the same order."""
+    if not ids:
+        return []
+    result = await db.execute(select(Article).where(Article.id.in_(ids)))
+    by_id = {a.id: a for a in result.scalars().all()}
+    return [by_id[i] for i in ids if i in by_id]
 
 
 async def _category_map(db: AsyncSession) -> dict:
