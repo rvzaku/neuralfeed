@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { shareUrl } from "@/lib/share";
 import { SourceBadge } from "@/components/ui/SourceBadge";
-import { cn, formatRelativeTime } from "@/lib/utils";
+import { cn, formatRelativeTime, formatExactTime } from "@/lib/utils";
 import { usePostFeedback, useSummary, useToggleBookmark } from "@/hooks/useFeed";
 import type { Article } from "@/lib/types";
 
@@ -199,8 +199,8 @@ export function SummarySheet({ article, onClose }: SummarySheetProps) {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1.5">
               <SourceBadge sourceId={article.source_id} />
-              <span className="text-xs text-muted-foreground">
-                {formatRelativeTime(article.published_at)}
+              <span className="text-xs text-muted-foreground" title={formatExactTime(article.published_at)}>
+                {formatRelativeTime(article.published_at)} · {formatExactTime(article.published_at)}
               </span>
               {article.author && (
                 <span className="text-xs text-muted-foreground truncate">· {article.author}</span>

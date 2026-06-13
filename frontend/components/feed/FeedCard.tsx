@@ -4,7 +4,7 @@ import { memo, useState } from "react";
 import { ThumbsUp, ThumbsDown, Bookmark, BookmarkCheck, ExternalLink, Share2, Check, Star, MessageSquare, ArrowBigUp, TrendingUp, Flame, Download, Heart } from "lucide-react";
 import { shareUrl } from "@/lib/share";
 import { SourceBadge } from "@/components/ui/SourceBadge";
-import { cn, formatRelativeTime } from "@/lib/utils";
+import { cn, formatRelativeTime, formatExactTime } from "@/lib/utils";
 import { usePostFeedback, useToggleBookmark } from "@/hooks/useFeed";
 import type { Article } from "@/lib/types";
 
@@ -203,7 +203,9 @@ function FeedCardInner({ article, onOpen }: FeedCardProps) {
               {"↑"}{compact(article.trending_score)}
             </span>
           )}
-          <span className="text-xs text-muted-foreground">{formatRelativeTime(article.published_at)}</span>
+          <span className="text-xs text-muted-foreground" title={formatExactTime(article.published_at)}>
+            {formatRelativeTime(article.published_at)} · {formatExactTime(article.published_at)}
+          </span>
           <a
             href={article.url}
             target="_blank"

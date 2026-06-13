@@ -23,6 +23,22 @@ export function formatRelativeTime(dateStr: string): string {
   });
 }
 
+/** Exact original publish moment in the viewer's local timezone, 12-hour
+ * (e.g. "Jun 13, 4:32 PM", adding the year only when it differs from now).
+ * Shown next to the relative time so the timestamp is precise, not vague. */
+export function formatExactTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  const sameYear = date.getFullYear() === new Date().getFullYear();
+  return date.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    ...(sameYear ? {} : { year: "numeric" }),
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
 export function truncate(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text;
   return text.slice(0, maxLength).trimEnd() + "…";
