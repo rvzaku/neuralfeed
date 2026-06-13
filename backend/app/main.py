@@ -55,7 +55,10 @@ async def security_headers(request, call_next):
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
-    allow_credentials=True,
+    # Auth is a Bearer token in the Authorization header, not a cookie, so
+    # credentialed CORS is unnecessary; keeping it false avoids the browser
+    # CORS pitfall where credentials force an exact (non-wildcard) origin.
+    allow_credentials=False,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],
 )

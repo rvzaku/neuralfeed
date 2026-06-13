@@ -1,6 +1,4 @@
 import json
-import math
-from datetime import datetime, timezone
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -32,13 +30,6 @@ async def _get_source_affinity(db: AsyncSession, user_id=None) -> dict:
 
 async def _get_muted_sources(db: AsyncSession, user_id=None) -> set:
     return set(await _get_pref(db, "muted_sources", user_id) or [])
-
-
-def _recency_score(published_at: datetime, half_life_days: float = 3.0) -> float:
-    now = datetime.now(timezone.utc)
-    pub = published_at if published_at.tzinfo else published_at.replace(tzinfo=timezone.utc)
-    age_days = max(0, (now - pub).total_seconds() / 86400)
-    return math.exp(-age_days * math.log(2) / half_life_days)
 
 
 # Below this base relevance an item is stale/untracted noise — dropped from the
@@ -85,11 +76,25 @@ def score_article(
     return round(score, 4)
 
 
-async def rank_articles(articles: list, db: AsyncSession, user_id=None, window_days: int = 7) -> list:
+async def rank_articles(
+    articles: list,
+    db: AsyncSession,
+    user_id=None,
+    window_days: int = 7,
+    topic_weights: Optional[dict] = None,
+    source_affinity: Optional[dict] = None,
+    muted_sources: Optional[set] = None,
+) -> list:
+    """Rank a candidate set. The caller (feed endpoint) already needs the user's
+    topic_weights/source_affinity to render the "why" line, so it passes them in
+    to avoid re-querying the preferences table three times per request."""
     from app.models.source import Source
-    topic_weights = await _get_topic_weights(db, user_id)
-    source_affinity = await _get_source_affinity(db, user_id)
-    muted_sources = await _get_muted_sources(db, user_id)
+    if topic_weights is None:
+        topic_weights = await _get_topic_weights(db, user_id)
+    if source_affinity is None:
+        source_affinity = await _get_source_affinity(db, user_id)
+    if muted_sources is None:
+        muted_sources = await _get_muted_sources(db, user_id)
 
     source_ids = {a.source_id for a in articles}
     source_scores: dict = {}

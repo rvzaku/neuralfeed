@@ -64,12 +64,13 @@ async def get_feed(
     if min_signal is not None:
         q = q.where(Source.signal_score >= min_signal)
 
-    total_result = await db.execute(select(func.count()).select_from(q.subquery()))
-    total = total_result.scalar_one()
+    # `total` is the post-ranking survivor count in ranked mode (set below), so
+    # the COUNT query is only needed for the raw paginated (ranked=false) path.
+    total = 0
 
     if ranked:
         from app.services.ranker import (
-            _get_source_affinity, _get_topic_weights, rank_articles,
+            _get_muted_sources, _get_source_affinity, _get_topic_weights, rank_articles,
         )
         from app.services.relevance import apply_daily_caps, explain, interleave_by_group
         # Bound the candidate set: rank the newest 2000, not the whole table
@@ -103,7 +104,16 @@ async def get_feed(
         capped = dedupe_cross_source(capped)
 
         user_id = user.id if user else None
-        ranked_items = await rank_articles(capped, db, user_id=user_id, window_days=window_days)
+        # Fetch the user's preferences ONCE — rank_articles and the "why" line
+        # below both need topic_weights/source_affinity; querying them here and
+        # passing them in saves three redundant preference lookups per request.
+        topic_w = await _get_topic_weights(db, user_id)
+        affinity = await _get_source_affinity(db, user_id)
+        muted = await _get_muted_sources(db, user_id)
+        ranked_items = await rank_articles(
+            capped, db, user_id=user_id, window_days=window_days,
+            topic_weights=topic_w, source_affinity=affinity, muted_sources=muted,
+        )
         total = len(ranked_items)
 
         # Mix categories within each day unless the user already narrowed
@@ -116,8 +126,7 @@ async def get_feed(
         items = ranked_items[offset: offset + limit]
 
         # Visible relevance: match % + why, only for the page being returned
-        topic_w = await _get_topic_weights(db, user_id)
-        affinity = await _get_source_affinity(db, user_id)
+        # (topic_w/affinity already fetched above — reused, not re-queried)
         explanations = {
             a.id: explain(
                 a, window_days, topic_weights=topic_w, source_affinity=affinity,
@@ -126,6 +135,8 @@ async def get_feed(
             for a in items
         }
     else:
+        total_result = await db.execute(select(func.count()).select_from(q.subquery()))
+        total = total_result.scalar_one()
         q = q.order_by(Article.published_at.desc()).offset((page - 1) * limit).limit(limit)
         result = await db.execute(q)
         items = result.scalars().all()
@@ -200,6 +211,11 @@ async def get_article(article_id: str, db: AsyncSession = Depends(get_db)) -> Ar
     article = await db.get(Article, article_id)
     if not article:
         raise HTTPException(status_code=404, detail="Article not found")
+    # KNOWN BUG (flagged, behavior intentionally unchanged for now): this mutates
+    # the GLOBAL Article.is_read column, so in a multi-user deploy one user
+    # opening an article marks it read for everyone. The correct fix routes
+    # read-state through user_article_state (per-user overlay) — same issue in
+    # articles.py. Deferred pending explicit go-ahead.
     article.is_read = True
     await db.commit()
     return ArticleOut.model_validate(article)

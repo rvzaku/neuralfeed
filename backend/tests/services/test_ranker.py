@@ -3,7 +3,7 @@ import pytest
 from datetime import datetime, timezone, timedelta
 from unittest.mock import AsyncMock, MagicMock
 
-from app.services.ranker import score_article, rank_articles, _recency_score
+from app.services.ranker import score_article, rank_articles
 
 
 def _make_article(
@@ -20,16 +20,6 @@ def _make_article(
     a.feedback = feedback
     a.topic_tags = topic_tags or []
     return a
-
-
-class TestRecencyScore:
-    def test_fresh_article_scores_near_one(self):
-        score = _recency_score(datetime.now(timezone.utc) - timedelta(minutes=30))
-        assert score > 0.9
-
-    def test_old_article_scores_near_zero(self):
-        score = _recency_score(datetime.now(timezone.utc) - timedelta(days=30))
-        assert score < 0.1
 
 
 class TestScoreArticle:
