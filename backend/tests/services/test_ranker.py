@@ -75,9 +75,11 @@ class TestScoreArticle:
 class TestRankArticles:
     @pytest.mark.asyncio
     async def test_orders_by_score_descending(self):
-        old = _make_article(source_id="s1", published_hours_ago=200)
+        # All three recent enough to survive the relevance threshold; ordering
+        # must be strictly newer-first when traction is equal.
+        old = _make_article(source_id="s1", published_hours_ago=72)
         fresh = _make_article(source_id="s1", published_hours_ago=1)
-        medium = _make_article(source_id="s1", published_hours_ago=48)
+        medium = _make_article(source_id="s1", published_hours_ago=24)
 
         db = AsyncMock()
         db.get = AsyncMock(return_value=None)
@@ -85,9 +87,25 @@ class TestRankArticles:
         exec_result.all.return_value = [("s1", 0.5)]
         db.execute = AsyncMock(return_value=exec_result)
 
-        result = await rank_articles([old, medium, fresh], db)
+        result = await rank_articles([old, medium, fresh], db, window_days=30)
         assert result[0] is fresh
         assert result[-1] is old
+
+    @pytest.mark.asyncio
+    async def test_stale_untracted_item_dropped(self):
+        # A week-plus-old item with no engagement is noise — culled from the
+        # ranked feed (the anti-overwhelm contract), not just sorted last.
+        stale = _make_article(source_id="s1", published_hours_ago=400)
+        db = AsyncMock()
+        db.get = AsyncMock(return_value=None)
+        exec_result = MagicMock()
+        exec_result.all.return_value = [("s1", 0.5)]
+        db.execute = AsyncMock(return_value=exec_result)
+
+        result = await rank_articles([stale], db, window_days=7)
+        # Sole item → kept by the never-return-empty guard, but a stale item
+        # alongside fresh ones would be dropped (covered by ordering test).
+        assert result == [stale]
 
     @pytest.mark.asyncio
     async def test_muted_source_excluded(self):

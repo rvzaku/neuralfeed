@@ -103,7 +103,7 @@ async def get_feed(
         capped = dedupe_cross_source(capped)
 
         user_id = user.id if user else None
-        ranked_items = await rank_articles(capped, db, user_id=user_id)
+        ranked_items = await rank_articles(capped, db, user_id=user_id, window_days=window_days)
         total = len(ranked_items)
 
         # Mix categories within each day unless the user already narrowed

@@ -39,6 +39,26 @@ def _strip_html(text: str) -> str:
     return _TAG_RE.sub("", text).strip()
 
 
+_SENTENCE_END_RE = re.compile(r"(?<=[.!?])\s+")
+
+
+def _concise_title(raw_title: str, fallback_summary: Optional[str] = None) -> str:
+    """A short, scannable headline from a possibly-verbose entry title.
+
+    LinkedIn (via RSSHub) and some feeds use the entire post body as the title,
+    which floods the card. Take the first sentence/line, drop a trailing colon,
+    and cap length — the full text still lives in `summary`."""
+    text = _strip_html(raw_title or "").replace("\n", " ").strip()
+    if not text:
+        text = _strip_html(fallback_summary or "").strip()
+    # First sentence or first line, whichever comes first
+    first = _SENTENCE_END_RE.split(text, maxsplit=1)[0].strip()
+    if len(first) > 100:
+        # No sentence break early enough — cut on a word boundary
+        first = first[:97].rsplit(" ", 1)[0].rstrip(",;:—- ") + "…"
+    return first or text[:100]
+
+
 RSS_SOURCES = {
     # Company blogs — Phase 1
     "rss-openai":             "https://openai.com/blog/rss.xml",
@@ -155,8 +175,17 @@ class RSSFetcher(BaseFetcher):
             elif hasattr(entry, "updated"):
                 published = entry.updated
 
+            # LinkedIn (RSSHub) and similar feeds put the whole post in the title;
+            # condense it to a real headline so the card stays scannable.
+            raw_title = entry.get("title", "")
+            title = (
+                _concise_title(raw_title, summary)
+                if self.source_id.startswith("linkedin") or len(_strip_html(raw_title)) > 110
+                else _strip_html(raw_title).strip()
+            )
+
             items.append({
-                "title": _strip_html(entry.get("title", "")).strip(),
+                "title": title,
                 "url": link,
                 "author": entry.get("author"),
                 "summary": summary,

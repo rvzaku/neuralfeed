@@ -101,3 +101,25 @@ async def test_rss_http_error():
 
     assert not result.ok
     assert "connection timeout" in result.error
+
+
+def test_concise_title_shortens_verbose_linkedin_post():
+    from app.fetchers.rss import _concise_title
+    verbose = (
+        "We are thrilled to announce our latest breakthrough in large language "
+        "models. After months of research, the team has achieved state-of-the-art "
+        "results across multiple benchmarks and we cannot wait to share more."
+    )
+    out = _concise_title(verbose)
+    assert len(out) <= 101
+    assert out.startswith("We are thrilled")
+
+
+def test_concise_title_keeps_short_titles_intact():
+    from app.fetchers.rss import _concise_title
+    assert _concise_title("GPT-5 released") == "GPT-5 released"
+
+
+def test_concise_title_falls_back_to_summary_when_empty():
+    from app.fetchers.rss import _concise_title
+    assert _concise_title("", "A useful summary sentence.") == "A useful summary sentence."
