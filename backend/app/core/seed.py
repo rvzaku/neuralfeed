@@ -75,6 +75,13 @@ ALL_SOURCES = [
     {"id": "hf-spaces",          "name": "HuggingFace Trending Spaces",       "category": "product",     "url": "https://huggingface.co/api/spaces",                           "access": "api",    "priority": "medium", "refresh_interval": "daily"},
     # ── Phase V9 — LinkedIn (Google News proxy, no LinkedIn scraping) ────────
     {"id": "linkedin-pulse",     "name": "LinkedIn (via Google News)",        "category": "social",      "url": "https://news.google.com/rss/search?q=site%3Alinkedin.com%20(AI%20OR%20LLM%20OR%20%22machine%20learning%22)%20when%3A7d&hl=en-US&gl=US&ceid=US:en", "access": "rss", "priority": "medium", "refresh_interval": "12h"},
+    # V6 — public LinkedIn company pages via RSSHub (ToS-safe public-page bridge,
+    # never private content). URLs are resolved from RSS_SOURCES (rsshub_base).
+    {"id": "linkedin-openai",      "name": "OpenAI (LinkedIn)",      "category": "social", "url": "https://www.linkedin.com/company/openai/",            "access": "rss", "priority": "medium", "refresh_interval": "12h", "notes": "Public company page via RSSHub bridge"},
+    {"id": "linkedin-anthropic",   "name": "Anthropic (LinkedIn)",   "category": "social", "url": "https://www.linkedin.com/company/anthropicresearch/", "access": "rss", "priority": "medium", "refresh_interval": "12h", "notes": "Public company page via RSSHub bridge"},
+    {"id": "linkedin-deepmind",    "name": "DeepMind (LinkedIn)",    "category": "social", "url": "https://www.linkedin.com/company/googledeepmind/",   "access": "rss", "priority": "medium", "refresh_interval": "12h", "notes": "Public company page via RSSHub bridge"},
+    {"id": "linkedin-huggingface", "name": "Hugging Face (LinkedIn)", "category": "social", "url": "https://www.linkedin.com/company/huggingface/",       "access": "rss", "priority": "medium", "refresh_interval": "12h", "notes": "Public company page via RSSHub bridge"},
+    {"id": "linkedin-mistral",     "name": "Mistral AI (LinkedIn)",  "category": "social", "url": "https://www.linkedin.com/company/mistralai/",         "access": "rss", "priority": "medium", "refresh_interval": "12h", "notes": "Public company page via RSSHub bridge"},
     # ── Phase V7 — Aggregators & relevance signals ───────────────────────────
     {"id": "hackernews-ai",      "name": "Hacker News (AI)",                  "category": "social",      "url": "https://news.ycombinator.com",                                "access": "api",    "priority": "high",   "refresh_interval": "6h"},
     {"id": "hf-papers",          "name": "HF Daily Papers",                   "category": "research",    "url": "https://huggingface.co/papers",                               "access": "api",    "priority": "high",   "refresh_interval": "daily"},

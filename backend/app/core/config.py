@@ -50,6 +50,11 @@ class Settings(BaseSettings):
     rate_limit_auth_per_minute: int = 10
     rate_limit_write_per_minute: int = 60
 
+    # LinkedIn public-page bridge (V6): RSSHub turns public company pages into
+    # RSS without touching LinkedIn directly or scraping private content. Point
+    # at a self-hosted instance for reliability; the public instance is default.
+    rsshub_base: str = "https://rsshub.app"
+
     # Summarization — provider is swappable via env (groq | ollama)
     summary_provider: str = "groq"
     summary_model: str = ""  # empty → provider default

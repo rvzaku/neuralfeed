@@ -12,7 +12,7 @@ from app.core.time import utcnow
 from app.models.article import Article, make_title_hash
 from app.services import summarizer
 
-MD = "A flowing five-minute story. " + ("word " * 200)
+MD = "**TL;DR:** A quick take.\n\n## What it is\n" + ("word " * 200)
 
 
 def _article(article_id, url, source_id="rss-openai", summary="snippet"):

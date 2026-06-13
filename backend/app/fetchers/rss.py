@@ -96,6 +96,28 @@ RSS_SOURCES = {
 }
 
 
+def _register_linkedin_company_feeds() -> None:
+    """Public LinkedIn company pages via RSSHub (V6) — a ToS-safe bridge that
+    reads only public company posts, never private content or LinkedIn's API.
+    Built from the configurable RSSHub base so a self-hosted instance can
+    replace the public one for reliability."""
+    from app.core.config import settings
+
+    base = settings.rsshub_base.rstrip("/")
+    companies = {
+        "linkedin-openai":      "openai",
+        "linkedin-anthropic":   "anthropicresearch",
+        "linkedin-deepmind":    "googledeepmind",
+        "linkedin-huggingface": "huggingface",
+        "linkedin-mistral":     "mistralai",
+    }
+    for source_id, slug in companies.items():
+        RSS_SOURCES.setdefault(source_id, f"{base}/linkedin/company/{slug}")
+
+
+_register_linkedin_company_feeds()
+
+
 class RSSFetcher(BaseFetcher):
     def __init__(self, source_id: str, feed_url: Optional[str] = None):
         self.source_id = source_id
