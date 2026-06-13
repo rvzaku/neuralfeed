@@ -58,6 +58,24 @@ async def _enrich_job() -> None:
         await enrich_slug_titles(db)
 
 
+_REENRICH_FLAG = "reenrich_70b_done"
+
+
+async def _reenrich_job() -> None:
+    """One-shot title quality upgrade (v0.3.3). Guarded by a DB flag so it runs
+    once total — not on every free-tier restart — to avoid burning tokens
+    re-rewriting titles that were already upgraded."""
+    from app.models.user_preference import UserPreference
+    from app.services.enricher import reenrich_recent
+
+    async with AsyncSessionLocal() as db:
+        if await db.get(UserPreference, _REENRICH_FLAG):
+            return
+        await reenrich_recent(db)
+        db.add(UserPreference(key=_REENRICH_FLAG, value="true"))
+        await db.commit()
+
+
 async def _traction_job() -> None:
     from app.services.traction import enrich_editorial_traction
     async with AsyncSessionLocal() as db:
@@ -111,8 +129,15 @@ async def start_scheduler() -> None:
         max_instances=1, coalesce=True,
     )
 
+    scheduler.add_job(
+        _reenrich_job, "date",
+        run_date=now + timedelta(minutes=3),
+        id="reenrich-70b-once", replace_existing=True,
+        max_instances=1, coalesce=True,
+    )
+
     scheduler.start()
-    log.info("scheduler_started", jobs=len(sources) + 3)
+    log.info("scheduler_started", jobs=len(sources) + 4)
 
 
 def stop_scheduler() -> None:

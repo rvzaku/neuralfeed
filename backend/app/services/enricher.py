@@ -186,3 +186,42 @@ async def enrich_slug_titles(db: AsyncSession, limit: int = BATCH_SIZE) -> int:
     if candidates:
         log.info("enrich_batch_complete", attempted=len(candidates), enriched=done)
     return done
+
+
+async def reenrich_recent(db: AsyncSession, limit: int = 60, days: int = 30) -> int:
+    """One-time quality upgrade: re-run enrichment over recent GitHub/HF items
+    with the stronger model, even when their title is no longer slug-shaped.
+
+    Items enriched by the old 8b model kept bland, repo-name-echoing titles that
+    the slug-only selector never revisits. This re-runs enrich_article directly
+    (never the fallback — a failed call leaves the existing title untouched, so a
+    decent title is never downgraded). Newest-first, bounded, rate-limit aware."""
+    from datetime import timedelta
+    from sqlalchemy import or_
+
+    from app.core.time import utcnow
+
+    cutoff = utcnow() - timedelta(days=days)
+    result = await db.execute(
+        select(Article)
+        .where(
+            or_(
+                Article.source_id.in_(SLUG_SOURCES),
+                Article.source_id.like("github%"),
+                Article.source_id.like("hf-%"),
+            ),
+            Article.published_at >= cutoff,
+        )
+        .order_by(Article.published_at.desc())
+        .limit(limit)
+    )
+    done = 0
+    for article in result.scalars().all():
+        try:
+            if await enrich_article(article, db):
+                done += 1
+        except RateLimited:
+            log.info("reenrich_rate_limited", reenriched=done)
+            break
+    log.info("reenrich_complete", reenriched=done)
+    return done
