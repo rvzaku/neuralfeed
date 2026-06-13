@@ -11,6 +11,7 @@ import structlog
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy import select
 
+from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.models.source import Source
 from app.services.fetch_runner import run_fetch
@@ -26,7 +27,12 @@ _INTERVAL_HOURS = {
 
 
 def _hours_for(refresh_interval: str) -> int:
-    return _INTERVAL_HOURS.get(refresh_interval, 24)
+    """Nominal interval clamped to refresh_max_hours so the feed never goes
+    stale longer than the configured freshness window (V6: updated every
+    3-4h). Sources that publish less often simply re-fetch into the dedupe
+    layer — new items still surface within the window, repeats are dropped."""
+    nominal = _INTERVAL_HOURS.get(refresh_interval, 24)
+    return min(nominal, max(1, settings.refresh_max_hours))
 
 
 async def _fetch_job(source_id: str) -> None:

@@ -30,6 +30,9 @@ class Settings(BaseSettings):
 
     # In-process scheduled fetching (replaces Celery beat for single-user deploys)
     scheduler_enabled: bool = True
+    # V6: keep the feed fresh — no source waits longer than this between fetches,
+    # so the user always has new relevant material within the window (3-4h).
+    refresh_max_hours: int = 4
 
     # Auth (Phase 3.1) — gate is off by default so single-user deploys keep working
     auth_required: bool = False
