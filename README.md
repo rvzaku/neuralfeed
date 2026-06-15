@@ -36,7 +36,6 @@
 - [Features](#features)
 - [How it works](#how-it-works)
 - [Tech stack](#tech-stack)
-- [Architecture](#architecture)
 - [API overview](#api-overview)
 - [Project structure](#project-structure)
 - [Running locally](#running-locally)
@@ -141,24 +140,6 @@ flowchart TD
 | Auth | JWT (HS256), PBKDF2 password hashing |
 | Hosting | Vercel (frontend) · Render (backend) · Neon (Postgres) |
 | Tooling | `uv` (Python), `bun` (frontend), Ruff, pytest, Vitest |
-
-## Architecture
-
-```mermaid
-flowchart LR
-    subgraph Sources
-        A[arXiv] & B[Reddit] & C[GitHub] & D[Hacker News] & E[Hugging Face] & F[RSS / blogs]
-    end
-    Sources --> FE[Fetchers]
-    FE --> ING[Ingest → dedupe → enrich → tag]
-    ING --> DB[(PostgreSQL)]
-    SCH[APScheduler\nfreshness-bound refresh] --> FE
-    DB --> RANK[Ranker\nfreshness + relevance + traction]
-    RANK --> API[FastAPI REST]
-    API --> WEB[Next.js dashboard]
-    API --> SUM[Groq summaries\non demand]
-    WEB --> USER((User))
-```
 
 ## API overview
 
