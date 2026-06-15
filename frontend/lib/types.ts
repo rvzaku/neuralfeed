@@ -67,6 +67,10 @@ export interface Article {
   relevance?: number | null;
   /** Human-readable reasons this item surfaced (traction, topic fit) */
   why?: string[] | null;
+  /** V6 Hotness Index — raw 0..1 cross-source-velocity score (ranked views) */
+  hotness?: number | null;
+  /** V6 Hotness Index colour band: 0 none · 1 warm · 2 hot · 3 blazing */
+  heat?: number | null;
 }
 
 export interface Source {
@@ -150,6 +154,8 @@ export interface TopicInfo {
   count: number;
   /** Learned affinity from likes/saves/dislikes (−1..1); 0 when neutral */
   weight: number;
+  /** V6 Hotness Index colour band: 0 none · 1 warm · 2 hot · 3 blazing */
+  heat?: number;
 }
 
 export interface TopicsResponse {

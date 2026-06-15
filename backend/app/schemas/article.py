@@ -41,6 +41,11 @@ class ArticleOut(BaseModel):
     # V8: visible relevance — match percentage + human-readable reasons
     relevance: Optional[int] = None
     why: Optional[list[str]] = None
+    # V6 Hotness Index — cross-source velocity rendered as a 0..3 colour band
+    # ("warm"/"hot"/"blazing"). `hotness` is the raw 0..1 score for ordering;
+    # `heat` is the band the client paints. Both are ranked-view only.
+    hotness: Optional[float] = None
+    heat: Optional[int] = None
 
     @field_validator("image_url", mode="before")
     @classmethod

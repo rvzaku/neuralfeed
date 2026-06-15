@@ -14,6 +14,7 @@ import {
   AudioLines, GitFork, Server, Package, Banknote, Sparkles,
 } from "lucide-react";
 import { FeedCard } from "@/components/feed/FeedCard";
+import { HeatDot, HeatLegend } from "@/components/ui/HeatBadge";
 import { FeedCardSkeleton } from "@/components/feed/FeedCardSkeleton";
 import { SummarySheet } from "@/components/feed/SummarySheet";
 import { useFeed, useTopics } from "@/hooks/useFeed";
@@ -60,6 +61,7 @@ export default function TopicsPage() {
       tag,
       count: -1,
       weight: 0,
+      heat: 0,
       ...TOPIC_META[tag],
     }));
   }, [topicsData]);
@@ -87,9 +89,12 @@ export default function TopicsPage() {
       <main className="flex-1 px-4 pt-4 pb-24 md:pb-8 max-w-2xl mx-auto w-full space-y-5">
         {!active ? (
           <>
-            <p className="text-xs text-muted-foreground -mb-1">
-              Ordered by what you read and what&apos;s moving this week.
-            </p>
+            <div className="flex items-center justify-between gap-2 -mb-1">
+              <p className="text-xs text-muted-foreground">
+                Ordered by what you read and what&apos;s moving this week.
+              </p>
+              <HeatLegend className="hidden sm:inline-flex shrink-0" />
+            </div>
 
             {topicsLoading && !topicsData ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -99,7 +104,7 @@ export default function TopicsPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {live.map(({ tag, label, blurb, icon: Icon, count, weight }) => (
+                {live.map(({ tag, label, blurb, icon: Icon, count, weight, heat }) => (
                   <button
                     key={tag}
                     onClick={() => setActive(tag as TopicTag)}
@@ -111,6 +116,7 @@ export default function TopicsPage() {
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center gap-1.5">
                         <span className="block text-sm font-semibold truncate">{label}</span>
+                        <HeatDot heat={heat} className="shrink-0" />
                         {weight > 0 && (
                           <Sparkles className="h-3 w-3 shrink-0 text-primary" aria-label="A topic you follow" />
                         )}

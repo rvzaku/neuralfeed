@@ -4,6 +4,7 @@ import { memo, useState } from "react";
 import { ThumbsUp, ThumbsDown, Bookmark, BookmarkCheck, ExternalLink, Share2, Check, Star, MessageSquare, ArrowBigUp, TrendingUp, Flame, Download, Heart } from "lucide-react";
 import { shareUrl } from "@/lib/share";
 import { SourceBadge } from "@/components/ui/SourceBadge";
+import { HeatBadge } from "@/components/ui/HeatBadge";
 import { cn, formatRelativeTime, formatExactTime } from "@/lib/utils";
 import { usePostFeedback, useToggleBookmark } from "@/hooks/useFeed";
 import type { Article } from "@/lib/types";
@@ -187,6 +188,7 @@ function FeedCardInner({ article, onOpen }: FeedCardProps) {
           )}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
+          <HeatBadge heat={article.heat} />
           {unseen && (
             <span className="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-2 py-0.5 text-[10px] font-medium">
               Unread

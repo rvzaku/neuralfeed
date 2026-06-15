@@ -134,10 +134,16 @@ async def get_feed(
 
     out_items = [ArticleOut.model_validate(a) for a in items]
     if ranked:
+        from app.services.hotness import heat_for
+
+        heat_by_id = {a.id: heat_for(a, buzz.get(a.id, 1)) for a in items}
         for o in out_items:
             match, why = explanations.get(o.id, (None, None))
             o.relevance = match
             o.why = why or None
+            score, level = heat_by_id.get(o.id, (None, 0))
+            o.hotness = score
+            o.heat = level
 
     if user:
         from app.services.user_state import overlay_model, state_map
