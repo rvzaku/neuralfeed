@@ -1,6 +1,8 @@
 # NeuralFeed
 
-**An AI-news intelligence dashboard.** One place that tracks everything moving in AI — research, code, social, and company blogs — deduplicates it, ranks it by freshness and relevance, summarizes it on demand, and links you straight to the source.
+### Your personal AI-research analyst, running 24/7.
+
+The AI field ships faster than anyone can follow — papers, model drops, repos, and launches scattered across a dozen platforms. **NeuralFeed is a real-time intelligence engine that reads all of them for you:** it continuously ingests 9+ sources, de-duplicates the same story across platforms, ranks what actually matters with a freshness + relevance + traction model, and turns any item into a plain-English brief on tap — then sends you straight to the source. A finite, signal-dense feed instead of a dozen infinite ones.
 
 <p>
   <img alt="Next.js" src="https://img.shields.io/badge/Next.js-15-000?logo=nextdotjs&logoColor=white">
