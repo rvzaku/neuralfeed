@@ -88,6 +88,47 @@ async def test_feed_cache_hit_serves_consistent_pages(client, db, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_ranked_cache_is_namespaced_per_user(client, db, monkeypatch):
+    """The ranked-order cache must be keyed per user: one user reading an article
+    (so it drops from THEIR dynamic feed) must not remove it from another user's
+    feed served from cache. Guards the user_id component of the cache key."""
+    from app.core import cache
+    from app.core.config import settings
+
+    store: dict = {}
+
+    class _Fake:
+        async def get(self, key):
+            return store.get(key)
+
+        async def set(self, key, value, ex=None):
+            store[key] = value
+
+    monkeypatch.setattr(settings, "feed_cache_enabled", True)
+    monkeypatch.setattr(cache, "_get_client", lambda: _Fake())
+
+    a = await _seed_article(db, url="https://arxiv.org/abs/nsiso.001")
+
+    async def _register(email):
+        resp = await client.post(
+            "/api/v1/auth/register", json={"email": email, "password": "password1"}
+        )
+        return {"Authorization": f"Bearer {resp.json()['access_token']}"}
+
+    h1 = await _register("cache-u1@example.com")
+    h2 = await _register("cache-u2@example.com")
+
+    # u1 opens it → read for u1 only; populates u1's cached order.
+    await client.get(f"/api/v1/feed/{a.id}", headers=h1)
+    feed_u1 = await client.get("/api/v1/feed?ranked=true", headers=h1)
+    assert a.id not in [i["id"] for i in feed_u1.json()["items"]]
+
+    # u2 never opened it — must still see it, not served u1's cached order.
+    feed_u2 = await client.get("/api/v1/feed?ranked=true", headers=h2)
+    assert a.id in [i["id"] for i in feed_u2.json()["items"]]
+
+
+@pytest.mark.asyncio
 async def test_feed_topic_filter_matches_multi_tag_articles(client, db):
     """Regression: the topic filter must match an article that carries the topic
     alongside other tags — not only articles where it is the sole tag. The old
