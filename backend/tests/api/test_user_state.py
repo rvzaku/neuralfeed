@@ -44,6 +44,28 @@ async def test_bookmark_is_per_user(client, db):
     assert art.is_bookmarked is False
 
 
+async def test_get_article_read_state_is_per_user(client, db):
+    """Opening an article marks it read for the opener only — never globally.
+    Regression for the deferred bug where get_article mutated Article.is_read."""
+    art = await _make_article(db, "ustate-read")
+    h1 = await _register(client, "u-read1@example.com")
+    h2 = await _register(client, "u-read2@example.com")
+
+    resp = await client.get(f"/api/v1/feed/{art.id}", headers=h1)
+    assert resp.status_code == 200
+    assert resp.json()["is_read"] is True
+
+    # u2 has NOT opened it — their overlay must still show it unread, proving the
+    # read-state is isolated per user and not written to the shared Article row.
+    feed_u2 = await client.get("/api/v1/feed?limit=100&ranked=false&include_read=true", headers=h2)
+    item_u2 = next(i for i in feed_u2.json()["items"] if i["id"] == art.id)
+    assert item_u2["is_read"] is False
+
+    # The global column is never mutated for authed reads.
+    await db.refresh(art)
+    assert art.is_read is False
+
+
 async def test_feedback_overlay_in_feed(client, db):
     art = await _make_article(db, "ustate-fb")
     h1 = await _register(client, "u3@example.com")

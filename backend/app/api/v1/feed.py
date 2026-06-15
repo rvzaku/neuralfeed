@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import cache
 from app.core.config import settings
-from app.core.deps import get_current_user, get_db
+from app.core.deps import get_current_user, get_db, is_guest
 from app.core.time import utcnow
 from app.models.article import Article
 from app.models.source import Source
@@ -290,15 +290,31 @@ async def _feed_density(db: AsyncSession, user) -> int:
 
 
 @router.get("/{article_id}", response_model=ArticleOut)
-async def get_article(article_id: str, db: AsyncSession = Depends(get_db)) -> ArticleOut:
+async def get_article(
+    article_id: str,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(get_current_user),
+    guest: bool = Depends(is_guest),
+) -> ArticleOut:
     article = await db.get(Article, article_id)
     if not article:
         raise HTTPException(status_code=404, detail="Article not found")
-    # KNOWN BUG (flagged, behavior intentionally unchanged for now): this mutates
-    # the GLOBAL Article.is_read column, so in a multi-user deploy one user
-    # opening an article marks it read for everyone. The correct fix routes
-    # read-state through user_article_state (per-user overlay) — same issue in
-    # articles.py. Deferred pending explicit go-ahead.
-    article.is_read = True
-    await db.commit()
+
+    # Read-state is per-user (UserArticleState) for authed accounts, so one
+    # person opening an article never marks it read for everyone else. Guests
+    # are read-only; the legacy global column is used only for the anonymous,
+    # single-user (AUTH_REQUIRED=false) deployment.
+    from app.services.user_state import overlay_model
+
+    if guest:
+        return overlay_model(ArticleOut.model_validate(article), None)
+
+    if user:
+        from app.services.user_state import upsert_state
+        state = await upsert_state(db, user.id, article.id, is_read=True)
+        return overlay_model(ArticleOut.model_validate(article), state)
+
+    if not article.is_read:
+        article.is_read = True
+        await db.commit()
     return ArticleOut.model_validate(article)
