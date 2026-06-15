@@ -31,12 +31,12 @@ const article: Article = {
 };
 
 describe("MobileNav", () => {
-  it("renders exactly the 5 destinations", () => {
+  it("renders exactly the 6 destinations", () => {
     render(<MobileNav />);
-    for (const label of ["Feed", "Discover", "Topics", "Sources", "Settings"]) {
+    for (const label of ["Feed", "Today", "Discover", "Topics", "Sources", "Settings"]) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
-    expect(screen.getAllByRole("link")).toHaveLength(5);
+    expect(screen.getAllByRole("link")).toHaveLength(6);
   });
 });
 
