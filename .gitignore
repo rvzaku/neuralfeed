@@ -57,3 +57,6 @@ uv.lock
 # Tooling repos / local-only
 ECC/
 .claude/settings.local.json
+
+# Internal dev notes (AI-assist guide, design feedback, idea logs) — kept local only
+.dev-notes/

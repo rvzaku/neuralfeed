@@ -62,6 +62,7 @@ export default function LoginPage() {
               ? "Welcome back — sign in to your feed"
               : "Create your account to get started"}
           </p>
+          <p className="text-xs text-muted-foreground/70">A personal AI-news dashboard · single-user instance</p>
         </div>
 
         {/* Mode toggle */}
