@@ -23,3 +23,10 @@ export function clearSession(): void {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(EMAIL_KEY);
 }
+
+// A guest session is a read-only demo login (email sentinel "guest"). The UI
+// hides write controls for guests; the backend enforces read-only regardless.
+export function isGuest(): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem(EMAIL_KEY) === "guest";
+}

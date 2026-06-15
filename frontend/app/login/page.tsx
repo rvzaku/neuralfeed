@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Lock, Mail, Sparkles } from "lucide-react";
-import { authLogin, authRegister } from "@/lib/api";
+import { authGuest, authLogin, authRegister } from "@/lib/api";
 import { setSession } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
@@ -154,6 +154,33 @@ export default function LoginPage() {
             {busy ? "Please wait…" : mode === "login" ? "Sign in" : "Create account"}
           </button>
         </form>
+
+        <div className="relative flex items-center gap-3">
+          <span className="h-px flex-1 bg-border" />
+          <span className="text-xs text-muted-foreground">or</span>
+          <span className="h-px flex-1 bg-border" />
+        </div>
+
+        <button
+          type="button"
+          disabled={busy}
+          onClick={async () => {
+            setError(null);
+            setBusy(true);
+            try {
+              const res = await authGuest();
+              setSession(res.access_token, res.email);
+              router.push("/");
+            } catch {
+              setError("Guest preview isn't available right now.");
+            } finally {
+              setBusy(false);
+            }
+          }}
+          className="w-full min-h-[48px] rounded-full border border-border text-sm font-semibold hover:bg-muted active:scale-[0.99] transition-all disabled:opacity-60"
+        >
+          Browse as guest (read-only)
+        </button>
 
         <p className="text-center text-xs text-muted-foreground">
           Private by design — your feed, your data, JWT-secured.

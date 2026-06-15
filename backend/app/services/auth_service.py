@@ -53,11 +53,31 @@ def create_token(user: User) -> str:
     return jwt.encode(payload, settings.jwt_secret, algorithm="HS256")
 
 
+def create_guest_token() -> str:
+    """Short-lived, read-only guest session. Carries role=guest and no user id;
+    every mutating request bearing this token is rejected by middleware, and the
+    summary route refuses to spend LLM quota for it beyond strict caps."""
+    payload = {
+        "sub": "guest",
+        "role": "guest",
+        "exp": utcnow() + timedelta(minutes=settings.guest_token_expires_minutes),
+    }
+    return jwt.encode(payload, settings.jwt_secret, algorithm="HS256")
+
+
 def decode_token(token: str) -> dict:
     try:
         return jwt.decode(token, settings.jwt_secret, algorithms=["HS256"])
     except jwt.PyJWTError as e:
         raise AuthError(f"invalid token: {e}")
+
+
+def is_guest_token(token: str) -> bool:
+    """True only for a valid, unexpired guest token. Invalid/expired → False."""
+    try:
+        return decode_token(token).get("role") == "guest"
+    except AuthError:
+        return False
 
 
 async def register(db: AsyncSession, email: str, password: str) -> User:

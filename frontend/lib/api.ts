@@ -51,6 +51,11 @@ export async function authLogin(email: string, password: string): Promise<AuthRe
   return data;
 }
 
+export async function authGuest(): Promise<AuthResponse> {
+  const { data } = await api.post<AuthResponse>("/api/v1/auth/guest");
+  return data;
+}
+
 // Feed
 export async function getFeed(filters: FeedFilters = {}): Promise<FeedResponse> {
   const params = Object.fromEntries(

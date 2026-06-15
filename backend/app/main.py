@@ -52,6 +52,27 @@ async def security_headers(request, call_next):
     response.headers["Cache-Control"] = "no-store"
     return response
 
+
+_MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+
+
+@app.middleware("http")
+async def guest_read_only(request, call_next):
+    """Single choke point: a guest token may never perform a mutating request.
+    Covers every write route — current and future — so read-only is enforced
+    server-side, not just hidden in the UI. No-op unless guest mode is on."""
+    if settings.guest_mode_enabled and request.method in _MUTATING_METHODS:
+        from fastapi.responses import JSONResponse
+        from app.services import auth_service
+
+        auth = request.headers.get("Authorization", "")
+        if auth.startswith("Bearer ") and auth_service.is_guest_token(auth[7:]):
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "Guests are read-only — sign in to make changes."},
+            )
+    return await call_next(request)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,

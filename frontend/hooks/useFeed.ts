@@ -1,6 +1,7 @@
 "use client";
 
 import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { isGuest } from "@/lib/auth";
 import {
   createSource,
   getFeed,
@@ -155,8 +156,10 @@ function restoreFeedCaches(
 export function usePostFeedback() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ articleId, value }: { articleId: string; value: FeedbackValue }) =>
-      postFeedback(articleId, value),
+    mutationFn: ({ articleId, value }: { articleId: string; value: FeedbackValue }) => {
+      if (isGuest()) return Promise.reject(new Error("read-only guest"));
+      return postFeedback(articleId, value);
+    },
     onMutate: async ({ articleId, value }) => {
       const previous = await snapshotFeedCaches(queryClient);
       patchArticleInCaches(queryClient, articleId, { feedback: value });
@@ -171,7 +174,10 @@ export function usePostFeedback() {
 export function useToggleBookmark() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (articleId: string) => toggleBookmark(articleId),
+    mutationFn: (articleId: string) => {
+      if (isGuest()) return Promise.reject(new Error("read-only guest"));
+      return toggleBookmark(articleId);
+    },
     onMutate: async (articleId) => {
       const previous = await snapshotFeedCaches(queryClient);
       // Flip optimistically; the server response settles the real value

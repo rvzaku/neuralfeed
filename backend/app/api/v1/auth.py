@@ -47,6 +47,16 @@ async def login(body: Credentials, db: AsyncSession = Depends(get_db)) -> TokenO
     return TokenOut(access_token=auth_service.create_token(user), email=user.email)
 
 
+@router.post("/guest", response_model=TokenOut)
+async def guest() -> TokenOut:
+    """Issue a short-lived read-only guest session for the public demo.
+    Returns 404 when guest mode is disabled so the feature is invisible."""
+    from app.core.config import settings
+    if not settings.guest_mode_enabled:
+        raise HTTPException(status_code=404, detail="not found")
+    return TokenOut(access_token=auth_service.create_guest_token(), email="guest")
+
+
 @router.get("/me", response_model=UserOut)
 async def me(user: User = Depends(get_current_user)) -> UserOut:
     if not user:

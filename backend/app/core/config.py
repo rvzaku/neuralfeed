@@ -42,6 +42,15 @@ class Settings(BaseSettings):
     # Set false after creating your account to close public signup
     allow_registration: bool = True
 
+    # Read-only guest mode (for a public demo). Off by default — flipping it on
+    # lets visitors browse the feed without an account. Guests can NEVER write
+    # (enforced by middleware) and, by default, cannot trigger paid LLM calls:
+    # they only see already-cached summaries unless guest_summaries_enabled.
+    guest_mode_enabled: bool = False
+    guest_token_expires_minutes: int = 60 * 12  # 12h guest sessions
+    guest_summaries_enabled: bool = False  # allow guests to generate fresh summaries
+    guest_summary_daily_cap: int = 30  # global cap on guest-triggered generations/day
+
     # Monitoring (Phase 3.3) — leave empty to disable
     sentry_dsn: str = ""
 

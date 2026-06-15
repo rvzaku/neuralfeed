@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_current_user, get_db
+from app.core.config import settings
+from app.core.deps import get_current_user, get_db, is_guest
 from app.models.article import Article
 from app.schemas.article import ArticleOut
 
@@ -14,14 +15,42 @@ async def get_summary(
     article_id: str,
     db: AsyncSession = Depends(get_db),
     user=Depends(get_current_user),
+    guest: bool = Depends(is_guest),
 ) -> dict:
     """Cached-or-generate '5-minute read' summary (single mode since V8).
-    Opening it marks the article read."""
+    Opening it marks the article read.
+
+    Guests are quota-protected: they receive only already-cached summaries, and
+    only trigger a fresh (paid) LLM call when guest_summaries_enabled AND the
+    global daily guest budget allows — never mutating owner read-state."""
+    from app.services import summarizer
     from app.services.summarizer import SummaryError, get_or_generate_summary
 
     article = await db.get(Article, article_id)
     if not article:
         raise HTTPException(status_code=404, detail="Article not found")
+
+    if guest:
+        cached = summarizer.cached_summary(article)
+        if cached:
+            return {
+                "markdown": cached,
+                "reading_minutes": summarizer._reading_minutes(cached),
+                "cached": True,
+                "article_id": article.id,
+                "url": article.url,
+            }
+        if not settings.guest_summaries_enabled or not summarizer.try_consume_guest_summary_budget():
+            raise HTTPException(
+                status_code=503,
+                detail="Sign in to generate a summary — or read the original at the source.",
+            )
+        # Budget reserved — fall through to generation (no read-state mutation).
+        try:
+            result = await get_or_generate_summary(article, db)
+        except SummaryError as e:
+            raise HTTPException(status_code=503, detail=str(e))
+        return {**result, "article_id": article.id, "url": article.url}
 
     try:
         result = await get_or_generate_summary(article, db)

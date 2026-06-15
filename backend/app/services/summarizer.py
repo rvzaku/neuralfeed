@@ -346,6 +346,28 @@ def _is_structured(markdown: str) -> bool:
 _summary_locks: dict[str, asyncio.Lock] = {}
 
 
+# Global daily budget for guest-triggered summary generation. Cached reads never
+# count; only a guest causing a fresh (paid) LLM call does. Resets each UTC day.
+# In-memory is sufficient: single instance, periodic restarts on the free tier.
+_guest_gen_budget: dict = {"date": None, "count": 0}
+
+
+def try_consume_guest_summary_budget() -> bool:
+    """Reserve one guest generation against today's cap. False when exhausted."""
+    today = utcnow().date()
+    if _guest_gen_budget["date"] != today:
+        _guest_gen_budget.update(date=today, count=0)
+    if _guest_gen_budget["count"] >= settings.guest_summary_daily_cap:
+        return False
+    _guest_gen_budget["count"] += 1
+    return True
+
+
+def cached_summary(article: Article) -> Optional[str]:
+    """Public accessor for an already-cached structured summary (no generation)."""
+    return _usable_cache(article)
+
+
 def _usable_cache(article: Article) -> Optional[str]:
     """The cached markdown if it's the current structured format, else None.
     Pre-V8 summaries were JSON; old free-form prose lacks `##`/TL;DR — both are
