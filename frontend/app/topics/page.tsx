@@ -46,14 +46,27 @@ export default function TopicsPage() {
 
   // Merge server relevance/counts with the local display metadata, keeping only
   // topics we have a card design for. Server already orders by relevance.
+  // Fallback: if the topics endpoint is unavailable (e.g. backend not yet
+  // redeployed, offline, or a request error), still render every topic from the
+  // local metadata — count `-1` means "unknown", so the section never goes blank.
   const ordered = useMemo(() => {
-    const rows = topicsData?.items ?? [];
-    return rows
-      .filter((t) => TOPIC_META[t.tag])
-      .map((t) => ({ ...t, ...TOPIC_META[t.tag] }));
+    const rows = topicsData?.items;
+    if (rows && rows.length > 0) {
+      return rows
+        .filter((t) => TOPIC_META[t.tag])
+        .map((t) => ({ ...t, ...TOPIC_META[t.tag] }));
+    }
+    return (Object.keys(TOPIC_META) as TopicTag[]).map((tag) => ({
+      tag,
+      count: -1,
+      weight: 0,
+      ...TOPIC_META[tag],
+    }));
   }, [topicsData]);
 
-  const live = ordered.filter((t) => t.count > 0);
+  // `count < 0` is the "unknown count" fallback — treat those as live cards so
+  // the directory stays full even when the endpoint can't be reached.
+  const live = ordered.filter((t) => t.count !== 0);
   const quiet = ordered.filter((t) => t.count === 0);
   const activeTopic = active ? TOPIC_META[active] : undefined;
 
@@ -78,7 +91,7 @@ export default function TopicsPage() {
               Ordered by what you read and what&apos;s moving this week.
             </p>
 
-            {topicsLoading ? (
+            {topicsLoading && !topicsData ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <div key={i} className="h-[68px] rounded-xl border border-border bg-card animate-pulse" />
@@ -104,9 +117,11 @@ export default function TopicsPage() {
                       </span>
                       <span className="block text-xs text-muted-foreground leading-snug">{blurb}</span>
                     </span>
-                    <span className="shrink-0 self-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium tabular-nums text-muted-foreground">
-                      {count}
-                    </span>
+                    {count >= 0 && (
+                      <span className="shrink-0 self-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium tabular-nums text-muted-foreground">
+                        {count}
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>
