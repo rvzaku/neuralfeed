@@ -23,12 +23,20 @@ function Inline({ text }: { text: string }) {
         if (part.startsWith("*") && part.endsWith("*") && part.length > 2)
           return <em key={i}>{part.slice(1, -1)}</em>;
         const link = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
-        if (link)
-          return (
-            <a key={i} href={link[2]} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2">
-              {link[1]}
-            </a>
-          );
+        if (link) {
+          // Summary markdown is derived from untrusted web pages, so a link URL
+          // could be `javascript:`/`data:` — only render an anchor for safe
+          // http(s)/mailto schemes; otherwise show the label as plain text.
+          const href = link[2].trim();
+          if (/^(https?:\/\/|mailto:)/i.test(href)) {
+            return (
+              <a key={i} href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2">
+                {link[1]}
+              </a>
+            );
+          }
+          return <span key={i}>{link[1]}</span>;
+        }
         return part;
       })}
     </>
