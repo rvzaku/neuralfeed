@@ -78,30 +78,47 @@ class SummaryProvider(Protocol):
 
 class GroqProvider:
     DEFAULT_MODEL = "llama-3.3-70b-versatile"  # free tier; far denser briefs than 8b
+    # When the strong model is rate-limited, retry on this one: the 8b model has a
+    # much higher free-tier ceiling, so a summary still comes back (slightly less
+    # dense). Better a good-enough summary than a 429 in the reader.
+    FALLBACK_MODEL = "llama-3.1-8b-instant"
 
     def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
         self.api_key = api_key or settings.groq_api_key
         self.model = model or settings.summary_model or self.DEFAULT_MODEL
 
+    async def _call(self, client: httpx.AsyncClient, model: str, prompt: str) -> httpx.Response:
+        return await client.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={"Authorization": f"Bearer {self.api_key}"},
+            json={
+                "model": model,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.4,
+                "max_tokens": 2048,
+            },
+        )
+
     async def summarize(self, title: str, content: str) -> str:
         if not self.api_key:
             raise SummaryError("GROQ_API_KEY is not configured")
         prompt = _PROMPT.replace("{title}", title).replace("{content}", content)
+        # Try the configured model; on a 429 fall back once to the high-limit 8b
+        # model (unless that's already what we're using).
+        models = [self.model]
+        if self.model != self.FALLBACK_MODEL:
+            models.append(self.FALLBACK_MODEL)
         try:
             async with httpx.AsyncClient(timeout=LLM_TIMEOUT) as client:
-                resp = await client.post(
-                    "https://api.groq.com/openai/v1/chat/completions",
-                    headers={"Authorization": f"Bearer {self.api_key}"},
-                    json={
-                        "model": self.model,
-                        "messages": [{"role": "user", "content": prompt}],
-                        "temperature": 0.4,
-                        "max_tokens": 2048,
-                    },
-                )
+                resp = None
+                for model in models:
+                    resp = await self._call(client, model, prompt)
+                    if resp.status_code != 429:
+                        break
+                    log.info("summary_rate_limited", model=model)
                 if resp.status_code == 429:
                     raise SummaryError(
-                        "Summaries are briefly rate-limited — please try again in a minute."
+                        "Summaries are busy right now — please try again in a minute."
                     )
                 resp.raise_for_status()
                 raw = resp.json()["choices"][0]["message"]["content"].strip()

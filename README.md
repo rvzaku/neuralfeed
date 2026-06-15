@@ -112,6 +112,12 @@ Open http://localhost:3000. On first run the backend seeds the source registry a
 
 Live and actively used daily. Ongoing work focuses on ranking quality, more sources, and feed personalization. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
+## How it was built
+
+NeuralFeed was designed and built **AI-natively, using [Claude Code](https://claude.com/claude-code)** as a development partner. I drove the architecture, product decisions, and review; the AI accelerated implementation — letting me move from idea to working feature with minimal friction and iterate on the design, fetchers, ranking, and infrastructure far faster than solo hand-coding.
+
+This is deliberate: working fluently *with* AI tooling — specifying intent clearly, reviewing generated code critically, and keeping a tight quality bar (conventional commits, ~84% test coverage, security review) — is how I prefer to ship. The goal is to turn ideas into shipped software quickly without sacrificing engineering rigor.
+
 ---
 
-*Built by [Atharv Motghare](https://github.com/rvzaku). Not affiliated with any of the sources it aggregates.*
+*Built by [Atharv Motghare](https://github.com/rvzaku) with [Claude Code](https://claude.com/claude-code). Not affiliated with any of the sources it aggregates.*
