@@ -10,8 +10,8 @@
 
 <table>
   <tr>
+    <td width="50%"><img src="docs/screenshots/summary.png" alt="On-demand LLM summary" /><br/><sub><b>On-demand LLM summary</b> — a structured 5-minute brief, generated on tap</sub></td>
     <td width="50%"><img src="docs/screenshots/filters.png" alt="Advanced filtering" /><br/><sub><b>Advanced filtering</b> — content type, topic, time range, signal quality</sub></td>
-    <td width="50%"><img src="docs/screenshots/sources.png" alt="Source management" /><br/><sub><b>Source management</b> — per-source enable/disable</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/screenshots/discover.png" alt="Discover (mobile)" /><br/><sub><b>Discover</b> — mobile, trending now</sub></td>
