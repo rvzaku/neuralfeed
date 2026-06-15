@@ -99,6 +99,10 @@ class GroqProvider:
                         "max_tokens": 2048,
                     },
                 )
+                if resp.status_code == 429:
+                    raise SummaryError(
+                        "Summaries are briefly rate-limited — please try again in a minute."
+                    )
                 resp.raise_for_status()
                 raw = resp.json()["choices"][0]["message"]["content"].strip()
         except httpx.HTTPError as e:

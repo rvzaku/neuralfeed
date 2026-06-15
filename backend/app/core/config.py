@@ -63,11 +63,11 @@ class Settings(BaseSettings):
     # Summarization — provider is swappable via env (groq | ollama)
     summary_provider: str = "groq"
     summary_model: str = ""  # empty → provider default
-    # Title/summary enrichment for slug-named items. Defaults to the stronger
-    # 70b model: titles are the most-complained-about surface, and a weak 8b
-    # model produced bland, repo-name-echoing headlines. Override to a faster
-    # model only if the enrich backlog can't keep up.
-    enrich_model: str = "llama-3.3-70b-versatile"
+    # Bulk title enrichment runs in batches on a schedule, so it uses the
+    # cheaper/faster 8b model to preserve the Groq free-tier quota for on-demand
+    # summaries (which stay on the stronger model, see summarizer.GroqProvider).
+    # Override to the 70b model if you have headroom and want denser titles.
+    enrich_model: str = "llama-3.1-8b-instant"
     groq_api_key: str = ""
     ollama_base_url: str = "http://localhost:11434"
 
