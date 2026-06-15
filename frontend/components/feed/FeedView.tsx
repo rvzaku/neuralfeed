@@ -115,7 +115,10 @@ export function FeedView() {
             </div>
             {!isLoading && !isError && total > 0 && (
               <span className="text-xs text-muted-foreground tabular-nums">
-                {total} {total === 1 ? "article" : "articles"}
+                {/* V6: finite framing — never a firehose */}
+                {allItems.length < total
+                  ? `Showing ${allItems.length} of ${total}`
+                  : `${total} ${total === 1 ? "article" : "articles"}`}
               </span>
             )}
           </div>
