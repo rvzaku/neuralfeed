@@ -5,6 +5,7 @@ import { isGuest } from "@/lib/auth";
 import {
   createSource,
   getFeed,
+  getTopics,
   getSources,
   patchSource,
   searchArticles,
@@ -37,6 +38,14 @@ export function useInfiniteFeed(filters: FeedFilters = {}) {
     queryFn: ({ pageParam }) => getFeed({ ...filters, page: pageParam }),
     initialPageParam: 1,
     getNextPageParam: (last) => (last.has_more ? last.page + 1 : undefined),
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+export function useTopics(timeRange: "1d" | "3d" | "7d" | "30d" = "7d") {
+  return useQuery({
+    queryKey: ["topics", timeRange],
+    queryFn: () => getTopics(timeRange),
     staleTime: 1000 * 60 * 5,
   });
 }

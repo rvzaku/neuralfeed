@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { Article, FeedFilters, FeedResponse, Source, FeedbackValue } from "./types";
+import type { Article, FeedFilters, FeedResponse, Source, FeedbackValue, TopicsResponse } from "./types";
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000",
@@ -62,6 +62,15 @@ export async function getFeed(filters: FeedFilters = {}): Promise<FeedResponse> 
     Object.entries(filters).filter(([, v]) => v !== undefined && v !== null)
   );
   const { data } = await api.get<FeedResponse>("/api/v1/feed", { params });
+  return data;
+}
+
+export async function getTopics(
+  timeRange: "1d" | "3d" | "7d" | "30d" = "7d"
+): Promise<TopicsResponse> {
+  const { data } = await api.get<TopicsResponse>("/api/v1/topics", {
+    params: { time_range: timeRange },
+  });
   return data;
 }
 

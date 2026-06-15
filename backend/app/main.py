@@ -9,7 +9,7 @@ from app.core.database import init_db, AsyncSessionLocal
 from app.core.deps import require_user_when_enabled
 from app.core.rate_limit import RateLimitMiddleware
 from app.core.seed import seed_sources, seed_accounts
-from app.api.v1 import auth, feed, sources, feedback, preferences, refresh, search, articles, accounts
+from app.api.v1 import auth, feed, sources, feedback, preferences, refresh, search, articles, accounts, topics
 
 log = structlog.get_logger()
 
@@ -109,6 +109,7 @@ for router in [
     search.router,
     articles.router,
     accounts.router,
+    topics.router,
 ]:
     app.include_router(
         router, prefix="/api/v1", dependencies=[Depends(require_user_when_enabled)]

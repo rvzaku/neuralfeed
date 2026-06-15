@@ -4,7 +4,7 @@ from datetime import timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, func
+from sqlalchemy import select, func, String
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import cache
@@ -61,7 +61,13 @@ async def get_feed(
         cutoff = utcnow() - timedelta(days=TIME_RANGE_DAYS[time_range])
         q = q.where(Article.published_at >= cutoff)
     if topic:
-        q = q.where(Article.topic_tags.contains([topic]))
+        # topic_tags is a generic JSON array column; SQLAlchemy's `.contains()`
+        # degrades to a LIKE on the *whole* serialized list (e.g. '%["llm"]%'),
+        # which only matches articles where the topic is the SOLE tag and silently
+        # drops every multi-tag article. Match the quoted slug as a substring of
+        # the JSON text instead — portable across SQLite and Postgres, and correct
+        # for single- and multi-tag arrays alike.
+        q = q.where(Article.topic_tags.cast(String).like(f'%"{topic}"%'))
     if feedback is not None:
         q = q.where(Article.feedback == feedback)
     if min_signal is not None:

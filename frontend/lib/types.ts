@@ -126,6 +126,19 @@ export interface SourceHealth {
   last_fetch_count: number | null;
 }
 
+export interface TopicInfo {
+  tag: TopicTag;
+  /** Articles tagged with this topic within the requested window */
+  count: number;
+  /** Learned affinity from likes/saves/dislikes (−1..1); 0 when neutral */
+  weight: number;
+}
+
+export interface TopicsResponse {
+  items: TopicInfo[];
+  time_range: "1d" | "3d" | "7d" | "30d";
+}
+
 export interface UserPreference {
   key: string;
   value: string;

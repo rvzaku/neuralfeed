@@ -88,6 +88,39 @@ async def test_feed_cache_hit_serves_consistent_pages(client, db, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_feed_topic_filter_matches_multi_tag_articles(client, db):
+    """Regression: the topic filter must match an article that carries the topic
+    alongside other tags — not only articles where it is the sole tag. The old
+    JSON `.contains([topic])` compiled to a whole-list LIKE and silently dropped
+    every multi-tag article, emptying most topic views."""
+    multi = await _seed_article(db, url="https://arxiv.org/abs/multi.001")
+    multi.topic_tags = ["llm", "ai-agents", "products"]
+    await db.commit()
+
+    resp = await client.get("/api/v1/feed?topic=ai-agents&ranked=false")
+    assert resp.status_code == 200
+    ids = [item["id"] for item in resp.json()["items"]]
+    assert multi.id in ids
+
+
+@pytest.mark.asyncio
+async def test_topics_endpoint_orders_by_relevance(client, db):
+    a = await _seed_article(db, url="https://arxiv.org/abs/topic.001")
+    a.topic_tags = ["llm", "robotics"]
+    await db.commit()
+
+    resp = await client.get("/api/v1/topics?time_range=30d")
+    assert resp.status_code == 200
+    data = resp.json()
+    by_tag = {t["tag"]: t for t in data["items"]}
+    assert by_tag["llm"]["count"] >= 1
+    assert by_tag["robotics"]["count"] >= 1
+    # Topics with material sort ahead of empty ones.
+    counts = [t["count"] for t in data["items"]]
+    assert counts == sorted(counts, reverse=True) or counts[0] >= counts[-1]
+
+
+@pytest.mark.asyncio
 async def test_sources_list(client):
     resp = await client.get("/api/v1/sources")
     assert resp.status_code == 200
