@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Database, RefreshCw, CheckCircle2, XCircle, AlertTriangle, Users, Plus, Rss, MessageCircle, Github } from "lucide-react";
-import { FollowTargets } from "@/components/sources/FollowTargets";
+import { Database, RefreshCw, CheckCircle2, XCircle, AlertTriangle, Plus, Rss, MessageCircle, Github } from "lucide-react";
 import { useAddSource, useSources, usePatchSource, useSourcesHealth } from "@/hooks/useFeed";
 import { cn, formatRelativeTime } from "@/lib/utils";
 import type { Source, SourceHealth } from "@/lib/types";
@@ -238,7 +237,6 @@ function SourceList() {
 }
 
 export default function SourcesPage() {
-  const [tab, setTab] = useState<"sources" | "targets">("sources");
   const { data: sources } = useSources(true);
   const enabledCount = sources?.filter((s) => s.enabled).length ?? 0;
   const totalCount = sources?.length ?? 0;
@@ -255,34 +253,8 @@ export default function SourcesPage() {
         </span>
       </header>
 
-      {/* Tabs */}
-      <div className="px-4 pt-3 max-w-2xl mx-auto w-full">
-        <div className="flex items-center gap-1 rounded-full bg-muted p-0.5 w-fit" role="tablist">
-          {([
-            ["sources", "Sources", Database],
-            ["targets", "Follow targets", Users],
-          ] as const).map(([value, label, Icon]) => (
-            <button
-              key={value}
-              role="tab"
-              aria-selected={tab === value}
-              onClick={() => setTab(value)}
-              className={cn(
-                "flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all min-h-[36px]",
-                tab === value
-                  ? "bg-foreground text-background shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <Icon className="h-3.5 w-3.5" />
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-
       <main className="flex-1 pb-24 md:pb-6 max-w-2xl mx-auto w-full">
-        {tab === "sources" ? <SourceList /> : <FollowTargets />}
+        <SourceList />
       </main>
 
     </div>
