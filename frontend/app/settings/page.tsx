@@ -7,7 +7,101 @@ import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { clearSession, getEmail } from "@/lib/auth";
 import { usePreferences, useSetPreference, useSources } from "@/hooks/useFeed";
+import { topicLabel } from "@/lib/topics";
 import { cn } from "@/lib/utils";
+
+function parseWeights(raw: unknown): Record<string, number> {
+  let val = raw;
+  if (typeof val === "string") {
+    try {
+      val = JSON.parse(val);
+    } catch {
+      return {};
+    }
+  }
+  if (!val || typeof val !== "object") return {};
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(val as Record<string, unknown>)) {
+    const n = Number(v);
+    if (Number.isFinite(n) && n !== 0) out[k] = n;
+  }
+  return out;
+}
+
+// Renders the topics NeuralFeed has learned the user leans into vs tunes out,
+// from their reactions — making the otherwise-invisible personalization legible.
+function YourTasteSection({ weights }: { weights: Record<string, number> }) {
+  const entries = Object.entries(weights).sort((a, b) => b[1] - a[1]);
+  const liked = entries.filter(([, w]) => w > 0);
+  const avoided = entries.filter(([, w]) => w < 0).reverse(); // strongest first
+  const max = Math.max(1, ...entries.map(([, w]) => Math.abs(w)));
+
+  return (
+    <section>
+      <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+        Your Taste
+      </h2>
+      <p className="text-xs text-muted-foreground mb-4">
+        Learned from your thumbs up/down and saves — no sliders to maintain. React
+        to articles and the For You feed adapts.
+      </p>
+
+      {entries.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border bg-card p-4">
+          <p className="text-sm text-muted-foreground">
+            Nothing learned yet. Like, save, or hide a few articles and your taste
+            will start to show up here.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4 rounded-xl border border-border bg-card p-4">
+          {liked.length > 0 && (
+            <TasteList title="Leaning into" tone="positive" items={liked} max={max} />
+          )}
+          {avoided.length > 0 && (
+            <TasteList title="Tuning out" tone="negative" items={avoided} max={max} />
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function TasteList({
+  title,
+  tone,
+  items,
+  max,
+}: {
+  title: string;
+  tone: "positive" | "negative";
+  items: [string, number][];
+  max: number;
+}) {
+  return (
+    <div>
+      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground mb-2">
+        {title}
+      </p>
+      <div className="space-y-2">
+        {items.map(([tag, w]) => (
+          <div key={tag} className="flex items-center gap-3">
+            <span className="w-36 shrink-0 truncate text-sm">{topicLabel(tag)}</span>
+            <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
+              <div
+                className={cn(
+                  "h-full rounded-full",
+                  tone === "positive" ? "bg-foreground" : "bg-destructive/60"
+                )}
+                style={{ width: `${Math.round((Math.abs(w) / max) * 100)}%` }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function AccountSection() {
   const router = useRouter();
@@ -42,6 +136,10 @@ export default function SettingsPage() {
   const [mutedSources, setMutedSources] = useState<string[]>([]);
   const [feedDensity, setFeedDensity] = useState(10);
   const [dirty, setDirty] = useState(false);
+
+  // topic_weights is learned from likes/dislikes/saves; the API may hand it back
+  // as an already-parsed object or a JSON string, so normalize both.
+  const topicWeights = parseWeights(prefs?.topic_weights);
 
   useEffect(() => {
     if (!prefs) return;
@@ -141,20 +239,8 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        {/* Learned personalization — V8: no manual sliders */}
-        <section>
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
-            Personalization
-          </h2>
-          <div className="rounded-xl border border-border bg-card p-4">
-            <p className="text-sm font-medium mb-1">Learned from your reactions</p>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              NeuralFeed tunes itself from your thumbs up/down and saves — liked topics and
-              sources rise, disliked ones sink. No sliders to maintain; just react to articles
-              and the For You feed adapts.
-            </p>
-          </div>
-        </section>
+        {/* Learned personalization — V8: no manual sliders, but now visible */}
+        <YourTasteSection weights={topicWeights} />
 
         {/* Muted Sources */}
         {sources && sources.length > 0 && (
