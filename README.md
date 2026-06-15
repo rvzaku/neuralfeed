@@ -110,8 +110,8 @@ Open http://localhost:3000. On first run the backend seeds the source registry a
 
 ## Status & roadmap
 
-Live and in daily personal use. Next planned work: an "Apple News / Artifact" style front-page redesign (hero story, themed topic sections, full-screen reader). See [`docs/ROADMAP.md`](docs/ROADMAP.md).
+Live and actively used daily. Ongoing work focuses on ranking quality, more sources, and feed personalization. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ---
 
-*Built by [Atharv Motghare](https://github.com/rvzaku) as a personal project. Not affiliated with any of the sources it aggregates.*
+*Built by [Atharv Motghare](https://github.com/rvzaku). Not affiliated with any of the sources it aggregates.*
