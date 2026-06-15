@@ -41,7 +41,7 @@ export default function TopicsPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <header className="sticky top-0 md:static z-10 bg-background/80 backdrop-blur-md border-b border-border px-4 py-3 flex items-center gap-2.5">
+      <header className="sticky top-[var(--banner-h,0px)] md:static z-10 bg-background/80 backdrop-blur-md border-b border-border px-4 py-3 flex items-center gap-2.5">
         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-foreground text-background">
           <Tags className="h-3.5 w-3.5" />
         </span>

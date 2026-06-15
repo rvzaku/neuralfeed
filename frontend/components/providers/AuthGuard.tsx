@@ -27,13 +27,24 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     setChecked(true);
   }, [pathname, router]);
 
+  // Publish the guest banner's height so sticky headers can offset themselves
+  // and sit *below* the banner instead of overlapping it (it's 0 for non-guests).
+  useEffect(() => {
+    const root = document.documentElement;
+    if (guest) root.style.setProperty("--banner-h", "2.25rem");
+    else root.style.removeProperty("--banner-h");
+    return () => {
+      root.style.removeProperty("--banner-h");
+    };
+  }, [guest]);
+
   // Avoid flashing protected content before the check runs
   if (!checked && !pathname.startsWith("/login")) return null;
 
   return (
     <>
       {guest && (
-        <div className="sticky top-0 z-50 flex items-center justify-center gap-3 bg-foreground px-4 py-2 text-center text-xs font-medium text-background">
+        <div className="sticky top-0 z-50 flex h-9 items-center justify-center gap-3 bg-foreground px-4 text-center text-xs font-medium text-background">
           <span>👀 Guest preview — read-only. Sign in to rate, save, and personalize.</span>
           <button
             onClick={() => {
