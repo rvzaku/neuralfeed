@@ -1,5 +1,27 @@
 # NeuralFeed — Roadmap
 
+> **Status — 2026-06-15: Phases 1–3 shipped and live in production.**
+>
+> NeuralFeed is deployed and in daily use: frontend on Vercel, async FastAPI
+> backend on Render, PostgreSQL on Neon. Built and running:
+> - **Sources (9+):** arXiv, Reddit, GitHub Trending, Hacker News, Hugging Face
+>   (papers/models/spaces), YouTube, company/blog RSS — with backoff + rate-limit handling.
+> - **Pipeline:** ingest → URL+title dedup → topic tagging → freshness + relevance +
+>   traction ranking, refreshed on a freshness-bounded APScheduler cadence.
+> - **Summaries:** on-demand Groq LLM briefs, cached per article, quota-aware model
+>   routing (8b for bulk title enrichment, 70b for summaries with 8b fallback on 429).
+> - **Auth & security:** JWT (single-user scope), PBKDF2, per-IP rate limiting,
+>   locked CORS, security headers, SSRF-guarded extraction.
+> - **Quality:** ~84% backend test coverage; CI on GitHub Actions.
+>
+> **Dropped:** the "Apple News / Artifact" front-page redesign (keeping the current
+> V5 premium-restraint feed). **Next:** ranking-quality tuning, more sources,
+> deeper feed personalization.
+>
+> The per-phase checklists below are the original plan, kept for history.
+
+---
+
 ## Phase 1 — Foundation (MVP, local only)
 
 ### 1.0 Scaffolding

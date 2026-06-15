@@ -2,6 +2,12 @@
 
 This is the living registry of all sources. **Never delete a source** — set `enabled: false` with a note.
 
+> **Updated 2026-06-15:** beyond the MVP table below, the live deployment also
+> fetches **Hacker News**, **Hugging Face** (papers, models, spaces) and **YouTube**
+> channels. Scheduling now runs via in-process **APScheduler** (not Celery beat),
+> with a freshness bound so no source waits longer than `REFRESH_MAX_HOURS` between
+> fetches. Per-source refresh intervals are clamped to that bound at runtime.
+
 ## MVP Sources (Phase 1)
 
 | ID | Name | Category | Access | Priority | Refresh | Enabled |
