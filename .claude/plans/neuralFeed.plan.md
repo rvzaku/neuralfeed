@@ -1,9 +1,51 @@
+> # ⟢ CURRENT STATUS — 2026-06-15 (authoritative; supersedes everything below)
+>
+> **NeuralFeed is shipped, deployed, and live in production.** Phases 1–3 of the
+> original roadmap and the V4 plan in this document are **done**. The detailed
+> plan below is retained as historical design record only — do not treat its
+> checklists as open work.
+>
+> **Live deployment**
+> - Frontend: Vercel — `neuralfeed.vercel.app` (login-first; `ALLOW_REGISTRATION=false`)
+> - Backend: Render free tier — `neuralfeed-api.onrender.com`; UptimeRobot warm-ping on `/health`
+> - DB: Neon PostgreSQL · Scheduling: in-process **APScheduler** (Celery/Redis retired at runtime)
+>
+> **Shipped & verified**
+> - **Sources (9+):** arXiv, Reddit, GitHub Trending, Hacker News, Hugging Face
+>   (papers/models/spaces), YouTube, company/blog RSS — resilient fetchers (backoff,
+>   `Retry-After`, SSRF-guarded extraction).
+> - **Pipeline:** ingest → URL+title dedupe → slug-title enrichment → topic tagging →
+>   freshness + relevance + traction ranking; freshness-bounded refresh (`REFRESH_MAX_HOURS`).
+> - **Summaries:** on-demand Groq briefs (TL;DR · What it is · Why it matters · How it
+>   works · What's new · Who should care), cached per article, page text never persisted.
+>   **Quota-aware model routing:** 8b (`llama-3.1-8b-instant`) for bulk title enrichment,
+>   70b (`llama-3.3-70b-versatile`) for summaries with automatic 8b fallback on 429.
+>   Friendly rate-limit message + Retry in the reader UI.
+> - **Auth & security:** JWT (HS256), PBKDF2-600k, per-IP rate limiting, locked CORS,
+>   security headers, per-user data scoping, SSRF guard.
+> - **Frontend:** Next.js 15 / React 19, mobile-first, dark mode, V5 premium-restraint
+>   design; feed, Discover (search + trending), Topics, Sources (health), Settings.
+> - **Quality:** 171 backend tests passing (~84% coverage); frontend smoke tests; CI on GitHub Actions.
+> - **Repo:** professional README (features, how-it-works, API, security, screenshots);
+>   internal AI-dev notes moved out of the public tree.
+>
+> **Decisions of record**
+> - ❌ **Dropped: the "Apple News / Artifact" V6 front-page redesign** (top-story hero /
+>   themed front page). Keeping the current V5 feed. (User decision, 2026-06-15.)
+> - Single-user instance by design (auth scopes data to one account; registration closed).
+> - Built AI-natively with Claude Code.
+>
+> **Open / next (not blockers):** ranking-quality tuning, more sources, deeper feed
+> personalization, optional read-only demo account + a short demo GIF for the README.
+>
+> ---
+
 # Plan: NeuralFeed V4 — Full Coverage, Deep Summaries, Editorial Redesign
 
 **Source docs**: `app-feedback-v2.md`, `ideas-v2.md` (V4 section), `CLAUDE.md`
 **Date**: 2026-06-12 (replaces the V1 greenfield plan, which shipped)
 **Complexity**: Large (≈4 working sessions)
-**Status**: PENDING APPROVAL — no implementation until confirmed
+**Status**: ✅ SHIPPED — see the Current Status block above. (Originally: pending approval.)
 
 ---
 
