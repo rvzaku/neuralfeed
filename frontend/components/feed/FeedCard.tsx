@@ -239,7 +239,7 @@ function FeedCardInner({ article, onOpen }: FeedCardProps) {
       {/* Title + optional quiet thumbnail */}
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-[15px] leading-snug tracking-tight mb-1.5 line-clamp-2 text-foreground group-hover:text-primary transition-colors">
+          <h3 className="font-display font-medium text-[17px] leading-[1.28] mb-1.5 line-clamp-2 text-foreground group-hover:text-primary transition-colors">
             {article.title}
           </h3>
           {/* Identity of rewritten slug titles — "what repo/model is this actually" */}

@@ -6,49 +6,52 @@
   /* V5 premium-restraint palette: neutral ink on paper, one flat accent
      (refined indigo) reserved for primary actions and active states.
      All colors live here — no hardcoded hex in components. */
+  /* Warm ink-on-paper — a deliberate shift off cold blue-grey, which reads as a
+     generic SaaS/AI template. Hue ~50–60 (faint warm/brown) on neutrals. One
+     restrained indigo accent. (app-feedback v1–v6: "must not look AI-generated".) */
   :root {
-    --background: 0 0% 99%;
-    --foreground: 240 6% 10%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 6% 10%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 6% 10%;
-    --primary: 243 60% 50%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 240 5% 95%;
-    --secondary-foreground: 240 6% 14%;
-    --muted: 240 5% 96%;
-    --muted-foreground: 240 4% 44%;
-    --accent: 240 5% 95%;
-    --accent-foreground: 240 6% 14%;
-    --destructive: 0 65% 48%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 240 6% 90%;
-    --input: 240 6% 90%;
-    --ring: 243 60% 50%;
+    --background: 48 33% 98%;
+    --foreground: 40 8% 12%;
+    --card: 48 30% 99%;
+    --card-foreground: 40 8% 12%;
+    --popover: 48 30% 99%;
+    --popover-foreground: 40 8% 12%;
+    --primary: 243 58% 52%;
+    --primary-foreground: 48 33% 99%;
+    --secondary: 45 14% 93%;
+    --secondary-foreground: 40 8% 16%;
+    --muted: 45 14% 94%;
+    --muted-foreground: 42 6% 42%;
+    --accent: 45 14% 93%;
+    --accent-foreground: 40 8% 16%;
+    --destructive: 8 62% 48%;
+    --destructive-foreground: 48 33% 99%;
+    --border: 44 12% 88%;
+    --input: 44 12% 88%;
+    --ring: 243 58% 52%;
     --radius: 0.625rem;
   }
 
   .dark {
-    --background: 240 4% 7%;
-    --foreground: 240 6% 93%;
-    --card: 240 4% 9%;
-    --card-foreground: 240 6% 93%;
-    --popover: 240 4% 8%;
-    --popover-foreground: 240 6% 93%;
-    --primary: 243 75% 72%;
-    --primary-foreground: 240 4% 7%;
-    --secondary: 240 4% 14%;
-    --secondary-foreground: 240 6% 93%;
-    --muted: 240 4% 14%;
-    --muted-foreground: 240 4% 60%;
-    --accent: 240 4% 14%;
-    --accent-foreground: 240 6% 93%;
-    --destructive: 0 55% 55%;
-    --destructive-foreground: 240 6% 93%;
-    --border: 240 4% 17%;
-    --input: 240 4% 17%;
-    --ring: 243 75% 72%;
+    --background: 40 8% 8%;
+    --foreground: 44 14% 92%;
+    --card: 40 8% 10%;
+    --card-foreground: 44 14% 92%;
+    --popover: 40 8% 9%;
+    --popover-foreground: 44 14% 92%;
+    --primary: 243 72% 74%;
+    --primary-foreground: 40 8% 8%;
+    --secondary: 40 6% 16%;
+    --secondary-foreground: 44 14% 92%;
+    --muted: 40 6% 16%;
+    --muted-foreground: 42 7% 60%;
+    --accent: 40 6% 16%;
+    --accent-foreground: 44 14% 92%;
+    --destructive: 8 55% 56%;
+    --destructive-foreground: 44 14% 92%;
+    --border: 40 6% 19%;
+    --input: 40 6% 19%;
+    --ring: 243 72% 74%;
   }
 }
 
@@ -63,6 +66,15 @@
 }
 
 @layer utilities {
+  /* Editorial display serif for titles/headings — Fraunces, loaded in layout.tsx.
+     Optical-size + softness tuned for screen headlines. */
+  .font-display {
+    font-family: var(--font-display), ui-serif, Georgia, serif;
+    font-optical-sizing: auto;
+    letter-spacing: -0.015em;
+    font-variation-settings: "SOFT" 40;
+  }
+
   /* Quiet card hover — hairline emphasis, no lift, no glow */
   .card-lift {
     transition: border-color 120ms ease, box-shadow 120ms ease;
