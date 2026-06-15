@@ -154,7 +154,10 @@ function SummarySkeleton() {
 }
 
 export function SummarySheet({ article, onClose }: SummarySheetProps) {
-  const { data, isLoading, isError } = useSummary(article?.id ?? null);
+  const { data, isLoading, isError, error, refetch, isFetching } = useSummary(article?.id ?? null);
+  const errorDetail =
+    (error as { response?: { data?: { detail?: string } } } | null)?.response?.data?.detail ?? null;
+  const isRateLimited = !!errorDetail && /rate|busy|try again|minute/i.test(errorDetail);
   const { mutate: postFeedback } = usePostFeedback();
   const { mutate: toggleBookmark } = useToggleBookmark();
   const [shared, setShared] = useState(false);
@@ -242,10 +245,23 @@ export function SummarySheet({ article, onClose }: SummarySheetProps) {
 
           {isError && (
             <div className="space-y-3">
-              <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
-                <AlertCircle className="h-4 w-4 shrink-0" />
-                <p className="text-xs">Couldn&apos;t generate a summary — read at the source below.</p>
+              <div className="flex items-start gap-2 text-amber-600 dark:text-amber-400">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                <p className="text-xs">
+                  {isRateLimited
+                    ? "Summaries are busy right now — give it a moment and try again."
+                    : errorDetail
+                      ? errorDetail
+                      : "Couldn't generate a summary — read at the source below."}
+                </p>
               </div>
+              <button
+                onClick={() => refetch()}
+                disabled={isFetching}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 min-h-[36px] text-xs font-medium hover:bg-muted transition-colors disabled:opacity-50"
+              >
+                {isFetching ? "Retrying…" : "Try again"}
+              </button>
               {article.summary && (
                 <p className="text-sm leading-relaxed text-foreground/90">{article.summary}</p>
               )}
