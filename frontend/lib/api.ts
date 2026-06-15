@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { Article, FeedFilters, FeedResponse, Source, FeedbackValue, TopicsResponse } from "./types";
+import type { Article, FeedFilters, FeedResponse, Source, FeedbackValue, TopicsResponse, Digest } from "./types";
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000",
@@ -71,6 +71,11 @@ export async function getTopics(
   const { data } = await api.get<TopicsResponse>("/api/v1/topics", {
     params: { time_range: timeRange },
   });
+  return data;
+}
+
+export async function getDigest(limit = 5): Promise<Digest> {
+  const { data } = await api.get<Digest>("/api/v1/digest", { params: { limit } });
   return data;
 }
 

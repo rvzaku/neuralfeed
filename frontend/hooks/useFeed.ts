@@ -6,6 +6,7 @@ import {
   createSource,
   getFeed,
   getTopics,
+  getDigest,
   getSources,
   patchSource,
   searchArticles,
@@ -47,6 +48,14 @@ export function useTopics(timeRange: "1d" | "3d" | "7d" | "30d" = "7d") {
     queryKey: ["topics", timeRange],
     queryFn: () => getTopics(timeRange),
     staleTime: 1000 * 60 * 5,
+  });
+}
+
+export function useDigest(limit = 5) {
+  return useQuery({
+    queryKey: ["digest", limit],
+    queryFn: () => getDigest(limit),
+    staleTime: 1000 * 60 * 10,
   });
 }
 

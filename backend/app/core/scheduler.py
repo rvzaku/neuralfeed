@@ -88,6 +88,43 @@ async def _discovery_job() -> None:
         await discover_accounts(db)
 
 
+async def _digest_job() -> None:
+    """Send the daily 'Today in AI' email to every user who opted in via the
+    per-user `digest_email_enabled` preference. No-ops cleanly when email is
+    unconfigured (see services.email.send_email)."""
+    import json
+
+    from app.models.user import User
+    from app.models.user_preference import UserPreference
+    from app.services.digest import build_digest
+    from app.services.email import render_digest_email, send_email
+
+    async with AsyncSessionLocal() as db:
+        prefs = await db.execute(
+            select(UserPreference).where(
+                UserPreference.key.like("u:%:digest_email_enabled")
+            )
+        )
+        sent = 0
+        for pref in prefs.scalars().all():
+            try:
+                if not json.loads(pref.value):
+                    continue
+            except (json.JSONDecodeError, TypeError):
+                continue
+            user_id = pref.key.split(":", 2)[1]
+            user = await db.get(User, user_id)
+            if not user or not user.email:
+                continue
+            digest = await build_digest(db, user_id=user_id)
+            if not digest.get("items"):
+                continue
+            html = render_digest_email(digest)
+            if await send_email(user.email, "Your daily AI digest", html):
+                sent += 1
+        log.info("digest_job_complete", sent=sent)
+
+
 async def start_scheduler() -> None:
     """Register one interval job per enabled source, staggered so a cold
     start doesn't fire every fetcher at once."""
@@ -136,8 +173,15 @@ async def start_scheduler() -> None:
         max_instances=1, coalesce=True,
     )
 
+    scheduler.add_job(
+        _digest_job, "cron",
+        hour=max(0, min(23, settings.digest_send_hour_utc)),
+        id="daily-digest-email", replace_existing=True,
+        max_instances=1, coalesce=True,
+    )
+
     scheduler.start()
-    log.info("scheduler_started", jobs=len(sources) + 4)
+    log.info("scheduler_started", jobs=len(sources) + 5)
 
 
 def stop_scheduler() -> None:

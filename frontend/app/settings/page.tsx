@@ -141,6 +141,8 @@ export default function SettingsPage() {
   // as an already-parsed object or a JSON string, so normalize both.
   const topicWeights = parseWeights(prefs?.topic_weights);
 
+  const [digestEmail, setDigestEmail] = useState(false);
+
   useEffect(() => {
     if (!prefs) return;
     const density = Number(prefs.feed_density);
@@ -150,7 +152,15 @@ export default function SettingsPage() {
     } catch {
       setMutedSources([]);
     }
+    const de: unknown = prefs.digest_email_enabled;
+    setDigestEmail(de === true || de === "true");
   }, [prefs]);
+
+  const toggleDigestEmail = () => {
+    const next = !digestEmail;
+    setDigestEmail(next);
+    setPref({ key: "digest_email_enabled", value: next });
+  };
 
   const toggleMutedSource = (id: string) => {
     setMutedSources((prev) =>
@@ -241,6 +251,38 @@ export default function SettingsPage() {
 
         {/* Learned personalization — V8: no manual sliders, but now visible */}
         <YourTasteSection weights={topicWeights} />
+
+        {/* Daily digest email opt-in (P1.4) */}
+        <section>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+            Daily Digest
+          </h2>
+          <div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-card px-4 py-3.5">
+            <div className="min-w-0">
+              <p className="text-sm font-medium">Email me “Today in AI”</p>
+              <p className="text-xs text-muted-foreground leading-snug">
+                A short daily brief of the top stories, sent each morning. See it
+                anytime on the Today tab.
+              </p>
+            </div>
+            <button
+              role="switch"
+              aria-checked={digestEmail}
+              onClick={toggleDigestEmail}
+              className={cn(
+                "relative h-6 w-11 shrink-0 rounded-full transition-colors",
+                digestEmail ? "bg-foreground" : "bg-muted"
+              )}
+            >
+              <span
+                className={cn(
+                  "absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-background shadow transition-transform",
+                  digestEmail && "translate-x-5"
+                )}
+              />
+            </button>
+          </div>
+        </section>
 
         {/* Muted Sources */}
         {sources && sources.length > 0 && (

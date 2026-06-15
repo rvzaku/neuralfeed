@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Newspaper, Compass, Tags, Database, Settings } from "lucide-react";
+import { Newspaper, Sun, Compass, Tags, Database, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { href: "/",         label: "Feed",     icon: Newspaper },
+  { href: "/today",    label: "Today",    icon: Sun },
   { href: "/discover", label: "Discover", icon: Compass },
   { href: "/topics",   label: "Topics",   icon: Tags },
   { href: "/sources",  label: "Sources",  icon: Database },

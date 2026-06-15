@@ -85,5 +85,14 @@ class Settings(BaseSettings):
     groq_api_key: str = ""
     ollama_base_url: str = "http://localhost:11434"
 
+    # Daily "Today in AI" email digest (P1.4). Email is sent via Resend; leave
+    # the API key empty to disable sending entirely (the in-app digest still
+    # works). Each user opts in with the per-user `digest_email_enabled` pref.
+    resend_api_key: str = ""
+    digest_from_email: str = "NeuralFeed <onboarding@resend.dev>"
+    digest_send_hour_utc: int = 6  # daily send time (UTC)
+    # Public app URL used for links in the email (so "read" buttons resolve).
+    app_base_url: str = "https://neuralfeed.vercel.app"
+
 
 settings = Settings()

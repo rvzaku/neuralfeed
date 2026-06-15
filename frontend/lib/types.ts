@@ -126,6 +126,24 @@ export interface SourceHealth {
   last_fetch_count: number | null;
 }
 
+export interface DigestItem {
+  id: string;
+  title: string;
+  url: string;
+  source_id: string;
+  source_name: string;
+  published_at: string | null;
+  topic_tags: TopicTag[];
+  blurb: string | null;
+}
+
+export interface Digest {
+  generated_at: string;
+  window_hours: number;
+  count: number;
+  items: DigestItem[];
+}
+
 export interface TopicInfo {
   tag: TopicTag;
   /** Articles tagged with this topic within the requested window */
