@@ -66,10 +66,14 @@ def score_article(
 
     feedback_boost = 0.3 if article.feedback == 1 else (-0.5 if article.feedback == -1 else 0.0)
 
+    # V6: lean harder on what the user actually likes. Learned topic affinity and
+    # source affinity now carry more weight so off-preference items visibly sink
+    # (and disliked topics, which contribute negative topic_boost, sink hardest)
+    # without ever overpowering base recency×traction.
     score = (
         base
-        + 0.15 * topic_boost
-        + 0.10 * source_affinity
+        + 0.25 * topic_boost
+        + 0.15 * source_affinity
         + 0.10 * (source_signal - 0.5)   # quality nudge, centered so 0.5 is neutral
         + 0.10 * feedback_boost
     )
