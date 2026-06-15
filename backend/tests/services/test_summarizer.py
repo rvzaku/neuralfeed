@@ -204,3 +204,37 @@ class TestGetOrGenerateSummary:
                 with pytest.raises(SummaryError):
                     await get_or_generate_summary(article, db)
         assert article.ai_summary is None
+
+
+class TestCleanSummaryMarkdown:
+    def test_strips_leading_chatbot_preamble(self):
+        from app.services.summarizer import clean_summary_markdown
+        raw = "Sure! Here is a 5-minute read:\n\n**TL;DR:** It runs locally.\n\n## What it is\nA tool."
+        out = clean_summary_markdown(raw)
+        assert out.startswith("**TL;DR:")
+        assert "Sure!" not in out
+
+    def test_keeps_content_when_it_starts_with_tldr(self):
+        from app.services.summarizer import clean_summary_markdown
+        raw = "**TL;DR:** It works.\n\n## How it works\nMagic."
+        assert clean_summary_markdown(raw) == raw
+
+    def test_strips_closing_chatter(self):
+        from app.services.summarizer import clean_summary_markdown
+        raw = "## What it is\nA model.\n\nLet me know if you have any questions!"
+        out = clean_summary_markdown(raw)
+        assert "Let me know" not in out
+        assert out.endswith("A model.")
+
+    def test_demotes_deep_headings_and_drops_rules(self):
+        from app.services.summarizer import clean_summary_markdown
+        raw = "## What it is\nX.\n\n---\n\n#### Details\nY."
+        out = clean_summary_markdown(raw)
+        assert "####" not in out
+        assert "### Details" in out
+        assert "---" not in out
+
+    def test_collapses_excess_blank_lines(self):
+        from app.services.summarizer import clean_summary_markdown
+        raw = "## A\nText.\n\n\n\n## B\nMore."
+        assert "\n\n\n" not in clean_summary_markdown(raw)

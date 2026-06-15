@@ -68,6 +68,46 @@ _PROMPT = (
 )
 
 
+# Conversational scaffolding LLMs prepend/append despite the prompt — the exact
+# tells that make a brief read "copy-pasted from a chatbot" (app-feedback-v6).
+_PREAMBLE_RE = re.compile(
+    r"^\s*(sure|certainly|here(?:'s| is| are)|below is|of course|absolutely|"
+    r"i(?:'ll| will)|let me|happy to|this (?:is|article)|in summary)\b[^\n]*\n+",
+    re.IGNORECASE,
+)
+_CLOSING_RE = re.compile(
+    r"\n+\s*(let me know|hope this helps|feel free|if you (?:have|need|'d)|"
+    r"in conclusion|note:|disclaimer:|i hope)\b[^\n]*$",
+    re.IGNORECASE | re.DOTALL,
+)
+_HR_RE = re.compile(r"(?m)^\s*([-*_])\1{2,}\s*$")          # --- *** ___ rules
+_DEEP_HEADING_RE = re.compile(r"(?m)^#{4,}\s+")            # #### → ###
+_CODE_FENCE_RE = re.compile(r"(?m)^\s*```[a-zA-Z]*\s*$")   # stray markdown fences
+_MULTI_BLANK_RE = re.compile(r"\n{3,}")
+
+
+def clean_summary_markdown(raw: str) -> str:
+    """Strip the chatbot scaffolding and normalize markdown so a brief reads as a
+    polished editorial piece, never a pasted LLM transcript (V6 Phase E).
+
+    Purely cosmetic and faithful: removes conversational preamble/closing lines,
+    horizontal rules, stray code fences, demotes too-deep headings to `###`, and
+    collapses excess blank lines. Never rewrites the substance.
+    """
+    text = raw.strip()
+    # Only strip a leading conversational line when it sits BEFORE the real brief
+    # (a TL;DR or a heading) — never eat actual content.
+    head = text[:200]
+    if not (re.match(r"^\s*(\*\*)?TL;DR", head, re.IGNORECASE) or re.match(r"^\s*#", head)):
+        text = _PREAMBLE_RE.sub("", text, count=1).strip()
+    text = _CLOSING_RE.sub("", text).strip()
+    text = _HR_RE.sub("", text)
+    text = _CODE_FENCE_RE.sub("", text)
+    text = _DEEP_HEADING_RE.sub("### ", text)
+    text = _MULTI_BLANK_RE.sub("\n\n", text)
+    return text.strip()
+
+
 class SummaryError(Exception):
     """Provider unreachable or returned unusable output."""
 
@@ -124,6 +164,7 @@ class GroqProvider:
                 raw = resp.json()["choices"][0]["message"]["content"].strip()
         except httpx.HTTPError as e:
             raise SummaryError(f"groq request failed: {e}")
+        raw = clean_summary_markdown(raw)
         if len(raw) < 300:
             raise SummaryError("model returned an implausibly short summary")
         return raw
@@ -152,6 +193,7 @@ class OllamaProvider:
                 raw = resp.json()["message"]["content"].strip()
         except httpx.HTTPError as e:
             raise SummaryError(f"ollama request failed: {e}")
+        raw = clean_summary_markdown(raw)
         if len(raw) < 300:
             raise SummaryError("model returned an implausibly short summary")
         return raw
