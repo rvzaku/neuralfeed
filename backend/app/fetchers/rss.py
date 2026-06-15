@@ -97,6 +97,10 @@ RSS_SOURCES = {
     "newsletter-alphasignal": "https://alphasignal.ai/rss",
     "newsletter-algbridge":   "https://thealgorithmicbridge.substack.com/feed",
     "newsletter-davissummarizes": "https://dblalock.substack.com/feed",
+    # Newsletters / blogs — P1.5 (feeds verified 2026-06-15)
+    "newsletter-latentspace": "https://www.latent.space/feed",
+    "rss-simonwillison":      "https://simonwillison.net/atom/everything/",
+    "rss-bair":               "https://bair.berkeley.edu/blog/feed.xml",
     # Podcasts
     "podcast-lexfridman":     "https://lexfridman.com/feed/podcast/",
     "podcast-twiml":          "https://twimlai.com/feed",
