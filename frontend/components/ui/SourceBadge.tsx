@@ -52,13 +52,16 @@ interface SourceBadgeProps {
 export function SourceBadge({ sourceId, category, className }: SourceBadgeProps) {
   const cfg = SOURCE_CONFIG[sourceId] ?? (category ? CATEGORY_CONFIG[category] : null) ?? {
     label: sourceId,
-    color: "bg-muted text-muted-foreground",
+    color: "",
   };
 
+  // Editorial restraint: source is shown as an icon + name in muted ink, not a
+  // filled coloured pill. Colour is reserved for the heat signal + unread accent
+  // so the feed stays calm and premium (anti-"AI-slop").
   const Icon = iconFor(sourceId);
   return (
-    <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium", cfg.color, className)}>
-      <Icon className="h-3 w-3 shrink-0" aria-hidden />
+    <span className={cn("inline-flex items-center gap-1.5 font-medium text-foreground/75", className)}>
+      <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
       {cfg.label}
     </span>
   );

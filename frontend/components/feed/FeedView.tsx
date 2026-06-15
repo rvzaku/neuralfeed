@@ -150,9 +150,13 @@ export function FeedView() {
             </div>
           )}
 
-          {!isLoading && !isError && allItems.map((article) => (
-            <FeedCard key={article.id} article={article} onOpen={setOpenArticle} />
-          ))}
+          {!isLoading && !isError && allItems.length > 0 && (
+            <div className="divide-y divide-border/60 border-y border-border/60">
+              {allItems.map((article) => (
+                <FeedCard key={article.id} article={article} onOpen={setOpenArticle} />
+              ))}
+            </div>
+          )}
 
           {/* No infinite scroll (app-feedback-v5): the feed is finite and
               deliberate — an explicit button pages deeper when wanted */}
