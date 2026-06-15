@@ -246,6 +246,13 @@ function FeedCardInner({ article, onOpen }: FeedCardProps) {
               {article.original_title}
             </p>
           )}
+          {/* V6: "why this matters now" — the editorial hook that sells the
+              item's relevance, distinct from the neutral content summary below */}
+          {article.context_line && (
+            <p className="text-[13px] leading-snug text-foreground/90 font-medium mb-1.5">
+              {article.context_line}
+            </p>
+          )}
           <EngagementStats article={article} />
           {article.summary && (
             <p className="text-xs text-muted-foreground line-clamp-2 mb-3 leading-relaxed">
