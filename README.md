@@ -2,9 +2,9 @@
 
 **A personal AI-news intelligence dashboard.** One place that tracks everything moving in AI — research, code, social, and company blogs — ranks it by relevance, and links you straight to the source.
 
-> ⚠️ **This is a personal, single-user project.** I built NeuralFeed for my own daily use as a portfolio piece. It runs as a single-user instance (auth exists only to protect *my* feed and preferences) — it is **not** a multi-tenant SaaS and isn't intended for public sign-ups.
-
 [**Live demo**](https://neuralfeed.vercel.app) · [Backend API](https://neuralfeed-api.onrender.com/health)
+
+<sub>Runs as a single-user instance — auth scopes the feed and preferences to one account rather than offering public multi-tenant sign-ups.</sub>
 
 ![NeuralFeed — ranked AI-news feed](docs/screenshots/feed.png)
 
