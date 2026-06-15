@@ -73,9 +73,21 @@ async def guest_read_only(request, call_next):
             )
     return await call_next(request)
 
+# Middleware ordering matters: Starlette runs the LAST-added middleware
+# OUTERMOST. CORS must be the outermost layer so that EVERY response — including
+# error responses produced by inner middleware (a 429 from the rate limiter, a
+# 403 from guest_read_only) and CORS preflight (OPTIONS) — carries the
+# Access-Control-Allow-Origin header. If CORS were inner, the browser would
+# block those responses with an opaque network error even though the server
+# answered correctly (the classic "works in curl, fails in the browser" trap).
+# Hence: add GZip and RateLimit first (inner), then CORS last (outer).
+app.add_middleware(GZipMiddleware, minimum_size=1024)
+app.add_middleware(RateLimitMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
+    # Optional regex (e.g. Vercel preview deploys) — off unless configured.
+    allow_origin_regex=settings.cors_origin_regex or None,
     # Auth is a Bearer token in the Authorization header, not a cookie, so
     # credentialed CORS is unnecessary; keeping it false avoids the browser
     # CORS pitfall where credentials force an exact (non-wildcard) origin.
@@ -83,9 +95,6 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],
 )
-
-app.add_middleware(RateLimitMiddleware)
-app.add_middleware(GZipMiddleware, minimum_size=1024)
 
 # Auth endpoints are never gated; everything else requires a user once
 # AUTH_REQUIRED=true (no-op until then — see require_user_when_enabled).

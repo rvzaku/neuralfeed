@@ -37,6 +37,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if not settings.rate_limit_enabled:
             return await call_next(request)
 
+        # CORS preflight (OPTIONS) is a browser protocol detail, not a real
+        # request — never rate-limit it, or a handful of legitimate page loads
+        # would exhaust the budget and the browser would block the actual call.
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
         path = request.url.path
         is_auth = path.startswith("/api/v1/auth")
         is_write = request.method in _WRITE_METHODS

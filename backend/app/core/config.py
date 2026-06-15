@@ -20,6 +20,11 @@ class Settings(BaseSettings):
         "https://neuralfeed.vercel.app",
     ]
 
+    # Optional regex for origins that can't be enumerated up front — e.g. Vercel
+    # preview deploys: r"^https://neuralfeed-[a-z0-9-]+\.vercel\.app$". Empty =
+    # disabled. Keep it tightly anchored (^…$) so it can't match foreign domains.
+    cors_origin_regex: str = ""
+
     @field_validator("cors_origins", mode="after")
     @classmethod
     def _split_cors_origins(cls, v: Union[str, list[str]]) -> list[str]:
