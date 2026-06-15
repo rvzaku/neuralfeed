@@ -10,9 +10,12 @@
 
 <table>
   <tr>
-    <td width="33%"><img src="docs/screenshots/discover.png" alt="Discover" /><br/><sub><b>Discover</b> — search everything fetched + trending now</sub></td>
-    <td width="33%"><img src="docs/screenshots/topics.png" alt="Topics" /><br/><sub><b>Topics</b> — browse by theme (LLMs, Agents, CV…)</sub></td>
-    <td width="33%"><img src="docs/screenshots/sources.png" alt="Source management" /><br/><sub><b>Sources</b> — per-source enable/disable & health</sub></td>
+    <td width="50%"><img src="docs/screenshots/summary.png" alt="On-demand LLM summary" /><br/><sub><b>On-demand LLM summary</b> — a structured brief (TL;DR · What it is · Why it matters · How it works), generated on tap</sub></td>
+    <td width="50%"><img src="docs/screenshots/discover.png" alt="Discover" /><br/><sub><b>Discover</b> — search everything fetched + trending now</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/topics.png" alt="Topics" /><br/><sub><b>Topics</b> — browse by theme (LLMs, Agents, CV…)</sub></td>
+    <td width="50%"><img src="docs/screenshots/sources.png" alt="Source management" /><br/><sub><b>Sources</b> — per-source enable/disable & health</sub></td>
   </tr>
 </table>
 
