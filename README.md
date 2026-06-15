@@ -6,8 +6,18 @@
 
 [**Live demo**](https://neuralfeed.vercel.app) · [Backend API](https://neuralfeed-api.onrender.com/health)
 
-<!-- Add screenshots here once captured -->
-<!-- ![Feed](docs/screenshots/feed.png) -->
+![NeuralFeed — ranked AI-news feed](docs/screenshots/feed.png)
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/filters.png" alt="Advanced filtering" /><br/><sub><b>Advanced filtering</b> — content type, topic, time range, signal quality</sub></td>
+    <td width="50%"><img src="docs/screenshots/sources.png" alt="Source management" /><br/><sub><b>Source management</b> — per-source enable/disable</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/discover.png" alt="Discover (mobile)" /><br/><sub><b>Discover</b> — mobile, trending now</sub></td>
+    <td width="50%"><img src="docs/screenshots/topics.png" alt="Topics (mobile)" /><br/><sub><b>Topics</b> — mobile, browse by theme</sub></td>
+  </tr>
+</table>
 
 ---
 
