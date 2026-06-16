@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from app.services.relevance import (
     apply_daily_caps,
     interleave_by_group,
+    interleave_by_importance,
     popularity,
     relevance_score,
 )
@@ -136,3 +137,42 @@ class TestInterleave:
         ]
         ordered = interleave_by_group(articles)
         assert ordered[0].id == "new"
+
+
+class TestResearchBaseline:
+    def test_untracted_paper_beats_zero_but_below_editorial(self):
+        # A paper with no HF traction must still be rankable (not ~0) so research
+        # isn't structurally buried under blogs (app-feedback-v6).
+        assert popularity(_article("arxiv-cs-ai")) == 0.40
+
+    def test_tracted_paper_beats_baseline(self):
+        hot = popularity(_article("arxiv-cs-ai", trending=200))
+        assert hot > 0.40
+
+
+class TestInterleaveByImportance:
+    def test_no_day_buckets_landmark_leads_year_view(self):
+        # The month/year fix: a months-old landmark must be able to lead, not be
+        # pushed under today's items by day-bucketing.
+        articles = [
+            _article(aid="landmark", source_id="rss-openai", days_old=120,
+                     engagement={"points": 5000, "upvotes": 5000}),
+            _article(aid="minor", source_id="reddit-ml", days_old=0,
+                     engagement={"upvotes": 2}),
+        ]
+        ordered = interleave_by_importance(articles, window_days=365)
+        assert ordered[0].id == "landmark"
+
+    def test_diversity_top_is_not_one_family(self):
+        # Even when blogs score highest, research/github/reddit get early slots.
+        articles = (
+            [_article(aid=f"b{i}", source_id="rss-openai") for i in range(10)]
+            + [_article(aid="paper", source_id="arxiv-cs-ai")]
+            + [_article(aid="repo", source_id="github-trending",
+                        engagement={"stars_today": 100})]
+            + [_article(aid="thread", source_id="reddit-ml",
+                        engagement={"upvotes": 100})]
+        )
+        ordered = interleave_by_importance(articles, window_days=365)
+        families = {a.source_id for a in ordered[:4]}
+        assert len(families) >= 4  # blogs can't monopolize the shortlist

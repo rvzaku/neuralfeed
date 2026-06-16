@@ -31,6 +31,13 @@ _SATURATION = {
     "editorial": 2.7,  # external HN/Reddit discussion of a blog post (~500 pts)
 }
 _EDITORIAL_BASELINE = 0.45  # blogs/newsletters/podcasts: curated, no votes
+# arXiv papers are peer-curated and inherently selective — like editorial, the
+# venue is itself a quality signal. Without this floor an untracted paper scores
+# ~0 popularity and is structurally buried under every blog/podcast (which all
+# get the editorial baseline), so the feed degenerates to "only blogs" no matter
+# how much research is ingested (app-feedback-v6). Traction (HF Daily Papers)
+# still lifts a paper above the floor.
+_RESEARCH_BASELINE = 0.40
 
 
 def _source_family(source_id: str) -> str:
@@ -82,7 +89,11 @@ def popularity(article: Article) -> float:
         or article.trending_score
         or 0
     )
-    return _log_norm(float(value), _SATURATION[family])
+    tracted = _log_norm(float(value), _SATURATION[family])
+    if family == "arxiv":
+        # Selective venue → never below the research baseline; traction lifts it.
+        return max(_RESEARCH_BASELINE, tracted)
+    return tracted
 
 
 def recency(published_at: datetime, half_life_days: float) -> float:
@@ -252,6 +263,50 @@ def apply_daily_caps(
 
     kept.sort(key=lambda a: scores[a.id], reverse=True)
     return kept
+
+
+def interleave_by_importance(
+    articles: list[Article],
+    window_days: int = 7,
+    category_of: Optional[dict] = None,
+    scores: Optional[dict] = None,
+) -> list[Article]:
+    """Catch-up ordering for the Month/Year horizons (app-feedback-v6).
+
+    Two problems this fixes versus `interleave_by_group`:
+    1. **Month == Year == Today.** `interleave_by_group` buckets by publication
+       day, newest day first, so after the Feed truncates to feed-density the top
+       is ALWAYS the newest day regardless of horizon — the importance-led score
+       never surfaces. Here there are NO day buckets: a months-old landmark can
+       lead a year view, exactly as the horizon-aware score intends.
+    2. **Only blogs.** Importance is still respected, but we round-robin across
+       source groups so the shortlist can't be a single family — research /
+       GitHub / Reddit each get a slot in the first rounds instead of being
+       swept below the editorial wall.
+
+    Each group's queue stays in importance order; the group whose best item
+    scores highest leads each round."""
+    if scores is None:
+        scores = _score_map(articles, window_days)
+    groups: dict = defaultdict(list)
+    for a in articles:
+        group = (category_of or {}).get(a.source_id) or _source_family(a.source_id)
+        groups[group].append(a)
+
+    queues = [
+        sorted(items, key=lambda a: scores[a.id], reverse=True)
+        for items in groups.values()
+    ]
+    queues.sort(key=lambda q: scores[q[0].id], reverse=True)
+
+    result: list[Article] = []
+    i = 0
+    while any(i < len(q) for q in queues):
+        for q in queues:
+            if i < len(q):
+                result.append(q[i])
+        i += 1
+    return result
 
 
 def interleave_by_group(

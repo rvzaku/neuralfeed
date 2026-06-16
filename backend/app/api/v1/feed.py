@@ -225,7 +225,7 @@ async def _compute_ranked_order(
         _get_muted_sources, _get_source_affinity, _get_topic_weights, rank_articles,
     )
     from app.services.relevance import (
-        apply_daily_caps, interleave_by_group, score_map,
+        apply_daily_caps, interleave_by_group, interleave_by_importance, score_map,
     )
 
     # Bound the candidate set: rank the newest 2000, not the whole table
@@ -266,13 +266,21 @@ async def _compute_ranked_order(
         topic_weights=topic_w, source_affinity=affinity, muted_sources=muted,
     )
 
-    # Mix categories within each day unless the query already narrowed to one
-    # source/category (a single column is then the point).
+    # Mix sources unless the query already narrowed to one source/category
+    # (a single column is then the point). Day/Week stay freshness-led with
+    # per-day buckets; Month/Year switch to importance-led catch-up ordering so
+    # the horizons are genuinely different and aren't all blogs from today.
     if not source_id and not category:
-        ranked_items = interleave_by_group(
-            ranked_items, window_days=window_days,
-            category_of=category_of, scores=scores,
-        )
+        if window_days <= 7:
+            ranked_items = interleave_by_group(
+                ranked_items, window_days=window_days,
+                category_of=category_of, scores=scores,
+            )
+        else:
+            ranked_items = interleave_by_importance(
+                ranked_items, window_days=window_days,
+                category_of=category_of, scores=scores,
+            )
     ids = [a.id for a in ranked_items]
     # Keep only the buzz entries for survivors, so the cached payload stays small.
     survivors = set(ids)
