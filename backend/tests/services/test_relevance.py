@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 
 from app.services.relevance import (
     apply_daily_caps,
+    importance_magnitude,
     interleave_by_group,
     interleave_by_importance,
     popularity,
@@ -176,3 +177,26 @@ class TestInterleaveByImportance:
         ordered = interleave_by_importance(articles, window_days=365)
         families = {a.source_id for a in ordered[:4]}
         assert len(families) >= 4  # blogs can't monopolize the shortlist
+
+
+class TestImportanceMagnitude:
+    """Magnitude must be order-preserving (a bigger story ranks higher), unlike
+    per-family `popularity` which saturates at 1.0 — the saturation was why
+    Month and Year rendered identically (app-feedback-v7)."""
+
+    def test_bigger_traction_ranks_higher_even_when_popularity_saturates(self):
+        big = _article("hf-spaces", trending=7470)
+        mid = _article("hf-spaces", trending=1829)
+        # popularity() saturates both to the ceiling…
+        assert popularity(big) == popularity(mid) == 1.0
+        # …but magnitude keeps them ordered, so the year can rank by true size.
+        assert importance_magnitude(big) > importance_magnitude(mid)
+
+    def test_horizon_crossover_old_landmark_vs_new_minor(self):
+        # Freshness-led (Day): the fresh minor item wins.
+        # Importance-led (Year): the older landmark wins. This crossover is what
+        # makes the horizons genuinely different surfaces.
+        landmark = _article("hf-spaces", days_old=120, trending=6000)
+        minor = _article("hf-spaces", days_old=0, trending=30)
+        assert relevance_score(minor, window_days=1) > relevance_score(landmark, window_days=1)
+        assert relevance_score(landmark, window_days=365) > relevance_score(minor, window_days=365)

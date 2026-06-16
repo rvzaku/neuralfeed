@@ -228,8 +228,18 @@ async def _compute_ranked_order(
         apply_daily_caps, interleave_by_group, interleave_by_importance, score_map,
     )
 
-    # Bound the candidate set: rank the newest 2000, not the whole table
-    all_result = await db.execute(q.order_by(Article.published_at.desc()).limit(2000))
+    # Bound the candidate set to 2000. The ORDER BY that bound uses is critical:
+    #   • Short horizons (≤7d) are freshness-led → newest 2000 (unchanged).
+    #   • Long horizons (Month/Year) are importance-led catch-up. Drawing the
+    #     newest 2000 is exactly why Month and Year rendered identically — with
+    #     >2000 items in the last ~month, the "newest 2000" set is the SAME for a
+    #     30d and a 365d filter, so the year never even sees older landmarks.
+    #     Draw by traction instead so the year's landmark items are in the pool.
+    if window_days > 7:
+        candidate_order = (Article.trending_score.desc(), Article.published_at.desc())
+    else:
+        candidate_order = (Article.published_at.desc(),)
+    all_result = await db.execute(q.order_by(*candidate_order).limit(2000))
     all_items = list(all_result.scalars().all())
 
     # V6 dynamic feed: articles the user has already opened drop out, so the feed

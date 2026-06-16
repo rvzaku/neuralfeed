@@ -39,6 +39,55 @@ _EDITORIAL_BASELINE = 0.45  # blogs/newsletters/podcasts: curated, no votes
 # still lifts a paper above the floor.
 _RESEARCH_BASELINE = 0.40
 
+# --- Importance magnitude (long-horizon catch-up) ---------------------------
+# `popularity()` is normalized *per source family* and saturates hard at 1.0, so
+# a 7,470-point item and a 1,829-point item both read as "fully popular". That's
+# fine for a freshness-led day/week feed (recency then differentiates), but it's
+# fatal for Month/Year: every recent high-traction item ties at 1.0, recency
+# always wins the tie, and the horizon can NEVER reach back to an older landmark
+# — so Month and Year render identically (app-feedback-v7, repeat report).
+#
+# For the importance-led horizons we instead use a *magnitude-preserving* signal
+# on a single GLOBAL log scale, so a genuinely bigger story (by absolute peak
+# traction) outranks a smaller-but-newer one regardless of age. Editorial /
+# research items keep a small floor so curated-but-untracted pieces stay
+# rankable, but clearly below anything the community actually surfaced.
+_GLOBAL_SATURATION = 4.0  # log10(10_000) — a landmark-scale story
+_MAG_EDITORIAL_FLOOR = 0.20
+_MAG_RESEARCH_FLOOR = 0.22
+
+
+def _peak_engagement(article: Article) -> float:
+    """Best single absolute traction number across the engagement metrics —
+    the raw magnitude, before any per-family normalization."""
+    engagement: dict = {}
+    if article.engagement:
+        try:
+            engagement = json.loads(article.engagement)
+        except (json.JSONDecodeError, TypeError):
+            pass
+    return max(
+        float(engagement.get("upvotes", 0) or 0),
+        float(engagement.get("points", 0) or 0) * 1.5,
+        float(engagement.get("stars_today", 0) or 0),
+        float(engagement.get("stars_total", 0) or 0),
+        float(article.trending_score or 0),
+    )
+
+
+def importance_magnitude(article: Article) -> float:
+    """0..1 absolute-traction magnitude on a single global log scale (no
+    per-family saturation), with floors for curated sources. Used as the
+    importance-led signal for Month/Year so older landmark items can outrank
+    newer minor ones — the thing that makes the horizons genuinely differ."""
+    mag = _log_norm(_peak_engagement(article), _GLOBAL_SATURATION)
+    family = _source_family(article.source_id)
+    if family == "arxiv":
+        return max(_MAG_RESEARCH_FLOOR, mag)
+    if family == "editorial":
+        return max(_MAG_EDITORIAL_FLOOR, mag)
+    return mag
+
 
 def _source_family(source_id: str) -> str:
     for family in ("reddit", "hackernews", "github", "arxiv"):
@@ -138,8 +187,14 @@ def _relevance_unit(article: Article, window_days: int = 7) -> float:
     pop = popularity(article)
     rec = recency(article.published_at, _half_life(window_days))
     fresh_led = rec * (0.25 + 0.75 * pop)   # original behavior (freshness first)
-    importance_led = 0.25 + 0.75 * pop      # recency-independent landmark signal
     beta = importance_weight(window_days)
+    if beta == 0.0:
+        # Short horizons (≤7d) are freshness-led, exactly as before — no change.
+        return fresh_led
+    # Long horizons: the importance term uses the magnitude-preserving signal (not
+    # the saturated per-family popularity) so a bigger older story can outrank a
+    # smaller newer one and Month/Year genuinely reach back (app-feedback-v7).
+    importance_led = 0.15 + 0.85 * importance_magnitude(article)
     return (1.0 - beta) * fresh_led + beta * importance_led
 
 
@@ -270,43 +325,39 @@ def interleave_by_importance(
     window_days: int = 7,
     category_of: Optional[dict] = None,
     scores: Optional[dict] = None,
+    group_cap: int = 3,
 ) -> list[Article]:
-    """Catch-up ordering for the Month/Year horizons (app-feedback-v6).
+    """Catch-up ordering for the Month/Year horizons (app-feedback-v7).
 
-    Two problems this fixes versus `interleave_by_group`:
-    1. **Month == Year == Today.** `interleave_by_group` buckets by publication
-       day, newest day first, so after the Feed truncates to feed-density the top
-       is ALWAYS the newest day regardless of horizon — the importance-led score
-       never surfaces. Here there are NO day buckets: a months-old landmark can
-       lead a year view, exactly as the horizon-aware score intends.
-    2. **Only blogs.** Importance is still respected, but we round-robin across
-       source groups so the shortlist can't be a single family — research /
-       GitHub / Reddit each get a slot in the first rounds instead of being
-       swept below the editorial wall.
+    **Score-first, with a soft per-group cap.** An earlier version round-robined
+    one item per source group per round; that guaranteed diversity but flattened
+    the horizon difference — the top-N became "the #1 of each group", which is
+    almost the same recent set for Month and Year, and it buried older landmark
+    items below newer minor ones. Here items are ordered strictly by the
+    (magnitude-led) importance score, so a months-old landmark leads a Year view;
+    a per-group cap (default 3) is the only constraint, so one family still can't
+    monopolize the shortlist. Items past the cap are appended in score order so
+    nothing is dropped — the cap only shapes the *head* of the list, which is all
+    the finite Feed shows.
 
-    Each group's queue stays in importance order; the group whose best item
-    scores highest leads each round."""
+    Pairs with importance-led candidate selection in the API layer (the candidate
+    pool for long horizons is drawn by traction, not pure recency) so older
+    landmarks are actually in the pool to be ranked."""
     if scores is None:
         scores = _score_map(articles, window_days)
-    groups: dict = defaultdict(list)
-    for a in articles:
+
+    ordered = sorted(articles, key=lambda a: scores[a.id], reverse=True)
+    primary: list[Article] = []
+    deferred: list[Article] = []
+    counts: dict = defaultdict(int)
+    for a in ordered:
         group = (category_of or {}).get(a.source_id) or _source_family(a.source_id)
-        groups[group].append(a)
-
-    queues = [
-        sorted(items, key=lambda a: scores[a.id], reverse=True)
-        for items in groups.values()
-    ]
-    queues.sort(key=lambda q: scores[q[0].id], reverse=True)
-
-    result: list[Article] = []
-    i = 0
-    while any(i < len(q) for q in queues):
-        for q in queues:
-            if i < len(q):
-                result.append(q[i])
-        i += 1
-    return result
+        if counts[group] < group_cap:
+            primary.append(a)
+            counts[group] += 1
+        else:
+            deferred.append(a)
+    return primary + deferred
 
 
 def interleave_by_group(
