@@ -15,7 +15,7 @@ import { FilterDrawer } from "./FilterDrawer";
 import { RefreshIndicator } from "./RefreshIndicator";
 import { SearchModal } from "./SearchModal";
 import { SummarySheet } from "./SummarySheet";
-import { useFeed, useInfiniteFeed } from "@/hooks/useFeed";
+import { useFeed } from "@/hooks/useFeed";
 import { cn } from "@/lib/utils";
 import type { Article, FeedFilters } from "@/lib/types";
 
@@ -56,7 +56,9 @@ export function FeedView() {
     feedback:    params.get("feedback") ? Number(params.get("feedback")) as FeedFilters["feedback"] : undefined,
     ranked:      true,            // V6: smart ranking is never disabled
     include_read: view === "all", // "All items" = ranked archive incl. viewed
-    limit: 30,
+    // V7-6: the Feed is a finite ranked shortlist — the backend caps it to the
+    // feed-density setting (cap_to_density defaults true); 50 just holds the page.
+    limit: 50,
   }), [params, view]);
 
   // Count every selected value (CSV members count individually) so the badge
@@ -67,24 +69,13 @@ export function FeedView() {
     return n + (["category", "topic", "source_id"].includes(k) ? v.split(",").filter(Boolean).length : 1);
   }, 0);
 
-  const {
-    data: infData, isLoading, isError, refetch,
-    fetchNextPage, hasNextPage, isFetchingNextPage,
-  } = useInfiniteFeed(filters);
-  const allItems = infData?.pages.flatMap((p) => p.items) ?? [];
-  const total = infData?.pages[0]?.total ?? 0;
+  const { data, isLoading, isError, refetch } = useFeed(filters);
+  const allItems = data?.items ?? [];
+  // total == feed-density here: the backend caps the ranked Feed to the density
+  // setting, so this is the finite "top N" count shown to the user.
+  const total = data?.total ?? 0;
 
   const horizon = rangeToHorizon(params.get("time_range"));
-  const hasFilters = activeFilterCount > 0;
-
-  // "Today in AI — top 10": the day's highest-importance items, always shown at
-  // the top of the For You view (this is the folded-in Today surface). Skipped
-  // when the user has narrowed with filters or is browsing the All archive.
-  const showToday = view === "foryou" && !hasFilters;
-  const { data: todayData } = useFeed(
-    { time_range: "1d", ranked: true, limit: 10 }, showToday
-  );
-  const todayItems = showToday ? (todayData?.items ?? []) : [];
 
   function setHorizon(h: Horizon) {
     const sp = new URLSearchParams(params.toString());
@@ -143,10 +134,8 @@ export function FeedView() {
             <div className="flex items-center gap-3">
               {!isLoading && !isError && total > 0 && (
                 <span className="hidden text-xs text-muted-foreground tabular-nums sm:inline">
-                  {/* V6: finite framing — never a firehose */}
-                  {allItems.length < total
-                    ? `Showing ${allItems.length} of ${total}`
-                    : `${total} ${total === 1 ? "article" : "articles"}`}
+                  {/* V7-6: finite ranked shortlist — never a firehose */}
+                  top {total}
                 </span>
               )}
               <button
@@ -165,25 +154,11 @@ export function FeedView() {
             </div>
           </div>
 
-          {/* Today in AI — the day's top 10 by importance (folded-in Today surface) */}
-          {showToday && todayItems.length > 0 && (
-            <section aria-label="Today in AI" className="pt-1">
-              <div className="mb-1 flex items-baseline justify-between">
-                <h2 className="font-serif text-lg font-semibold tracking-tight text-foreground">Today in AI</h2>
-                <span className="text-xs text-muted-foreground">top {todayItems.length}</span>
-              </div>
-              <div className="divide-y divide-border/60 border-y border-border/60">
-                {todayItems.map((a) => (
-                  <FeedCard key={`today-${a.id}`} article={a} onOpen={setOpenArticle} />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Catch up — horizon selector: most important + relevant over the window */}
+          {/* Horizon selector — the Feed is the most important + relevant items over
+              the chosen window (Day = today's top N), as one finite numbered list. */}
           <div className="flex items-center justify-between gap-2 pt-1">
             <h2 className="font-serif text-lg font-semibold tracking-tight text-foreground">
-              {showToday && todayItems.length > 0 ? "Catch up" : "Feed"}
+              {horizon === "day" ? "Today in AI" : horizon === "year" ? "This year in AI" : "This month in AI"}
             </h2>
             <div className="flex items-center gap-1 rounded-full border border-border p-0.5">
               {HORIZON_LABEL.map(([h, label]) => (
@@ -233,29 +208,26 @@ export function FeedView() {
 
           {!isLoading && !isError && allItems.length > 0 && (
             <div className="divide-y divide-border/60 border-y border-border/60">
-              {allItems.map((article) => (
-                <FeedCard key={article.id} article={article} onOpen={setOpenArticle} />
+              {allItems.map((article, i) => (
+                <FeedCard key={article.id} article={article} onOpen={setOpenArticle} rank={i + 1} />
               ))}
             </div>
           )}
 
-          {/* No infinite scroll (app-feedback-v5): the feed is finite and
-              deliberate — an explicit button pages deeper when wanted */}
-          {isFetchingNextPage && Array.from({ length: 3 }).map((_, i) => <FeedCardSkeleton key={`p${i}`} />)}
-          {hasNextPage && !isFetchingNextPage && allItems.length > 0 && (
-            <button
-              onClick={() => fetchNextPage()}
-              className="w-full py-3 text-sm font-medium text-muted-foreground border border-border rounded-xl hover:bg-muted transition-colors"
-            >
-              Show more
-            </button>
-          )}
-          {!hasNextPage && allItems.length > 0 && (
-            <p className="py-6 text-center text-sm font-serif font-semibold text-foreground">
-              {view === "foryou"
-                ? `You're all caught up — ${total} items earned a slot in this window`
-                : `All ${total} items loaded`}
-            </p>
+          {/* V7-6: the Feed is a finite, numbered shortlist — no "Show more" here.
+              Exploration (paginated) lives in Discover. */}
+          {!isLoading && !isError && allItems.length > 0 && (
+            <div className="py-6 text-center">
+              <p className="font-serif text-sm font-semibold text-foreground">
+                Your ranked top {total} — that&apos;s the signal worth your time today.
+              </p>
+              <button
+                onClick={() => router.push("/discover")}
+                className="mt-2 text-sm text-primary hover:underline"
+              >
+                Explore more in Discover →
+              </button>
+            </div>
           )}
         </main>
       </div>

@@ -42,6 +42,9 @@ async def get_feed(
     feedback: Optional[int] = Query(None, ge=-1, le=1),
     min_signal: Optional[float] = Query(None, ge=0.0, le=1.0),
     include_read: bool = Query(False),  # V6 dynamic feed: viewed items drop out
+    # V7-6: the Feed is a finite ranked shortlist capped to feed-density; Discover
+    # passes cap_to_density=false to page through the full ranked set ("Show more").
+    cap_to_density: bool = Query(True),
     db: AsyncSession = Depends(get_db),
     user=Depends(get_current_user),
 ) -> FeedResponse:
@@ -89,14 +92,19 @@ async def get_feed(
     # `total` is the post-ranking survivor count in ranked mode (set below), so
     # the COUNT query is only needed for the raw paginated (ranked=false) path.
     total = 0
+    density = 0  # effective feed-density; set in the ranked path
 
     if ranked:
         from app.services.ranker import _get_source_affinity, _get_topic_weights
-        from app.services.relevance import explain
+        from app.services.relevance import DEFAULT_PER_SOURCE_PER_DAY, explain
 
         window_days = TIME_RANGE_DAYS.get(time_range or "7d", 7)
         user_id = user.id if user else None
-        per_day = await _feed_density(db, user)
+        density = await _feed_density(db, user)
+        # Anti-domination cap (per source-category per day) is now decoupled from
+        # the visible feed length: it just prevents one source crowding the pool
+        # BEFORE we truncate the ranked result to `density`.
+        per_day = DEFAULT_PER_SOURCE_PER_DAY
 
         # The ranked ORDER (and cross-source buzz) is identical across the pages
         # of one scroll session, so cache it and let page 2..N just slice + load
@@ -123,6 +131,13 @@ async def get_feed(
                 {"ids": ordered_ids, "buzz": buzz, "total": total},
                 settings.feed_cache_ttl_seconds,
             )
+
+        # V7-6: the Feed is a finite ranked shortlist — truncate to feed-density so
+        # it shows exactly N numbered items and never a "Show more". Discover passes
+        # cap_to_density=false to page through the full ranked set instead.
+        if cap_to_density:
+            ordered_ids = ordered_ids[:density]
+            total = len(ordered_ids)
 
         offset = (page - 1) * limit
         page_ids = ordered_ids[offset: offset + limit]
@@ -179,6 +194,7 @@ async def get_feed(
         page=page,
         limit=limit,
         has_more=(page * limit) < total,
+        density=density,
     )
 
 

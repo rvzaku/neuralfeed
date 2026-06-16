@@ -6,7 +6,7 @@ import { Compass, Search, Flame, Tags, ArrowRight } from "lucide-react";
 import { FeedCard } from "@/components/feed/FeedCard";
 import { FeedCardSkeleton } from "@/components/feed/FeedCardSkeleton";
 import { SummarySheet } from "@/components/feed/SummarySheet";
-import { useFeed, useSearch } from "@/hooks/useFeed";
+import { useFeed, useInfiniteFeed, useSearch } from "@/hooks/useFeed";
 import type { Article } from "@/lib/types";
 
 function SectionTitle({ icon: Icon, children }: { icon: typeof Flame; children: React.ReactNode }) {
@@ -28,7 +28,16 @@ export default function DiscoverPage() {
     ranked: true,
     time_range: "3d",
     limit: 10,
+    cap_to_density: false, // Discover explores beyond the Feed's density cap
   });
+
+  // V7-6: Discover is the exploration surface — paginated "Show more" over the
+  // full ranked set (the Feed itself stays a finite numbered shortlist).
+  const {
+    data: exploreData, isLoading: exploreLoading,
+    fetchNextPage, hasNextPage, isFetchingNextPage,
+  } = useInfiniteFeed({ ranked: true, time_range: "30d", limit: 15, cap_to_density: false });
+  const exploreItems = exploreData?.pages.flatMap((p) => p.items) ?? [];
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -93,6 +102,27 @@ export default function DiscoverPage() {
               )}
             </section>
 
+            {/* More to explore — paginated, the part the Feed deliberately omits */}
+            <section className="space-y-3">
+              <SectionTitle icon={Compass}>More to explore</SectionTitle>
+              {exploreLoading && Array.from({ length: 4 }).map((_, i) => <FeedCardSkeleton key={i} />)}
+              <div className="divide-y divide-border/60">
+                {exploreItems
+                  .filter((a) => !trending?.items.slice(0, 10).some((t) => t.id === a.id))
+                  .map((a) => (
+                    <FeedCard key={a.id} article={a} onOpen={setOpenArticle} />
+                  ))}
+              </div>
+              {isFetchingNextPage && Array.from({ length: 3 }).map((_, i) => <FeedCardSkeleton key={`p${i}`} />)}
+              {hasNextPage && !isFetchingNextPage && exploreItems.length > 0 && (
+                <button
+                  onClick={() => fetchNextPage()}
+                  className="w-full py-3 text-sm font-medium text-muted-foreground border border-border rounded-xl hover:bg-muted transition-colors"
+                >
+                  Show more
+                </button>
+              )}
+            </section>
           </>
         )}
       </main>

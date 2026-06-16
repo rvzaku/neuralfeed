@@ -91,3 +91,6 @@ class FeedResponse(BaseModel):
     page: int
     limit: int
     has_more: bool
+    # V7-6: the effective feed-density (visible feed length). Lets the client
+    # number 1..N and decide whether to show a "Show more" affordance.
+    density: int = 0

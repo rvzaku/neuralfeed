@@ -145,6 +145,35 @@ async def test_feed_topic_filter_matches_multi_tag_articles(client, db):
 
 
 @pytest.mark.asyncio
+async def test_feed_capped_to_density_and_discover_uncapped(client, db):
+    """V7-6: the Feed (cap_to_density default) returns at most feed-density items
+    and reports it; Discover (cap_to_density=false) pages through the full set."""
+    from app.models.user_preference import UserPreference
+
+    titles = [
+        "Quantum reactor breakthrough", "Neural compiler shipped",
+        "Robotics arm dataset", "Vector index speedup", "Diffusion audio model",
+        "Agent planning toolkit", "Sparse attention kernel", "Federated rollout",
+    ]
+    db.add(UserPreference(key="feed_density", value="3"))
+    for i, title in enumerate(titles):
+        a = await _seed_article(db, source_id=f"rss-src{i}", url=f"https://x/{i}")
+        a.title = title  # fully distinct tokens so cross-source dedupe keeps them
+    await db.commit()
+
+    capped = await client.get("/api/v1/feed?ranked=true&limit=50")
+    assert capped.status_code == 200
+    body = capped.json()
+    assert body["density"] == 3
+    assert len(body["items"]) == 3
+    assert body["total"] == 3
+    assert body["has_more"] is False
+
+    uncapped = await client.get("/api/v1/feed?ranked=true&limit=50&cap_to_density=false")
+    assert len(uncapped.json()["items"]) > 3
+
+
+@pytest.mark.asyncio
 async def test_feed_multi_select_topic_csv(client, db):
     """V7 multi-select: a comma-joined topic param returns articles matching ANY
     of the topics (OR), not an empty intersection."""

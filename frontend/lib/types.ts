@@ -94,6 +94,8 @@ export interface FeedResponse {
   page: number;
   limit: number;
   has_more: boolean;
+  /** V7-6: effective feed-density (visible feed length) for numbering */
+  density?: number;
 }
 
 export interface FeedFilters {
@@ -112,6 +114,8 @@ export interface FeedFilters {
   ranked?: boolean;
   /** V6: include already-viewed items (the "All items" archive view) */
   include_read?: boolean;
+  /** V7-6: Feed caps to feed-density (true); Discover pages the full set (false) */
+  cap_to_density?: boolean;
 }
 
 export interface ArticleSummary {

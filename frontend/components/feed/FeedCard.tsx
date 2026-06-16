@@ -14,6 +14,8 @@ interface FeedCardProps {
   article: Article;
   /** Opens the 1-minute summary sheet; falls back to direct link-out when absent */
   onOpen?: (article: Article) => void;
+  /** 1-based rank shown as a quiet editorial index on the finite numbered Feed */
+  rank?: number;
 }
 
 function compact(n: number): string {
@@ -85,7 +87,7 @@ function isUnseen(article: Article): boolean {
   return ageHours > 48;
 }
 
-function FeedCardInner({ article, onOpen }: FeedCardProps) {
+function FeedCardInner({ article, onOpen, rank }: FeedCardProps) {
   const { mutate: postFeedback } = usePostFeedback();
   const { mutate: toggleBookmark } = useToggleBookmark();
   const unread = !article.is_read;
@@ -153,6 +155,14 @@ function FeedCardInner({ article, onOpen }: FeedCardProps) {
 
       {/* Title + optional quiet thumbnail */}
       <div className="flex items-start gap-4">
+        {rank != null && (
+          <span
+            aria-hidden
+            className="shrink-0 font-serif text-xl font-semibold leading-[1.3] tabular-nums text-muted-foreground/50"
+          >
+            {rank}.
+          </span>
+        )}
         <div className="min-w-0 flex-1">
           <h3 className="font-display text-[18px] font-medium leading-[1.3] text-foreground transition-colors group-hover:text-primary line-clamp-2">
             {article.title}
