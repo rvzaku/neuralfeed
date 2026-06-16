@@ -73,9 +73,10 @@ export function FeedView() {
       <div className="flex flex-col flex-1 min-w-0">
         <main className="flex-1 px-4 pt-4 pb-24 md:pb-6 lg:pb-8 max-w-2xl lg:max-w-3xl xl:max-w-4xl mx-auto w-full space-y-3">
 
-          {/* Top bar: brand, tabs, actions — filters stay behind one button */}
-          <div className="flex items-center justify-between gap-2">
-            <h1 className="font-serif font-semibold text-lg tracking-tight text-foreground lg:text-xl">
+          {/* Mobile mini-header (the desktop global Header owns brand/search/refresh,
+              so this row is mobile-only to avoid duplicated chrome). */}
+          <div className="flex items-center justify-between gap-2 md:hidden">
+            <h1 className="font-serif font-semibold text-lg tracking-tight text-foreground">
               NeuralFeed
             </h1>
             <div className="flex items-center gap-1">
@@ -86,23 +87,11 @@ export function FeedView() {
               >
                 <Search className="h-4 w-4 text-muted-foreground" />
               </button>
-              <button
-                onClick={() => setDrawerOpen(true)}
-                className="relative p-2 rounded-lg hover:bg-muted transition-colors"
-                aria-label="Filters"
-              >
-                <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
-                {activeFilterCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center">
-                    {activeFilterCount}
-                  </span>
-                )}
-              </button>
               <RefreshIndicator />
             </div>
           </div>
 
-          {/* View tabs + a precise, calm count — never a firehose (V6) */}
+          {/* View tabs + count + filter — present on every breakpoint */}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5">
               {([["foryou", "For You"], ["all", "All items"]] as const).map(([key, label]) => (
@@ -120,14 +109,29 @@ export function FeedView() {
                 </button>
               ))}
             </div>
-            {!isLoading && !isError && total > 0 && (
-              <span className="text-xs text-muted-foreground tabular-nums">
-                {/* V6: finite framing — never a firehose */}
-                {allItems.length < total
-                  ? `Showing ${allItems.length} of ${total}`
-                  : `${total} ${total === 1 ? "article" : "articles"}`}
-              </span>
-            )}
+            <div className="flex items-center gap-3">
+              {!isLoading && !isError && total > 0 && (
+                <span className="hidden text-xs text-muted-foreground tabular-nums sm:inline">
+                  {/* V6: finite framing — never a firehose */}
+                  {allItems.length < total
+                    ? `Showing ${allItems.length} of ${total}`
+                    : `${total} ${total === 1 ? "article" : "articles"}`}
+                </span>
+              )}
+              <button
+                onClick={() => setDrawerOpen(true)}
+                className="relative flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
+                aria-label="Filters"
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Filters</span>
+                {activeFilterCount > 0 && (
+                  <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
 
           {isLoading && (
