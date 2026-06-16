@@ -16,6 +16,8 @@ interface FeedCardProps {
   onOpen?: (article: Article) => void;
   /** 1-based rank shown as a quiet editorial index on the finite numbered Feed */
   rank?: number;
+  /** Render as a bordered card (the Feed/Today look) instead of a flat list row */
+  boxed?: boolean;
 }
 
 function compact(n: number): string {
@@ -87,7 +89,7 @@ function isUnseen(article: Article): boolean {
   return ageHours > 48;
 }
 
-function FeedCardInner({ article, onOpen, rank }: FeedCardProps) {
+function FeedCardInner({ article, onOpen, rank, boxed }: FeedCardProps) {
   const { mutate: postFeedback } = usePostFeedback();
   const { mutate: toggleBookmark } = useToggleBookmark();
   const unread = !article.is_read;
@@ -131,14 +133,23 @@ function FeedCardInner({ article, onOpen, rank }: FeedCardProps) {
       onClick={handleCardClick}
       onKeyDown={(e) => e.key === "Enter" && activate()}
       className={cn(
-        "group relative cursor-pointer px-1 py-5 transition-colors sm:px-2",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:rounded-lg",
+        "group relative cursor-pointer",
+        boxed
+          ? "rounded-xl border border-border bg-card px-4 py-4 card-lift focus-visible:rounded-xl"
+          : "px-1 py-5 transition-colors sm:px-2 focus-visible:rounded-lg",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         article.is_read && "opacity-55 hover:opacity-90"
       )}
     >
       {/* Unread accent dot — the only chrome announcing freshness (no coloured badge) */}
       {unread && (
-        <span aria-hidden className="absolute left-[-2px] top-[26px] h-1.5 w-1.5 rounded-full bg-primary sm:left-[-6px]" />
+        <span
+          aria-hidden
+          className={cn(
+            "absolute h-1.5 w-1.5 rounded-full bg-primary",
+            boxed ? "left-2 top-5" : "left-[-2px] top-[26px] sm:left-[-6px]"
+          )}
+        />
       )}
 
       {/* Meta line — one quiet row */}

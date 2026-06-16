@@ -345,8 +345,21 @@ async def get_article(
         return overlay_model(ArticleOut.model_validate(article), None)
 
     if user:
+        from app.models.user_article_state import UserArticleState
         from app.services.user_state import upsert_state
+
+        # First open is a weak implicit positive — learn the user's taste from what
+        # they actually choose to read, not only explicit feedback (V7 Phase 2).
+        existing = await db.get(UserArticleState, (user.id, article.id))
+        first_open = existing is None or not existing.is_read
         state = await upsert_state(db, user.id, article.id, is_read=True)
+        if first_open:
+            from app.services.preference_learner import learn
+            try:
+                await learn(db, user, article, signal="view")
+                await db.commit()
+            except Exception:  # learning is best-effort; never block the read
+                await db.rollback()
         return overlay_model(ArticleOut.model_validate(article), state)
 
     if not article.is_read:

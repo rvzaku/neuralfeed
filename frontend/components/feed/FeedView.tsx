@@ -207,9 +207,9 @@ export function FeedView() {
           )}
 
           {!isLoading && !isError && allItems.length > 0 && (
-            <div className="divide-y divide-border/60 border-y border-border/60">
+            <div className="space-y-3">
               {allItems.map((article, i) => (
-                <FeedCard key={article.id} article={article} onOpen={setOpenArticle} rank={i + 1} />
+                <FeedCard key={article.id} article={article} onOpen={setOpenArticle} rank={i + 1} boxed />
               ))}
             </div>
           )}

@@ -48,6 +48,17 @@ async def test_like_boosts_topics_and_source(db):
 
 
 @pytest.mark.asyncio
+async def test_view_is_a_weak_positive_below_like(db):
+    # V7 Phase 2: opening an article nudges taste up, but far less than a like.
+    await learn(db, None, _article(), "view")
+    await db.commit()
+    weights = await _weights(db)
+    assert 0 < weights["llm"] < 0.15
+    affinity = await _weights(db, "source_affinity")
+    assert 0 < affinity["reddit-ml"] < 0.15
+
+
+@pytest.mark.asyncio
 async def test_dislike_pushes_harder_than_like(db):
     await learn(db, None, _article(), "like")
     await learn(db, None, _article(), "dislike")

@@ -17,8 +17,14 @@ from app.models.user_preference import UserPreference
 
 log = structlog.get_logger()
 
-# Deltas per signal; dislikes push harder than likes so noise gets buried fast
-_DELTAS = {"like": 0.15, "dislike": -0.25, "bookmark": 0.30, "unlike": -0.15, "undislike": 0.25}
+# Deltas per signal; dislikes push harder than likes so noise gets buried fast.
+# `view` is a weak implicit positive (opening an article to read it) — much
+# smaller than an explicit like so it nudges taste over time without overpowering
+# deliberate feedback (V7 Phase 2: learn from opens/views, not just 👍/👎/save).
+_DELTAS = {
+    "like": 0.15, "dislike": -0.25, "bookmark": 0.30,
+    "unlike": -0.15, "undislike": 0.25, "view": 0.04,
+}
 _CLAMP = 1.0
 
 
