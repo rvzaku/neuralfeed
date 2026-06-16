@@ -55,7 +55,7 @@ async def build_digest(
         if len(items) >= limit:
             break
 
-    ranked = await rank_articles(items, db, user_id=user_id, window_days=1)
+    ranked, _ = await rank_articles(items, db, user_id=user_id, window_days=1)
     top = ranked[:limit]
 
     names: dict[str, str] = {}

@@ -271,7 +271,7 @@ async def _compute_ranked_order(
     topic_w = await _get_topic_weights(db, user_id)
     affinity = await _get_source_affinity(db, user_id)
     muted = await _get_muted_sources(db, user_id)
-    ranked_items = await rank_articles(
+    ranked_items, final_scores = await rank_articles(
         capped, db, user_id=user_id, window_days=window_days,
         topic_weights=topic_w, source_affinity=affinity, muted_sources=muted,
     )
@@ -280,16 +280,20 @@ async def _compute_ranked_order(
     # (a single column is then the point). Day/Week stay freshness-led with
     # per-day buckets; Month/Year switch to importance-led catch-up ordering so
     # the horizons are genuinely different and aren't all blogs from today.
+    # CRUCIAL: interleave on `final_scores` (ranker output incl. topicality +
+    # personalization), NOT the raw base `scores` — sorting by base here would
+    # discard every refinement the ranker just computed (off-topic junk would
+    # climb back to the top on its raw traction).
     if not source_id and not category:
         if window_days <= 7:
             ranked_items = interleave_by_group(
                 ranked_items, window_days=window_days,
-                category_of=category_of, scores=scores,
+                category_of=category_of, scores=final_scores,
             )
         else:
             ranked_items = interleave_by_importance(
                 ranked_items, window_days=window_days,
-                category_of=category_of, scores=scores,
+                category_of=category_of, scores=final_scores,
             )
     ids = [a.id for a in ranked_items]
     # Keep only the buzz entries for survivors, so the cached payload stays small.

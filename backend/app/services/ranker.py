@@ -37,6 +37,21 @@ async def _get_muted_sources(db: AsyncSession, user_id=None) -> set:
 # that the feed only shows what actually gained traction (feedback-feed-philosophy).
 MIN_RELEVANCE = 0.04
 
+# Open aggregators publish whatever is trending on their platform, AI or not, so a
+# "general"-only (unclassified) item from one is almost always off-topic noise — a
+# viral non-AI GitHub repo ("Watch free TV"), HN post, or subreddit thread that was
+# crowding out real AI signal (app-feedback-v7). Curated/AI-native sources (arXiv,
+# HF, company blogs, newsletters, podcasts) are about AI by construction, so an
+# untagged item there is just a tagger miss, not noise — it gets only a light touch.
+_BROAD_AGGREGATOR_PREFIXES = (
+    "github", "hackernews", "reddit", "producthunt", "twitter", "nitter",
+    "youtube", "linkedin",
+)
+
+
+def _is_broad_aggregator(source_id: str) -> bool:
+    return source_id.startswith(_BROAD_AGGREGATOR_PREFIXES)
+
 
 def score_article(
     article: Article,
@@ -66,15 +81,19 @@ def score_article(
 
     feedback_boost = 0.3 if article.feedback == 1 else (-0.5 if article.feedback == -1 else 0.0)
 
-    # Topicality (relevance precision, app-feedback-v7): the keyword tagger files
-    # items it can't classify into a specific AI topic under the catch-all
-    # "general" tag. A high-traction item that is only "general" is the classic
-    # off-topic noise (a viral non-AI Hacker News post) that made the feed feel
-    # irrelevant — penalize it so genuine AI stories outrank it. Specifically
-    # tagged items are unaffected.
+    # Topicality (relevance precision, app-feedback-v7): an item the tagger could
+    # only file under the catch-all "general" tag is unclassified. The penalty is
+    # PROPORTIONAL to the item's own relevance (so a high-traction junk repo sinks
+    # a lot, not a flat nudge) and SOURCE-AWARE: hard for open aggregators where
+    # "general" means non-AI noise, light for AI-native sources where it's just a
+    # tagger miss. Specifically-tagged items are untouched.
     tags = article.topic_tags or []
     specific = [t for t in tags if t != "general"]
-    topicality = -0.18 if not specific else 0.0
+    if specific:
+        topicality = 0.0
+    else:
+        rate = 0.60 if _is_broad_aggregator(article.source_id) else 0.15
+        topicality = -rate * base
 
     # V6: lean harder on what the user actually likes. Learned topic affinity and
     # source affinity now carry more weight so off-preference items visibly sink
@@ -99,10 +118,18 @@ async def rank_articles(
     topic_weights: Optional[dict] = None,
     source_affinity: Optional[dict] = None,
     muted_sources: Optional[set] = None,
-) -> list:
-    """Rank a candidate set. The caller (feed endpoint) already needs the user's
-    topic_weights/source_affinity to render the "why" line, so it passes them in
-    to avoid re-querying the preferences table three times per request."""
+) -> "tuple[list, dict]":
+    """Rank a candidate set. Returns (kept_articles, final_score_by_id).
+
+    The score map is the authoritative ranking signal — it carries the
+    topicality penalty and the learned topic/source/feedback personalization on
+    top of base relevance. The caller MUST feed this map (not the raw
+    relevance_score) into the interleave step, or that downstream re-sort would
+    silently discard every refinement computed here.
+
+    The caller (feed endpoint) already needs the user's topic_weights/
+    source_affinity to render the "why" line, so it passes them in to avoid
+    re-querying the preferences table three times per request."""
     from app.models.source import Source
     if topic_weights is None:
         topic_weights = await _get_topic_weights(db, user_id)
@@ -133,4 +160,5 @@ async def rank_articles(
     kept = [a for a, s in scored if s >= MIN_RELEVANCE]
     if not kept:
         kept = [a for a, s in scored if s >= 0][:20]
-    return kept
+    final_scores = {a.id: s for a, s in scored}
+    return kept, final_scores

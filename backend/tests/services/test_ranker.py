@@ -40,6 +40,24 @@ class TestTopicality:
         mixed = _make_article(published_hours_ago=6, topic_tags=["general", "llm"])
         assert score_article(mixed, 0.5, {}, set()) > score_article(only_general, 0.5, {}, set())
 
+    def test_broad_aggregator_general_penalized_harder_than_curated(self):
+        # A "general" junk repo from GitHub sinks much harder than a "general"
+        # untagged item from an AI-native source (just a tagger miss).
+        junk = _make_article(source_id="github-trending", published_hours_ago=6,
+                             trending_score=5000, topic_tags=["general"])
+        curated = _make_article(source_id="rss-anthropic", published_hours_ago=6,
+                                trending_score=5000, topic_tags=["general"])
+        assert score_article(junk, 0.5, {}, set()) < score_article(curated, 0.5, {}, set())
+
+    def test_ai_tagged_aggregator_item_beats_general_junk(self):
+        # The motivating fix: a real AI item must outrank a higher-traction but
+        # unclassified junk repo from the same kind of open aggregator.
+        junk = _make_article(source_id="github-trending", published_hours_ago=6,
+                             trending_score=8000, topic_tags=["general"])
+        ai_item = _make_article(source_id="github-trending", published_hours_ago=6,
+                                trending_score=3000, topic_tags=["ai-agents"])
+        assert score_article(ai_item, 0.5, {}, set()) > score_article(junk, 0.5, {}, set())
+
 
 class TestScoreArticle:
     def test_new_high_signal_scores_high(self):
@@ -96,7 +114,7 @@ class TestRankArticles:
         exec_result.all.return_value = [("s1", 0.5)]
         db.execute = AsyncMock(return_value=exec_result)
 
-        result = await rank_articles([old, medium, fresh], db, window_days=30)
+        result, _ = await rank_articles([old, medium, fresh], db, window_days=30)
         assert result[0] is fresh
         assert result[-1] is old
 
@@ -111,7 +129,7 @@ class TestRankArticles:
         exec_result.all.return_value = [("s1", 0.5)]
         db.execute = AsyncMock(return_value=exec_result)
 
-        result = await rank_articles([stale], db, window_days=7)
+        result, _ = await rank_articles([stale], db, window_days=7)
         # Sole item → kept by the never-return-empty guard, but a stale item
         # alongside fresh ones would be dropped (covered by ordering test).
         assert result == [stale]
@@ -134,11 +152,11 @@ class TestRankArticles:
         exec_result.all.return_value = [("muted-src", 0.5)]
         db.execute = AsyncMock(return_value=exec_result)
 
-        result = await rank_articles([article], db)
+        result, _ = await rank_articles([article], db)
         assert result == []
 
     @pytest.mark.asyncio
     async def test_empty_list_returns_empty(self):
         db = AsyncMock()
-        result = await rank_articles([], db)
+        result, _ = await rank_articles([], db)
         assert result == []
