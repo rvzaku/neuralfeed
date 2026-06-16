@@ -25,11 +25,12 @@ import {
 } from "@/lib/api";
 import type { FeedFilters, FeedbackValue } from "@/lib/types";
 
-export function useFeed(filters: FeedFilters = {}) {
+export function useFeed(filters: FeedFilters = {}, enabled = true) {
   return useQuery({
     queryKey: ["feed", filters],
     queryFn: () => getFeed(filters),
     staleTime: 1000 * 60 * 5,
+    enabled,
   });
 }
 

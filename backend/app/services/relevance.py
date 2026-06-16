@@ -102,13 +102,42 @@ def _half_life(window_days: int) -> float:
     return max(0.75, window_days / 6)
 
 
+def importance_weight(window_days: int) -> float:
+    """How much the score should lean on *importance* (recency-independent
+    popularity/traction) vs. *freshness* — as a function of the browsing horizon.
+
+    The user's "catch me up over any window" requirement (app-feedback-v7): opening
+    the app a year later must surface the year's LANDMARK items (an OpenClaw-scale
+    launch), not merely last week's minor news. So recency dominates a day view and
+    nearly vanishes over a year. Short windows (≤7d) keep the original freshness-led
+    behavior exactly (weight 0), so day/week feeds are unchanged."""
+    if window_days <= 7:
+        return 0.0
+    if window_days <= 30:
+        return 0.45
+    if window_days <= 90:
+        return 0.65
+    return 0.85
+
+
+def _relevance_unit(article: Article, window_days: int = 7) -> float:
+    """Core 0..1 score shared by ranking and the displayed match %, so the two can
+    never diverge. Blends a freshness-led term (recency × popularity) with an
+    importance-led term (popularity alone) by the horizon's `importance_weight`."""
+    pop = popularity(article)
+    rec = recency(article.published_at, _half_life(window_days))
+    fresh_led = rec * (0.25 + 0.75 * pop)   # original behavior (freshness first)
+    importance_led = 0.25 + 0.75 * pop      # recency-independent landmark signal
+    beta = importance_weight(window_days)
+    return (1.0 - beta) * fresh_led + beta * importance_led
+
+
 def relevance_score(article: Article, window_days: int = 7) -> float:
-    """Recency × popularity. The half-life scales with the browsing window:
-    in a 30-day view a week-old item is still 'recent'; in a 1-day view it
-    is ancient. Popularity floor keeps zero-vote items rankable, not zero."""
-    return recency(article.published_at, _half_life(window_days)) * (
-        0.25 + 0.75 * popularity(article)
-    )
+    """Horizon-aware relevance. For short windows this is recency × popularity
+    (freshness-led, unchanged); for long windows it shifts to importance-led so
+    landmark items survive months/years of age. Popularity floor keeps zero-vote
+    items rankable, not zero."""
+    return _relevance_unit(article, window_days)
 
 
 _FAMILY_LABEL = {"reddit": "Reddit", "hackernews": "Hacker News", "github": "GitHub",
@@ -128,11 +157,10 @@ def explain(
     `mentions` is the cross-source coverage count (V6): a story carried by
     several independent sources is genuinely gaining traction, so it earns a
     leading reason and a bounded match boost."""
-    pop = popularity(article)
-    rec = recency(article.published_at, _half_life(window_days))
     # Cross-source coverage is hard proof of traction — lift match up to +12
     buzz_boost = min(max(mentions - 1, 0) * 6, 12)
-    match = min(100, int(round(100 * rec * (0.25 + 0.75 * pop))) + buzz_boost)
+    # Same horizon-aware core the ranking uses, so match % and sort order align.
+    match = min(100, int(round(100 * _relevance_unit(article, window_days))) + buzz_boost)
 
     engagement: dict = {}
     if article.engagement:

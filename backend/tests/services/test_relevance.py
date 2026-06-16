@@ -65,6 +65,28 @@ class TestRelevanceScore:
         dud = relevance_score(_article(days_old=0, engagement={"upvotes": 1}), window_days=30)
         assert hit > dud
 
+    def test_year_horizon_ranks_landmark_over_recent_minor(self):
+        # V7: opening the app a year later, a months-old landmark (huge traction)
+        # must outrank a brand-new minor item — recency nearly vanishes at 365d.
+        landmark = relevance_score(
+            _article(days_old=180, engagement={"upvotes": 5000}), window_days=365
+        )
+        minor_new = relevance_score(
+            _article(days_old=0, engagement={"upvotes": 5}), window_days=365
+        )
+        assert landmark > minor_new
+
+    def test_short_window_stays_freshness_led(self):
+        # Same comparison in a 1-day view must favor the fresh item (importance
+        # weight is 0 for short horizons — original behavior preserved).
+        landmark_old = relevance_score(
+            _article(days_old=180, engagement={"upvotes": 5000}), window_days=1
+        )
+        minor_new = relevance_score(
+            _article(days_old=0, engagement={"upvotes": 5}), window_days=1
+        )
+        assert minor_new > landmark_old
+
 
 class TestDailyCaps:
     def test_caps_per_group_per_day(self):

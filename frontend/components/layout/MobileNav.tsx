@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Newspaper, Sun, Compass, Tags, Database, Settings } from "lucide-react";
+import { Newspaper, Compass, Tags, Database, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// V7: "Today" is folded into the Feed (top-10 block), so it's no longer a nav tab.
 const NAV_ITEMS = [
   { href: "/",         label: "Feed",     icon: Newspaper },
-  { href: "/today",    label: "Today",    icon: Sun },
   { href: "/discover", label: "Discover", icon: Compass },
   { href: "/topics",   label: "Topics",   icon: Tags },
   { href: "/sources",  label: "Sources",  icon: Database },

@@ -108,7 +108,7 @@ export interface FeedFilters {
   is_read?: boolean;
   is_bookmarked?: boolean;
   feedback?: FeedbackValue;
-  time_range?: "1d" | "3d" | "7d" | "30d";
+  time_range?: "1d" | "3d" | "7d" | "30d" | "90d" | "365d";
   ranked?: boolean;
   /** V6: include already-viewed items (the "All items" archive view) */
   include_read?: boolean;

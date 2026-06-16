@@ -15,11 +15,24 @@ import { FilterDrawer } from "./FilterDrawer";
 import { RefreshIndicator } from "./RefreshIndicator";
 import { SearchModal } from "./SearchModal";
 import { SummarySheet } from "./SummarySheet";
-import { useInfiniteFeed } from "@/hooks/useFeed";
+import { useFeed, useInfiniteFeed } from "@/hooks/useFeed";
 import { cn } from "@/lib/utils";
 import type { Article, FeedFilters } from "@/lib/types";
 
-const FILTER_PARAMS = ["category", "topic", "source_id", "time_range", "is_read", "is_bookmarked", "feedback"];
+// time_range is driven by the Day/Month/Year horizon selector, not the filter
+// drawer, so it is intentionally excluded from the filter count.
+const FILTER_PARAMS = ["category", "topic", "source_id", "is_read", "is_bookmarked", "feedback"];
+
+// V7 horizon catch-up: open the app a day / month / year later and see the most
+// important + relevant items for that window (backend ranking is horizon-aware).
+type Horizon = "day" | "month" | "year";
+const HORIZON_RANGE: Record<Horizon, FeedFilters["time_range"]> = { day: "1d", month: "30d", year: "365d" };
+const HORIZON_LABEL: [Horizon, string][] = [["day", "Day"], ["month", "Month"], ["year", "Year"]];
+function rangeToHorizon(tr: string | null): Horizon {
+  if (tr === "1d") return "day";
+  if (tr === "365d") return "year";
+  return "month";
+}
 
 export function FeedView() {
   const params = useSearchParams();
@@ -37,7 +50,7 @@ export function FeedView() {
     category:    params.get("category") || undefined,
     topic:       params.get("topic") || undefined,
     source_id:   params.get("source_id") || undefined,
-    time_range:  (params.get("time_range") as FeedFilters["time_range"]) || "7d",
+    time_range:  (params.get("time_range") as FeedFilters["time_range"]) || "30d",
     is_read:     params.get("is_read") === "false" ? false : params.get("is_read") === "true" ? true : undefined,
     is_bookmarked: params.get("is_bookmarked") === "true" ? true : undefined,
     feedback:    params.get("feedback") ? Number(params.get("feedback")) as FeedFilters["feedback"] : undefined,
@@ -60,6 +73,24 @@ export function FeedView() {
   } = useInfiniteFeed(filters);
   const allItems = infData?.pages.flatMap((p) => p.items) ?? [];
   const total = infData?.pages[0]?.total ?? 0;
+
+  const horizon = rangeToHorizon(params.get("time_range"));
+  const hasFilters = activeFilterCount > 0;
+
+  // "Today in AI — top 10": the day's highest-importance items, always shown at
+  // the top of the For You view (this is the folded-in Today surface). Skipped
+  // when the user has narrowed with filters or is browsing the All archive.
+  const showToday = view === "foryou" && !hasFilters;
+  const { data: todayData } = useFeed(
+    { time_range: "1d", ranked: true, limit: 10 }, showToday
+  );
+  const todayItems = showToday ? (todayData?.items ?? []) : [];
+
+  function setHorizon(h: Horizon) {
+    const sp = new URLSearchParams(params.toString());
+    sp.set("time_range", HORIZON_RANGE[h] as string);
+    router.push(`?${sp.toString()}`, { scroll: false });
+  }
 
   function setView(next: "foryou" | "all") {
     const sp = new URLSearchParams(params.toString());
@@ -131,6 +162,45 @@ export function FeedView() {
                   </span>
                 )}
               </button>
+            </div>
+          </div>
+
+          {/* Today in AI — the day's top 10 by importance (folded-in Today surface) */}
+          {showToday && todayItems.length > 0 && (
+            <section aria-label="Today in AI" className="pt-1">
+              <div className="mb-1 flex items-baseline justify-between">
+                <h2 className="font-serif text-lg font-semibold tracking-tight text-foreground">Today in AI</h2>
+                <span className="text-xs text-muted-foreground">top {todayItems.length}</span>
+              </div>
+              <div className="divide-y divide-border/60 border-y border-border/60">
+                {todayItems.map((a) => (
+                  <FeedCard key={`today-${a.id}`} article={a} onOpen={setOpenArticle} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Catch up — horizon selector: most important + relevant over the window */}
+          <div className="flex items-center justify-between gap-2 pt-1">
+            <h2 className="font-serif text-lg font-semibold tracking-tight text-foreground">
+              {showToday && todayItems.length > 0 ? "Catch up" : "Feed"}
+            </h2>
+            <div className="flex items-center gap-1 rounded-full border border-border p-0.5">
+              {HORIZON_LABEL.map(([h, label]) => (
+                <button
+                  key={h}
+                  onClick={() => setHorizon(h)}
+                  aria-pressed={horizon === h}
+                  className={cn(
+                    "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                    horizon === h
+                      ? "bg-foreground text-background"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
 

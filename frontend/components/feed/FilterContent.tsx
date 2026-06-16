@@ -32,13 +32,6 @@ const CONTENT_TYPES = [
   { value: "funding",    label: "Funding" },
 ];
 
-const TIME_RANGES = [
-  { value: "1d",  label: "Today" },
-  { value: "3d",  label: "3 days" },
-  { value: "7d",  label: "Week" },
-  { value: "30d", label: "Month" },
-];
-
 const FEEDBACK_OPTIONS = [
   { value: "",   label: "All" },
   { value: "1",  label: "Liked" },
@@ -66,7 +59,6 @@ export function FilterContent({ onClear, className }: FilterContentProps) {
   const topicSet    = parseSet(params.get("topic"));
   const categorySet = parseSet(params.get("category"));
   const sourceSet   = parseSet(params.get("source_id"));
-  const activeTime     = params.get("time_range") ?? "7d";
   const activeFeedback = params.get("feedback") ?? "";
 
   const setParam = useCallback(
@@ -99,7 +91,7 @@ export function FilterContent({ onClear, className }: FilterContentProps) {
 
   const hasActive =
     topicSet.size > 0 || sourceSet.size > 0 || categorySet.size > 0 ||
-    activeFeedback !== "" || activeTime !== "7d";
+    activeFeedback !== "";
 
   return (
     <div className={cn("space-y-6", className)}>
@@ -139,28 +131,7 @@ export function FilterContent({ onClear, className }: FilterContentProps) {
         </div>
       </section>
 
-      {/* Time range */}
-      <section>
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-          Time Range
-        </p>
-        <div className="flex gap-2">
-          {TIME_RANGES.map((t) => (
-            <button
-              key={t.value}
-              onClick={() => setParam("time_range", t.value)}
-              className={cn(
-                "flex-1 rounded-lg px-2 py-2 text-xs font-medium border transition-colors",
-                activeTime === t.value
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-muted/40 text-muted-foreground border-border hover:bg-muted hover:text-foreground"
-              )}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </section>
+      {/* Time range lives on the Feed's Day/Month/Year horizon selector now. */}
 
       {/* Topic */}
       <section>

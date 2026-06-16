@@ -17,7 +17,7 @@ from app.schemas.article import ArticleOut, FeedResponse
 
 router = APIRouter(prefix="/feed", tags=["feed"])
 
-TIME_RANGE_DAYS = {"1d": 1, "3d": 3, "7d": 7, "30d": 30}
+TIME_RANGE_DAYS = {"1d": 1, "3d": 3, "7d": 7, "30d": 30, "90d": 90, "365d": 365}
 
 
 def _csv(value: Optional[str]) -> list[str]:
@@ -37,7 +37,7 @@ async def get_feed(
     topic: Optional[str] = None,
     is_read: Optional[bool] = None,
     is_bookmarked: Optional[bool] = None,
-    time_range: Optional[str] = Query(None, pattern="^(1d|3d|7d|30d)$"),
+    time_range: Optional[str] = Query(None, pattern="^(1d|3d|7d|30d|90d|365d)$"),
     ranked: bool = Query(True),  # smart ranking on by default (V4 Phase 2b)
     feedback: Optional[int] = Query(None, ge=-1, le=1),
     min_signal: Optional[float] = Query(None, ge=0.0, le=1.0),

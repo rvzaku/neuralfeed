@@ -6,9 +6,9 @@ import { usePathname } from "next/navigation";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// V7: "Today" is folded into the Feed (top-10 block), so it's no longer a nav link.
 const NAV_LINKS = [
   { href: "/",         label: "Feed" },
-  { href: "/today",    label: "Today" },
   { href: "/discover", label: "Discover" },
   { href: "/topics",   label: "Topics" },
   { href: "/sources",  label: "Sources" },
