@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { shareUrl } from "@/lib/share";
 import { SourceBadge } from "@/components/ui/SourceBadge";
+import { RelevanceBadge } from "@/components/ui/RelevanceBadge";
 import { cn, formatRelativeTime, formatExactTime } from "@/lib/utils";
 import { usePostFeedback, useSummary, useToggleBookmark } from "@/hooks/useFeed";
 import type { Article } from "@/lib/types";
@@ -46,6 +47,8 @@ function Inline({ text }: { text: string }) {
 type MdBlock =
   | { kind: "tldr"; text: string }
   | { kind: "heading"; text: string }
+  | { kind: "quote"; text: string }
+  | { kind: "hr" }
   | { kind: "ul" | "ol"; items: string[] }
   | { kind: "p"; text: string };
 
@@ -76,13 +79,35 @@ function parseMarkdown(markdown: string): MdBlock[] {
       blocks.push({ kind: "tldr", text });
       continue;
     }
-    if (/^#{1,3}\s+/.test(line)) {
+    // Horizontal rule: --- / *** / ___
+    if (/^([-*_])\1{2,}$/.test(line)) {
       flushPara(); flushList();
-      blocks.push({ kind: "heading", text: line.replace(/^#{1,3}\s+/, "") });
+      blocks.push({ kind: "hr" });
       continue;
     }
-    const bullet = line.match(/^([-*])\s+(.*)$/);
-    const ordered = line.match(/^\d+\.\s+(.*)$/);
+    if (/^#{1,4}\s+/.test(line)) {
+      flushPara(); flushList();
+      blocks.push({ kind: "heading", text: line.replace(/^#{1,4}\s+/, "").replace(/:$/, "") });
+      continue;
+    }
+    // Bold-only line acting as a section heading ("**How it works**") — the LLM
+    // very often emits these instead of real `##` headings. Treat a short, fully
+    // bolded line with no trailing prose as a heading so the read stays scannable.
+    const boldHeading = line.match(/^\*\*([^*]{2,60})\*\*:?$/);
+    if (boldHeading) {
+      flushPara(); flushList();
+      blocks.push({ kind: "heading", text: boldHeading[1].replace(/:$/, "") });
+      continue;
+    }
+    // Blockquote
+    const quote = line.match(/^>\s?(.*)$/);
+    if (quote) {
+      flushPara(); flushList();
+      blocks.push({ kind: "quote", text: quote[1] });
+      continue;
+    }
+    const bullet = line.match(/^([-*•])\s+(.*)$/);
+    const ordered = line.match(/^\d+[.)]\s+(.*)$/);
     if (bullet || ordered) {
       flushPara();
       const kind = ordered ? "ol" : "ul";
@@ -101,40 +126,74 @@ function parseMarkdown(markdown: string): MdBlock[] {
 
 export function DeepMarkdown({ markdown }: { markdown: string }) {
   const blocks = parseMarkdown(markdown);
+  let headingSeen = false;
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {blocks.map((b, i) => {
         if (b.kind === "tldr") {
           return (
-            <div key={i} className="rounded-lg border-l-2 border-primary bg-muted/50 px-4 py-3">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-primary mb-1">TL;DR</p>
-              <p className="text-[15px] leading-[1.6] text-foreground font-medium">
+            <div key={i} className="rounded-xl border border-primary/20 bg-primary/[0.04] px-4 py-3.5">
+              <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary" /> The gist
+              </p>
+              <p className="text-[15.5px] leading-[1.6] text-foreground font-medium">
                 <Inline text={b.text} />
               </p>
             </div>
           );
         }
         if (b.kind === "heading") {
+          const first = !headingSeen;
+          headingSeen = true;
           return (
-            <h3 key={i} className="font-semibold tracking-tight text-[15px] pt-2 text-foreground">
+            <h3
+              key={i}
+              className={cn(
+                "font-serif font-semibold tracking-tight text-[19px] leading-snug text-foreground",
+                first ? "pt-1" : "pt-4 mt-1 border-t border-border/50"
+              )}
+            >
               <Inline text={b.text} />
             </h3>
           );
         }
-        if (b.kind === "ul" || b.kind === "ol") {
-          const Tag = b.kind === "ol" ? "ol" : "ul";
+        if (b.kind === "quote") {
           return (
-            <Tag key={i} className={cn(
-              "pl-5 space-y-1.5 text-sm leading-relaxed text-foreground/90",
-              b.kind === "ol" ? "list-decimal" : "list-disc"
-            )}>
-              {b.items.map((item, j) => <li key={j}><Inline text={item} /></li>)}
-            </Tag>
+            <blockquote key={i} className="border-l-2 border-primary/40 pl-4 text-[15px] italic leading-[1.7] text-muted-foreground">
+              <Inline text={b.text} />
+            </blockquote>
+          );
+        }
+        if (b.kind === "hr") {
+          return <hr key={i} className="border-border/60" />;
+        }
+        if (b.kind === "ul" || b.kind === "ol") {
+          if (b.kind === "ol") {
+            return (
+              <ol key={i} className="space-y-2 text-[15px] leading-[1.65] text-foreground/90">
+                {b.items.map((item, j) => (
+                  <li key={j} className="flex gap-2.5">
+                    <span className="mt-px shrink-0 font-mono text-[12px] font-semibold tabular-nums text-primary/80">{j + 1}.</span>
+                    <span className="min-w-0"><Inline text={item} /></span>
+                  </li>
+                ))}
+              </ol>
+            );
+          }
+          return (
+            <ul key={i} className="space-y-2 text-[15px] leading-[1.65] text-foreground/90">
+              {b.items.map((item, j) => (
+                <li key={j} className="flex gap-2.5">
+                  <span aria-hidden className="mt-[9px] h-1 w-1 shrink-0 rounded-full bg-primary/50" />
+                  <span className="min-w-0"><Inline text={item} /></span>
+                </li>
+              ))}
+            </ul>
           );
         }
         if (b.kind === "p") {
           return (
-            <p key={i} className="text-[15px] leading-[1.7] text-foreground/90">
+            <p key={i} className="text-[15.5px] leading-[1.75] text-foreground/90">
               <Inline text={b.text} />
             </p>
           );
@@ -217,7 +276,12 @@ export function SummarySheet({ article, onClose }: SummarySheetProps) {
                 <span className="text-xs text-muted-foreground truncate">· {article.author}</span>
               )}
             </div>
-            <h2 className="font-semibold tracking-tight text-xl leading-snug">{article.title}</h2>
+            <h2 className="font-serif font-semibold tracking-tight text-2xl leading-snug">{article.title}</h2>
+            {article.relevance != null && (
+              <div className="mt-2">
+                <RelevanceBadge relevance={article.relevance} showLabel />
+              </div>
+            )}
           </div>
           <button
             onClick={onClose}

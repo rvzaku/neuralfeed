@@ -146,7 +146,7 @@ function FeedCardInner({ article, onOpen }: FeedCardProps) {
         <span className="text-muted-foreground/40">·</span>
         <span className="tabular-nums" title={formatExactTime(article.published_at)}>{formatRelativeTime(article.published_at)}</span>
         <div className="ml-auto flex items-center gap-2">
-          <RelevanceBadge relevance={article.relevance} className="hidden sm:inline-flex" />
+          <RelevanceBadge relevance={article.relevance} />
           <HeatBadge heat={article.heat} />
         </div>
       </div>
