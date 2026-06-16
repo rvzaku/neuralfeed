@@ -42,8 +42,15 @@ def _age_days(article: Article, now) -> float:
     return (now - pub).total_seconds() / 86400
 
 
-def _keep(article: Article, now) -> "tuple[bool, str]":
+def _keep(article: Article, now, landmark_matcher=None) -> "tuple[bool, str]":
     """(keep?, tier) for a non-preserved article."""
+    from app.services.landmarks import title_is_landmark
+
+    # Landmark protection: a current breakout launch (OpenClaw, Moltbook) is kept
+    # regardless of age or per-item traction — it's reference-grade, not noise.
+    if title_is_landmark(article.title, landmark_matcher):
+        return (True, "landmark")
+
     age = _age_days(article, now)
     if age > OLD_DAYS:
         return (False, "ancient")
@@ -78,6 +85,8 @@ async def curate() -> None:
             row[0] for row in (await db.execute(select(UserArticleState.article_id))).all()
         }
         articles = (await db.execute(select(Article))).scalars().all()
+        from app.services.landmarks import load_landmark_matcher
+        landmark_matcher = await load_landmark_matcher(db)
 
         drop_ids: list[str] = []
         tiers: dict[str, list[int]] = {}  # tier -> [kept, dropped]
@@ -85,7 +94,7 @@ async def curate() -> None:
             if a.id in preserved:
                 tiers.setdefault("preserved", [0, 0])[0] += 1
                 continue
-            keep, tier = _keep(a, now)
+            keep, tier = _keep(a, now, landmark_matcher)
             t = tiers.setdefault(tier, [0, 0])
             if keep:
                 t[0] += 1
@@ -95,7 +104,7 @@ async def curate() -> None:
 
         total = len(articles)
         print(f"corpus: {total} articles, {len(preserved)} preserved (user-engaged)")
-        for tier in ("preserved", "fresh", "recent", "older", "ancient"):
+        for tier in ("preserved", "landmark", "fresh", "recent", "older", "ancient"):
             if tier in tiers:
                 kept, dropped = tiers[tier]
                 print(f"  {tier:10} keep={kept:>5}  drop={dropped:>5}")

@@ -60,6 +60,7 @@ def score_article(
     muted_sources: set,
     source_affinity: float = 0.0,
     window_days: int = 7,
+    landmark_matcher=None,
 ) -> float:
     """Final feed score. The DOMINANT term is the same recency×popularity
     relevance the card's "% match" shows — so the ordering can never contradict
@@ -95,6 +96,13 @@ def score_article(
         rate = 0.60 if _is_broad_aggregator(article.source_id) else 0.15
         topicality = -rate * base
 
+    # Landmark boost (app-feedback-v6): an item naming a current breakout launch
+    # (OpenClaw, Moltbook — detected by scripts/detect_landmarks.py) is "what the
+    # whole field is talking about", so it earns a real lift even when it carries
+    # no per-item upvote/star traction. Bounded so it informs, never dominates.
+    from app.services.landmarks import title_is_landmark
+    landmark_boost = 0.20 if title_is_landmark(article.title, landmark_matcher) else 0.0
+
     # V6: lean harder on what the user actually likes. Learned topic affinity and
     # source affinity now carry more weight so off-preference items visibly sink
     # (and disliked topics, which contribute negative topic_boost, sink hardest)
@@ -106,6 +114,7 @@ def score_article(
         + 0.10 * (source_signal - 0.5)   # quality nudge, centered so 0.5 is neutral
         + 0.10 * feedback_boost
         + topicality
+        + landmark_boost
     )
     return round(score, 4)
 
@@ -118,6 +127,7 @@ async def rank_articles(
     topic_weights: Optional[dict] = None,
     source_affinity: Optional[dict] = None,
     muted_sources: Optional[set] = None,
+    landmark_matcher=None,
 ) -> "tuple[list, dict]":
     """Rank a candidate set. Returns (kept_articles, final_score_by_id).
 
@@ -150,7 +160,7 @@ async def rank_articles(
         (a, score_article(
             a, source_scores.get(a.source_id, 0.5), topic_weights, muted_sources,
             source_affinity=float(source_affinity.get(a.source_id, 0.0)),
-            window_days=window_days,
+            window_days=window_days, landmark_matcher=landmark_matcher,
         ))
         for a in articles
     ]

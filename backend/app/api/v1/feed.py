@@ -271,9 +271,12 @@ async def _compute_ranked_order(
     topic_w = await _get_topic_weights(db, user_id)
     affinity = await _get_source_affinity(db, user_id)
     muted = await _get_muted_sources(db, user_id)
+    from app.services.landmarks import load_landmark_matcher
+    landmark_matcher = await load_landmark_matcher(db)
     ranked_items, final_scores = await rank_articles(
         capped, db, user_id=user_id, window_days=window_days,
         topic_weights=topic_w, source_affinity=affinity, muted_sources=muted,
+        landmark_matcher=landmark_matcher,
     )
 
     # Mix sources unless the query already narrowed to one source/category

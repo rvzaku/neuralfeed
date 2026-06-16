@@ -49,6 +49,16 @@ class TestTopicality:
                                 trending_score=5000, topic_tags=["general"])
         assert score_article(junk, 0.5, {}, set()) < score_article(curated, 0.5, {}, set())
 
+    def test_landmark_title_gets_boost(self):
+        from app.services.landmarks import compile_matcher
+        m = compile_matcher(["OpenClaw"])
+        plain = _make_article(published_hours_ago=6, topic_tags=["ai-agents"])
+        plain.title = "A routine agent update"
+        landmark = _make_article(published_hours_ago=6, topic_tags=["ai-agents"])
+        landmark.title = "OpenClaw breaks the internet"
+        assert score_article(landmark, 0.5, {}, set(), landmark_matcher=m) > \
+            score_article(plain, 0.5, {}, set(), landmark_matcher=m)
+
     def test_ai_tagged_aggregator_item_beats_general_junk(self):
         # The motivating fix: a real AI item must outrank a higher-traction but
         # unclassified junk repo from the same kind of open aggregator.
