@@ -5,6 +5,7 @@ import { ThumbsUp, ThumbsDown, Bookmark, BookmarkCheck, ExternalLink, Share2, Ch
 import { shareUrl } from "@/lib/share";
 import { SourceBadge } from "@/components/ui/SourceBadge";
 import { HeatBadge } from "@/components/ui/HeatBadge";
+import { RelevanceBadge } from "@/components/ui/RelevanceBadge";
 import { cn, formatRelativeTime, formatExactTime } from "@/lib/utils";
 import { usePostFeedback, useToggleBookmark } from "@/hooks/useFeed";
 import type { Article } from "@/lib/types";
@@ -145,11 +146,7 @@ function FeedCardInner({ article, onOpen }: FeedCardProps) {
         <span className="text-muted-foreground/40">·</span>
         <span className="tabular-nums" title={formatExactTime(article.published_at)}>{formatRelativeTime(article.published_at)}</span>
         <div className="ml-auto flex items-center gap-2">
-          {article.relevance != null && (
-            <span className="hidden font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground/80 sm:inline">
-              rel <span className="text-foreground/70">{article.relevance}</span>
-            </span>
-          )}
+          <RelevanceBadge relevance={article.relevance} className="hidden sm:inline-flex" />
           <HeatBadge heat={article.heat} />
         </div>
       </div>

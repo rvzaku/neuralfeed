@@ -51,10 +51,12 @@ describe("FeedCard", () => {
     );
   });
 
-  it("shows the relevance match and why line", () => {
+  it("shows the relevance score and engagement traction", () => {
     withQuery(<FeedCard article={article} onOpen={vi.fn()} />);
-    expect(screen.getByText("87% match")).toBeInTheDocument();
-    expect(screen.getByText(/412 upvotes on Reddit/)).toBeInTheDocument();
+    expect(
+      screen.getByLabelText(/Relevance 87 out of 100/)
+    ).toBeInTheDocument();
+    expect(screen.getByText("412")).toBeInTheDocument();
   });
 });
 
