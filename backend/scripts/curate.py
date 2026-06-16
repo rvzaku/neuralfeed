@@ -24,10 +24,14 @@ from app.services.ranker import _is_broad_aggregator
 from app.services.relevance import importance_magnitude, popularity
 
 # Tier boundaries (days) and thresholds — see the plan doc; tune here.
+# GENTLE policy (user-chosen 2026-06-16): keep fresh + recent broadly, prune only
+# clear junk + non-relevant older items + everything >1yr.
 FRESH_DAYS, RECENT_DAYS, OLD_DAYS = 14, 90, 365
-FRESH_JUNK_MAG = 0.25       # broad-aggregator general-only below this = junk
-RECENT_MIN_MAG, RECENT_MIN_POP = 0.15, 0.50
-OLD_LANDMARK_MAG = 0.45
+# "Clear junk" (applies at any non-ancient age): a broad-aggregator item the
+# tagger couldn't classify as AI AND that never gained traction.
+CLEAR_JUNK_MAG, CLEAR_JUNK_POP = 0.10, 0.30
+# 90-365d: kept at a LOW relevance bar (not the strict landmark bar).
+OLD_MIN_MAG, OLD_MIN_POP = 0.20, 0.40
 
 
 def _age_days(article: Article, now) -> float:
@@ -41,19 +45,29 @@ def _age_days(article: Article, now) -> float:
 def _keep(article: Article, now) -> "tuple[bool, str]":
     """(keep?, tier) for a non-preserved article."""
     age = _age_days(article, now)
+    if age > OLD_DAYS:
+        return (False, "ancient")
+
     tags = article.topic_tags or []
     specific = any(t != "general" for t in tags)
     ai_relevant = specific or not _is_broad_aggregator(article.source_id)
     mag = importance_magnitude(article)
+    pop = popularity(article)
 
+    # Fresh tier is kept entirely (user-chosen gentle policy) — recent items are
+    # cheap to store and may still matter; anti-overwhelm is the ranker's job.
     if age <= FRESH_DAYS:
-        junk = _is_broad_aggregator(article.source_id) and not specific and mag < FRESH_JUNK_MAG
-        return (not junk, "fresh")
+        return (True, "fresh")
+
+    # Clear junk (older than fresh): unclassifiable aggregator noise, no traction.
+    if _is_broad_aggregator(article.source_id) and not specific \
+            and mag < CLEAR_JUNK_MAG and pop < CLEAR_JUNK_POP:
+        return (False, "recent" if age <= RECENT_DAYS else "older")
+
     if age <= RECENT_DAYS:
-        return (ai_relevant and (mag >= RECENT_MIN_MAG or popularity(article) >= RECENT_MIN_POP), "recent")
-    if age <= OLD_DAYS:
-        return (specific and mag >= OLD_LANDMARK_MAG, "older")
-    return (False, "ancient")
+        return (True, "recent")
+    # 90-365d: keep at a low relevance bar (gentler than landmark-only).
+    return (ai_relevant and (mag >= OLD_MIN_MAG or pop >= OLD_MIN_POP), "older")
 
 
 async def curate() -> None:
