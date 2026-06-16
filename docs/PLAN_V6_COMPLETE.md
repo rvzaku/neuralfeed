@@ -199,3 +199,80 @@ Acceptance: no duplicated chrome; clean layout at all breakpoints; feels snappy.
 V7-1 → V7-2 (auth/login bugs, highest user pain) → V7-4 (quick removal) → V7-3
 (multi-select, back+front) → V7-5 (polish). Then resume Phase 1–2. Each step: local
 `tsc`+`test`+`pytest` green before push; user runs `verify-deployed`.
+
+---
+
+# V7-6 — Finite numbered Feed + Discover "Show more" (2026-06-16)
+
+> Request: the **Feed** must be a *finite, numbered* list (`1.`…`N.`) where N = the
+> **feed-density** setting; it must **not** have "Show more". **Discover** is the
+> exploration surface and gets the **"Show more"** pagination. This is the
+> anti-overwhelm contract made literal: the Feed is a deliberate ranked shortlist,
+> Discover is the unbounded browse.
+
+## Current state (audit)
+- `feed_density` pref = *items per source-category per day* — an INTERNAL cap inside
+  the ranking pipeline (`apply_daily_caps`), not the visible feed length. Default 10,
+  clamped 1–50. Settings already exposes a "Feed density" control writing this pref.
+- **Feed** (`FeedView`) uses `useInfiniteFeed` + a "Show more" button (infinite).
+- **Discover** shows a fixed "Trending now" top-10 via `useFeed({limit:10})` — no
+  pagination, no "Show more".
+- Phase 1 just added a "Today in AI — top 10" block + Day/Month/Year horizon selector
+  to the Feed.
+
+## Target design
+**Redefine `feed_density` as the visible Feed length (total items shown), default 10.**
+Keep the per-source/day cap as an internal anti-domination step (rename internally to
+`per_source_cap`, fixed at 10) so one source can't crowd the shortlist before it's
+truncated to `feed_density`.
+
+1. **Feed = one finite, numbered list.** Merge the separate "Today top-10" block into
+   the main ranked list to remove redundancy: the Feed is a single list of exactly
+   `feed_density` items, ranked by the horizon-aware importance score, numbered
+   `1.`…`N.`. The Day/Month/Year selector chooses the window (Day = today's top N).
+   **No "Show more."** A calm footer states "Your ranked top N — open Discover to
+   explore more."
+2. **"All items" tab** stays as the read-inclusive archive but is **also capped to
+   `feed_density`** (consistency: the Feed surface is always finite). Deep browsing
+   lives in Discover, not here.
+3. **Discover gets "Show more."** Convert Discover's exploration list to
+   `useInfiniteFeed` with a "Show more" button (the component already exists — move the
+   pattern here from the Feed). Trending stays; add a paginated "More to explore"
+   section below it.
+
+## Backend changes
+- `_feed_density(db, user)` keeps reading the pref but its meaning is now "visible feed
+  length" (same clamp 1–50, default 10).
+- In the ranked path, after rank + interleave, **truncate `ordered_ids` to
+  `feed_density`** for the Feed view; set `total` to the truncated length so the client
+  shows "N articles", not a firehose. Gate truncation on a new query flag
+  `cap_to_density: bool = True` (Feed passes true; Discover passes `false` to paginate).
+- Keep `apply_daily_caps` with a fixed internal `per_source_cap=10` (decoupled from the
+  pref) so dedupe/anti-domination still work before truncation.
+- Return the effective `density` in `FeedResponse` meta so the client knows N without a
+  second prefs call (used for numbering + the "no show-more" footer).
+- Tests: density truncates the feed; Discover (`cap_to_density=false`) paginates;
+  per-source cap still applied.
+
+## Frontend changes
+- **`FeedCard`** gains an optional `rank?: number` prop → renders a quiet editorial
+  index (`font-serif` muted `1.`) at the row's left, aligned with the unread dot.
+- **`FeedView`**: switch the Feed from `useInfiniteFeed` to a single `useFeed({ limit:
+  density })`; remove the "Show more" button; pass `rank={i+1}` to each card; drop the
+  now-merged Today block (its role = Day horizon of the numbered list). Read `density`
+  from the feed response meta (fallback 10).
+- **Discover** (`app/discover/page.tsx`): add a paginated "More to explore" list using
+  `useInfiniteFeed` + "Show more"; pass `cap_to_density=false`.
+- `lib/types.ts`: add `density` to `FeedResponse`; add `cap_to_density` to `FeedFilters`.
+
+## Acceptance
+- Feed shows exactly `feed_density` numbered items (`1.`…`N.`), no "Show more"; changing
+  density in Settings changes the count + numbering.
+- Discover has a working "Show more" that loads further pages.
+- No source dominates the shortlist; ordering matches the match %.
+- Local `tsc`+`test`+`pytest` green; user runs `verify-deployed`.
+
+## Decision needed
+- **D — Today block:** merge it into the single numbered Feed list (recommended — Day
+  horizon = today's top N, no redundancy), OR keep a distinct "Today top-10" section
+  *above* a separate numbered catch-up list?
