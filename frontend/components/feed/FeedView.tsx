@@ -68,7 +68,7 @@ export function FeedView() {
 
           {/* Top bar: brand, tabs, actions — filters stay behind one button */}
           <div className="flex items-center justify-between gap-2">
-            <h1 className="font-serif font-bold text-base tracking-tight text-foreground lg:text-lg">
+            <h1 className="font-serif font-semibold text-lg tracking-tight text-foreground lg:text-xl">
               NeuralFeed
             </h1>
             <div className="flex items-center gap-1">

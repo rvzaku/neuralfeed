@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Lock, Mail, Sparkles } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { authGuest, authLogin, authRegister } from "@/lib/api";
 import { setSession } from "@/lib/auth";
 import { cn } from "@/lib/utils";
@@ -54,9 +54,9 @@ export default function LoginPage() {
       <div className="w-full max-w-sm space-y-7 relative">
         <div className="text-center space-y-2">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-foreground text-background shadow-sm">
-            <Sparkles className="h-6 w-6" />
+            <span className="font-serif text-2xl font-semibold leading-none">N</span>
           </div>
-          <h1 className="font-serif text-3xl font-bold text-foreground">NeuralFeed</h1>
+          <h1 className="font-serif text-4xl font-semibold tracking-tight text-foreground">NeuralFeed</h1>
           <p className="text-sm text-muted-foreground">
             {mode === "login"
               ? "Welcome back — sign in to your feed"

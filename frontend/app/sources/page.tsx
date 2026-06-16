@@ -247,7 +247,7 @@ export default function SourcesPage() {
         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-foreground text-background">
           <Database className="h-3.5 w-3.5" />
         </span>
-        <h1 className="font-serif font-bold text-base">Sources</h1>
+        <h1 className="font-serif font-semibold text-lg tracking-tight">Sources</h1>
         <span className="ml-auto text-xs text-muted-foreground">
           {enabledCount}/{totalCount} enabled
         </span>

@@ -26,10 +26,10 @@ export function Header() {
     <>
       <header className="hidden md:flex items-center justify-between px-6 py-3 border-b border-border bg-background/80 backdrop-blur-sm sticky top-[var(--banner-h,0px)] z-20">
         <div className="flex items-center gap-2">
-          <span className="font-serif font-bold text-lg tracking-tight text-foreground">
+          <span className="font-serif font-semibold text-xl tracking-tight text-foreground">
             NeuralFeed
           </span>
-          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+          <span className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground/70">
             beta
           </span>
         </div>

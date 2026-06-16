@@ -52,7 +52,11 @@ const config: Config = {
       },
       fontFamily: {
         sans: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
-        serif: ["var(--font-geist-sans)", "system-ui", "sans-serif"],  // headlines share the product face
+        // Editorial display serif (Fraunces) — the signature face on the wordmark
+        // and every page heading. This is what separates NeuralFeed from a generic
+        // all-sans AI dashboard (app-feedback v1–v6: "must not look AI-generated").
+        serif: ["var(--font-display)", "ui-serif", "Georgia", "serif"],
+        display: ["var(--font-display)", "ui-serif", "Georgia", "serif"],
         mono: ["var(--font-geist-mono)", "monospace"],
       },
     },

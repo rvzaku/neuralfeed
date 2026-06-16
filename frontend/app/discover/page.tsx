@@ -36,7 +36,7 @@ export default function DiscoverPage() {
         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-foreground text-background">
           <Compass className="h-3.5 w-3.5" />
         </span>
-        <h1 className="font-serif font-bold text-base">Discover</h1>
+        <h1 className="font-serif font-semibold text-lg tracking-tight">Discover</h1>
       </header>
 
       <main className="flex-1 px-4 pt-4 pb-24 md:pb-8 max-w-2xl mx-auto w-full space-y-8">

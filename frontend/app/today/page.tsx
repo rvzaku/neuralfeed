@@ -18,7 +18,7 @@ export default function TodayPage() {
         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-foreground text-background">
           <Sun className="h-3.5 w-3.5" />
         </span>
-        <h1 className="font-serif font-bold text-base">Today in AI</h1>
+        <h1 className="font-serif font-semibold text-lg tracking-tight">Today in AI</h1>
       </header>
 
       <main className="flex-1 px-4 pt-5 pb-24 md:pb-8 max-w-2xl mx-auto w-full">

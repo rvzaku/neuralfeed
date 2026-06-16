@@ -186,7 +186,7 @@ export default function SettingsPage() {
         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-foreground text-background">
           <Settings className="h-3.5 w-3.5" />
         </span>
-        <h1 className="font-serif font-bold text-base">Settings</h1>
+        <h1 className="font-serif font-semibold text-lg tracking-tight">Settings</h1>
         {dirty && (
           <div className="ml-auto flex items-center gap-2">
             <button

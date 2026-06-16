@@ -11,7 +11,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Tags, Brain, Eye, Layers, Gamepad2, ShieldCheck, Bot, Cpu,
-  AudioLines, GitFork, Server, Package, Banknote, Sparkles,
+  AudioLines, GitFork, Server, Package, Banknote, Star,
 } from "lucide-react";
 import { FeedCard } from "@/components/feed/FeedCard";
 import { HeatDot, HeatLegend } from "@/components/ui/HeatBadge";
@@ -78,7 +78,7 @@ export default function TopicsPage() {
         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-foreground text-background">
           <Tags className="h-3.5 w-3.5" />
         </span>
-        <h1 className="font-serif font-bold text-base">Topics</h1>
+        <h1 className="font-serif font-semibold text-lg tracking-tight">Topics</h1>
         {active && (
           <button onClick={() => setActive(null)} className="ml-auto text-xs text-primary hover:underline">
             All topics
@@ -118,7 +118,7 @@ export default function TopicsPage() {
                         <span className="block text-sm font-semibold truncate">{label}</span>
                         <HeatDot heat={heat} className="shrink-0" />
                         {weight > 0 && (
-                          <Sparkles className="h-3 w-3 shrink-0 text-primary" aria-label="A topic you follow" />
+                          <Star className="h-3 w-3 shrink-0 fill-primary text-primary" aria-label="A topic you follow" />
                         )}
                       </span>
                       <span className="block text-xs text-muted-foreground leading-snug">{blurb}</span>
