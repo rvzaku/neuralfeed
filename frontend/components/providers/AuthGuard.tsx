@@ -7,39 +7,49 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { clearSession, getToken, isGuest } from "@/lib/auth";
+import { Header } from "@/components/layout/Header";
+import { MobileNav } from "@/components/layout/MobileNav";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [checked, setChecked] = useState(false);
+  const onLogin = pathname.startsWith("/login");
+
+  // `mounted` ensures the very first client render matches SSR (both render
+  // nothing/login), so reading localStorage afterwards can't cause a hydration
+  // mismatch — and gates protected content until a token is confirmed.
+  const [mounted, setMounted] = useState(false);
   const [guest, setGuest] = useState(false);
 
+  useEffect(() => setMounted(true), []);
+
   useEffect(() => {
-    if (pathname.startsWith("/login")) {
-      setChecked(true);
-      return;
-    }
+    if (!mounted || onLogin) return;
     if (!getToken()) {
       router.replace("/login");
       return;
     }
     setGuest(isGuest());
-    setChecked(true);
-  }, [pathname, router]);
+  }, [mounted, onLogin, pathname, router]);
 
   // Publish the guest banner's height so sticky headers can offset themselves
   // and sit *below* the banner instead of overlapping it (it's 0 for non-guests).
   useEffect(() => {
     const root = document.documentElement;
-    if (guest) root.style.setProperty("--banner-h", "2.25rem");
+    if (guest && !onLogin) root.style.setProperty("--banner-h", "2.25rem");
     else root.style.removeProperty("--banner-h");
     return () => {
       root.style.removeProperty("--banner-h");
     };
-  }, [guest]);
+  }, [guest, onLogin]);
 
-  // Avoid flashing protected content before the check runs
-  if (!checked && !pathname.startsWith("/login")) return null;
+  // The login page is the one route that renders WITHOUT app chrome.
+  if (onLogin) return <>{children}</>;
+
+  // Protected routes: render nothing until mounted AND a token is present. This
+  // is the single gate that prevents the flash-of-protected-content bug — chrome
+  // and children never paint for a logged-out visitor.
+  if (!mounted || !getToken()) return null;
 
   return (
     <>
@@ -57,7 +67,9 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
           </button>
         </div>
       )}
+      <Header />
       {children}
+      <MobileNav />
     </>
   );
 }

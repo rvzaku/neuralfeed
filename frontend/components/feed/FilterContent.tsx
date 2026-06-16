@@ -45,15 +45,16 @@ const FEEDBACK_OPTIONS = [
   { value: "-1", label: "Disliked" },
 ];
 
-const QUALITY_OPTIONS = [
-  { value: "",    label: "All sources" },
-  { value: "0.7", label: "High signal" },
-  { value: "0.4", label: "High + Medium" },
-];
-
 interface FilterContentProps {
   onClear?: () => void;
   className?: string;
+}
+
+/** CSV param → Set, e.g. "llm,ai-agents" → {llm, ai-agents}. The URL is the single
+ *  source of truth for filter state, so multi-select is just set membership in a
+ *  comma-joined param — shareable, refresh-safe, no client store needed. */
+function parseSet(value: string | null): Set<string> {
+  return new Set((value ?? "").split(",").filter(Boolean));
 }
 
 export function FilterContent({ onClear, className }: FilterContentProps) {
@@ -61,12 +62,12 @@ export function FilterContent({ onClear, className }: FilterContentProps) {
   const params = useSearchParams();
   const { data: sources } = useSources();
 
-  const activeTopic    = params.get("topic") ?? "";
-  const activeCategory = params.get("category") ?? "";
+  // Multi-select dimensions (sets); time + feedback stay single-value.
+  const topicSet    = parseSet(params.get("topic"));
+  const categorySet = parseSet(params.get("category"));
+  const sourceSet   = parseSet(params.get("source_id"));
   const activeTime     = params.get("time_range") ?? "7d";
-  const activeSource   = params.get("source_id") ?? "";
   const activeFeedback = params.get("feedback") ?? "";
-  const activeQuality  = params.get("min_signal") ?? "";
 
   const setParam = useCallback(
     (key: string, value: string) => {
@@ -78,14 +79,27 @@ export function FilterContent({ onClear, className }: FilterContentProps) {
     [params, router]
   );
 
+  // Toggle a value's membership in a CSV multi-select param.
+  const toggleMulti = useCallback(
+    (key: string, value: string) => {
+      const set = parseSet(params.get(key));
+      if (set.has(value)) set.delete(value);
+      else set.add(value);
+      setParam(key, [...set].join(","));
+    },
+    [params, setParam]
+  );
+
   const clearAll = useCallback(() => {
     const next = new URLSearchParams(params.toString());
-    ["topic", "source_id", "feedback", "min_signal", "category", "time_range"].forEach((k) => next.delete(k));
+    ["topic", "source_id", "feedback", "category", "time_range"].forEach((k) => next.delete(k));
     router.push(`?${next.toString()}`, { scroll: false });
     onClear?.();
   }, [params, router, onClear]);
 
-  const hasActive = activeTopic || activeSource || activeFeedback || activeQuality || activeCategory || activeTime !== "7d";
+  const hasActive =
+    topicSet.size > 0 || sourceSet.size > 0 || categorySet.size > 0 ||
+    activeFeedback !== "" || activeTime !== "7d";
 
   return (
     <div className={cn("space-y-6", className)}>
@@ -104,20 +118,24 @@ export function FilterContent({ onClear, className }: FilterContentProps) {
           Content Type
         </p>
         <div className="flex flex-wrap gap-2">
-          {CONTENT_TYPES.map((t) => (
-            <button
-              key={t.value}
-              onClick={() => setParam("category", t.value)}
-              className={cn(
-                "rounded-full px-3 py-1 text-xs font-medium border transition-colors",
-                activeCategory === t.value
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-muted/40 text-muted-foreground border-border hover:bg-muted hover:text-foreground"
-              )}
-            >
-              {t.label}
-            </button>
-          ))}
+          {CONTENT_TYPES.map((t) => {
+            const active = t.value === "" ? categorySet.size === 0 : categorySet.has(t.value);
+            return (
+              <button
+                key={t.value}
+                aria-pressed={active}
+                onClick={() => (t.value === "" ? setParam("category", "") : toggleMulti("category", t.value))}
+                className={cn(
+                  "rounded-full px-3 py-1 text-xs font-medium border transition-colors",
+                  active
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-muted/40 text-muted-foreground border-border hover:bg-muted hover:text-foreground"
+                )}
+              >
+                {t.label}
+              </button>
+            );
+          })}
         </div>
       </section>
 
@@ -150,47 +168,28 @@ export function FilterContent({ onClear, className }: FilterContentProps) {
           Topic
         </p>
         <div className="flex flex-wrap gap-2">
-          {TOPIC_TAGS.map((t) => (
-            <button
-              key={t.value}
-              onClick={() => setParam("topic", activeTopic === t.value ? "" : t.value)}
-              className={cn(
-                "rounded-full px-3 py-1 text-xs font-medium border transition-colors",
-                activeTopic === t.value
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-muted/40 text-muted-foreground border-border hover:bg-muted hover:text-foreground"
-              )}
-            >
-              {t.label}
-            </button>
-          ))}
+          {TOPIC_TAGS.map((t) => {
+            const active = topicSet.has(t.value);
+            return (
+              <button
+                key={t.value}
+                aria-pressed={active}
+                onClick={() => toggleMulti("topic", t.value)}
+                className={cn(
+                  "rounded-full px-3 py-1 text-xs font-medium border transition-colors",
+                  active
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-muted/40 text-muted-foreground border-border hover:bg-muted hover:text-foreground"
+                )}
+              >
+                {t.label}
+              </button>
+            );
+          })}
         </div>
       </section>
 
-      {/* Source quality */}
-      <section>
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-          Source Quality
-        </p>
-        <div className="flex flex-col gap-1.5">
-          {QUALITY_OPTIONS.map((q) => (
-            <button
-              key={q.value}
-              onClick={() => setParam("min_signal", q.value)}
-              className={cn(
-                "w-full text-left px-3 py-2 rounded-lg text-xs border transition-colors",
-                activeQuality === q.value
-                  ? "bg-primary/10 text-primary border-primary/30 font-medium"
-                  : "text-muted-foreground border-border hover:bg-muted"
-              )}
-            >
-              {q.label}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/* Source */}
+      {/* Source — multi-select; quality is now automatic (handled by ranking) */}
       {sources && sources.length > 0 && (
         <section>
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
@@ -198,30 +197,35 @@ export function FilterContent({ onClear, className }: FilterContentProps) {
           </p>
           <div className="space-y-1 max-h-52 overflow-y-auto">
             <button
+              aria-pressed={sourceSet.size === 0}
               onClick={() => setParam("source_id", "")}
               className={cn(
                 "w-full text-left px-3 py-2 rounded-lg text-xs border transition-colors",
-                !activeSource
+                sourceSet.size === 0
                   ? "bg-primary/10 text-primary border-primary/30 font-medium"
                   : "text-muted-foreground border-border hover:bg-muted"
               )}
             >
               All sources
             </button>
-            {sources.map((src) => (
-              <button
-                key={src.id}
-                onClick={() => setParam("source_id", activeSource === src.id ? "" : src.id)}
-                className={cn(
-                  "w-full text-left px-3 py-2 rounded-lg text-xs border transition-colors",
-                  activeSource === src.id
-                    ? "bg-primary/10 text-primary border-primary/30 font-medium"
-                    : "text-muted-foreground border-border hover:bg-muted"
-                )}
-              >
-                {src.name}
-              </button>
-            ))}
+            {sources.map((src) => {
+              const active = sourceSet.has(src.id);
+              return (
+                <button
+                  key={src.id}
+                  aria-pressed={active}
+                  onClick={() => toggleMulti("source_id", src.id)}
+                  className={cn(
+                    "w-full text-left px-3 py-2 rounded-lg text-xs border transition-colors",
+                    active
+                      ? "bg-primary/10 text-primary border-primary/30 font-medium"
+                      : "text-muted-foreground border-border hover:bg-muted"
+                  )}
+                >
+                  {src.name}
+                </button>
+              );
+            })}
           </div>
         </section>
       )}

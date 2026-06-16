@@ -44,14 +44,8 @@ export default function LoginPage() {
     "focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-shadow";
 
   return (
-    <main className="min-h-dvh flex items-center justify-center bg-background px-4 relative overflow-hidden">
-      {/* Soft brand glow backdrop */}
-      <div
-        className="absolute -top-32 left-1/2 -translate-x-1/2 h-72 w-[480px] rounded-full bg-primary/10 blur-3xl"
-        aria-hidden
-      />
-
-      <div className="w-full max-w-sm space-y-7 relative">
+    <main className="min-h-dvh flex items-center justify-center bg-background px-4 py-10">
+      <div className="w-full max-w-sm space-y-7">
         <div className="text-center space-y-2">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-foreground text-background shadow-sm">
             <span className="font-serif text-2xl font-semibold leading-none">N</span>

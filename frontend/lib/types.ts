@@ -99,15 +99,17 @@ export interface FeedResponse {
 export interface FeedFilters {
   page?: number;
   limit?: number;
+  /** single id or comma-joined ids (multi-select) */
   source_id?: string;
-  category?: SourceCategory;
-  topic?: TopicTag;
+  /** single category or comma-joined categories (multi-select) */
+  category?: SourceCategory | string;
+  /** single topic or comma-joined topics (multi-select) */
+  topic?: TopicTag | string;
   is_read?: boolean;
   is_bookmarked?: boolean;
   feedback?: FeedbackValue;
   time_range?: "1d" | "3d" | "7d" | "30d";
   ranked?: boolean;
-  min_signal?: number;
   /** V6: include already-viewed items (the "All items" archive view) */
   include_read?: boolean;
 }

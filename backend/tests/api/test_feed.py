@@ -145,6 +145,41 @@ async def test_feed_topic_filter_matches_multi_tag_articles(client, db):
 
 
 @pytest.mark.asyncio
+async def test_feed_multi_select_topic_csv(client, db):
+    """V7 multi-select: a comma-joined topic param returns articles matching ANY
+    of the topics (OR), not an empty intersection."""
+    llm = await _seed_article(db, url="https://arxiv.org/abs/m.llm")
+    llm.topic_tags = ["llm"]
+    robo = await _seed_article(db, url="https://arxiv.org/abs/m.robo")
+    robo.topic_tags = ["robotics"]
+    other = await _seed_article(db, url="https://arxiv.org/abs/m.other")
+    other.topic_tags = ["funding"]
+    await db.commit()
+
+    resp = await client.get("/api/v1/feed?topic=llm,robotics&ranked=false")
+    assert resp.status_code == 200
+    ids = [item["id"] for item in resp.json()["items"]]
+    assert llm.id in ids
+    assert robo.id in ids
+    assert other.id not in ids
+
+
+@pytest.mark.asyncio
+async def test_feed_multi_select_source_csv(client, db):
+    """V7 multi-select: comma-joined source_id returns items from either source."""
+    a = await _seed_article(db, source_id="arxiv-cs-ai", url="https://arxiv.org/abs/s.a")
+    b = await _seed_article(db, source_id="reddit-ml", url="https://reddit.com/s.b")
+    c = await _seed_article(db, source_id="rss-openai", url="https://openai.com/s.c")
+    await db.commit()
+
+    resp = await client.get("/api/v1/feed?source_id=arxiv-cs-ai,reddit-ml&ranked=false")
+    assert resp.status_code == 200
+    ids = [item["id"] for item in resp.json()["items"]]
+    assert a.id in ids and b.id in ids
+    assert c.id not in ids
+
+
+@pytest.mark.asyncio
 async def test_topics_endpoint_orders_by_relevance(client, db):
     a = await _seed_article(db, url="https://arxiv.org/abs/topic.001")
     a.topic_tags = ["llm", "robotics"]

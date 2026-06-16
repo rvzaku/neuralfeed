@@ -4,7 +4,7 @@ from datetime import timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, func, String
+from sqlalchemy import select, func, String, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import cache
@@ -18,6 +18,14 @@ from app.schemas.article import ArticleOut, FeedResponse
 router = APIRouter(prefix="/feed", tags=["feed"])
 
 TIME_RANGE_DAYS = {"1d": 1, "3d": 3, "7d": 7, "30d": 30}
+
+
+def _csv(value: Optional[str]) -> list[str]:
+    """Split a comma-joined multi-select param ("llm,ai-agents") into a clean list.
+    Single values and empty/None both behave sanely."""
+    if not value:
+        return []
+    return [v.strip() for v in value.split(",") if v.strip()]
 
 
 @router.get("", response_model=FeedResponse)
@@ -44,15 +52,20 @@ async def get_feed(
     if user:
         is_read = is_bookmarked = feedback = None
 
+    # Multi-select: source_id / category / topic accept comma-joined values.
+    source_ids = _csv(source_id)
+    categories = _csv(category)
+    topics = _csv(topic)
+
     # Join Source once if any Source-column filter is active
-    needs_source_join = bool(category or min_signal is not None)
+    needs_source_join = bool(categories or min_signal is not None)
     if needs_source_join:
         q = q.join(Source, Article.source_id == Source.id)
 
-    if source_id:
-        q = q.where(Article.source_id == source_id)
-    if category:
-        q = q.where(Source.category == category)
+    if source_ids:
+        q = q.where(Article.source_id.in_(source_ids))
+    if categories:
+        q = q.where(Source.category.in_(categories))
     if is_read is not None:
         q = q.where(Article.is_read == is_read)
     if is_bookmarked is not None:
@@ -60,14 +73,14 @@ async def get_feed(
     if time_range and time_range in TIME_RANGE_DAYS:
         cutoff = utcnow() - timedelta(days=TIME_RANGE_DAYS[time_range])
         q = q.where(Article.published_at >= cutoff)
-    if topic:
+    if topics:
         # topic_tags is a generic JSON array column; SQLAlchemy's `.contains()`
         # degrades to a LIKE on the *whole* serialized list (e.g. '%["llm"]%'),
         # which only matches articles where the topic is the SOLE tag and silently
-        # drops every multi-tag article. Match the quoted slug as a substring of
+        # drops every multi-tag article. Match each quoted slug as a substring of
         # the JSON text instead — portable across SQLite and Postgres, and correct
-        # for single- and multi-tag arrays alike.
-        q = q.where(Article.topic_tags.cast(String).like(f'%"{topic}"%'))
+        # for single- and multi-tag arrays alike. Multiple topics are OR-ed.
+        q = q.where(or_(*[Article.topic_tags.cast(String).like(f'%"{t}"%') for t in topics]))
     if feedback is not None:
         q = q.where(Article.feedback == feedback)
     if min_signal is not None:

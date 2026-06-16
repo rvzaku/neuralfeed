@@ -3,8 +3,6 @@ import { Geist, Geist_Mono, Fraunces } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { QueryProvider } from "@/components/providers/QueryProvider";
-import { Header } from "@/components/layout/Header";
-import { MobileNav } from "@/components/layout/MobileNav";
 import { AuthGuard } from "@/components/providers/AuthGuard";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -28,11 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} antialiased min-h-screen`}>
         <ThemeProvider>
           <QueryProvider>
-            <AuthGuard>
-              <Header />
-              {children}
-              <MobileNav />
-            </AuthGuard>
+            <AuthGuard>{children}</AuthGuard>
           </QueryProvider>
         </ThemeProvider>
       </body>

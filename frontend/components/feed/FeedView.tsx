@@ -19,7 +19,7 @@ import { useInfiniteFeed } from "@/hooks/useFeed";
 import { cn } from "@/lib/utils";
 import type { Article, FeedFilters } from "@/lib/types";
 
-const FILTER_PARAMS = ["category", "topic", "source_id", "time_range", "is_read", "is_bookmarked", "feedback", "min_signal"];
+const FILTER_PARAMS = ["category", "topic", "source_id", "time_range", "is_read", "is_bookmarked", "feedback"];
 
 export function FeedView() {
   const params = useSearchParams();
@@ -32,20 +32,27 @@ export function FeedView() {
   const view = params.get("view") === "all" ? "all" : "foryou";
 
   const filters: FeedFilters = useMemo(() => ({
-    category:    (params.get("category") as FeedFilters["category"]) || undefined,
-    topic:       (params.get("topic") as FeedFilters["topic"]) || undefined,
+    // category/topic/source_id may be comma-joined (multi-select); passed through
+    // as CSV — the backend splits and builds IN / OR queries.
+    category:    params.get("category") || undefined,
+    topic:       params.get("topic") || undefined,
     source_id:   params.get("source_id") || undefined,
     time_range:  (params.get("time_range") as FeedFilters["time_range"]) || "7d",
     is_read:     params.get("is_read") === "false" ? false : params.get("is_read") === "true" ? true : undefined,
     is_bookmarked: params.get("is_bookmarked") === "true" ? true : undefined,
     feedback:    params.get("feedback") ? Number(params.get("feedback")) as FeedFilters["feedback"] : undefined,
-    min_signal:  params.get("min_signal") ? Number(params.get("min_signal")) : undefined,
     ranked:      true,            // V6: smart ranking is never disabled
     include_read: view === "all", // "All items" = ranked archive incl. viewed
     limit: 30,
   }), [params, view]);
 
-  const activeFilterCount = FILTER_PARAMS.filter((k) => params.get(k)).length;
+  // Count every selected value (CSV members count individually) so the badge
+  // reflects multi-select reality, not just how many dimensions are touched.
+  const activeFilterCount = FILTER_PARAMS.reduce((n, k) => {
+    const v = params.get(k);
+    if (!v) return n;
+    return n + (["category", "topic", "source_id"].includes(k) ? v.split(",").filter(Boolean).length : 1);
+  }, 0);
 
   const {
     data: infData, isLoading, isError, refetch,

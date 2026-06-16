@@ -133,3 +133,69 @@ Acceptance: all rows `PASS`; security clean; perf budget met.
 ship first. 4 (dedupe) rides on 2's signals. 3 (traction) and 5 (LinkedIn) are
 backend/source-heavy. 6 gates the release. CI green + local gates before every push;
 user-run `verify-deployed` before each "check the site".
+
+---
+
+# V7 Addendum — UX bugs + filter intelligence (2026-06-16)
+
+> Source: `.dev-notes/app-feedback-v7.md`. These are **broken-UX bugs + filter changes**
+> and take priority over the (larger) Phase 1–2 feature work because the app is currently
+> hard to use. Engineering principles: single source of truth for auth/chrome, no flash of
+> unauthorized content (FOUC/FOUAC), URL as the filter state container, accessible controls,
+> no fabricated UI, no gradients (anti-AI).
+
+## V7-1 — Auth gate & app chrome (CRITICAL bug)  ·  frontend
+**Symptoms:** the login page shows the nav menu; clicking a menu item briefly flashes
+protected content before snapping back to login.
+**Root cause:** `Header` + `MobileNav` are rendered inside `AuthGuard`'s children in
+`layout.tsx`, so they appear on `/login`; and `AuthGuard` doesn't re-gate per navigation,
+so protected content paints before `router.replace('/login')` runs.
+**Fix (single source of truth in `AuthGuard`):**
+- Move `Header` + `MobileNav` *into* `AuthGuard`; render chrome **only** when authenticated
+  AND not on `/login`.
+- Gate rendering on a `mounted` flag + live `getToken()`: on protected routes render
+  nothing until a token is confirmed (kills the flash). `/login` renders children only,
+  no chrome.
+- Keep the guest banner + `--banner-h` behavior.
+Acceptance: `/login` has no nav; no protected content ever flashes; deep-linking a
+protected route while logged out goes straight to login with no flicker.
+
+## V7-2 — Login page alignment & de-AI  ·  frontend
+- Remove the blurred `bg-primary/10` **glow backdrop** (a gradient/AI tell; violates
+  "no gradients").
+- With chrome gone (V7-1), confirm the card is true-centered (`min-h-dvh`, no header
+  offset); tighten vertical rhythm and input alignment; ensure 44px tap targets.
+Acceptance: login is centered and clean on mobile + desktop; no gradient.
+
+## V7-3 — Multi-select filters  ·  back + front
+**Goal:** select multiple values per dimension (content type, topic, source).
+- **Frontend:** represent each multi dimension as a comma-joined URL param (e.g.
+  `topic=llm,ai-agents`); `FilterContent` toggles membership in the set; chips show
+  selected state; `activeFilterCount` counts total selected. `FeedView` parses CSV → arrays.
+- **Backend (`feed.py`):** accept CSV for `source_id`, `category`, `topic`; build
+  `IN (...)` / OR-of-`LIKE` (topic JSON) queries; update the deep-feed signature, the
+  Redis cache key, and param whitelist. Add tests for single + multi + empty.
+Acceptance: choosing LLMs + Agents shows items in either; selections survive refresh
+(URL-encoded); no N+1 or query errors.
+
+## V7-4 — Remove Source-Quality filter → automatic & smart  ·  back + front
+- Delete the **Source Quality** section + `min_signal` param from `FilterContent`,
+  `FeedView`, `FILTER_PARAMS`, and the feed API surface used by the client.
+- Quality stays enforced **automatically** inside ranking (`source_signal` term in
+  `ranker.score_article`) — no user knob, consistent with "smart ranking, no toggles".
+Acceptance: no quality filter in UI; low-signal sources still naturally sink via ranking.
+
+## V7-5 — Responsiveness & layout polish  ·  frontend
+- **De-duplicate the brand:** on `md+`, the global `Header` and `FeedView`'s own top bar
+  both render "NeuralFeed" — hide the in-feed top bar on desktop (Header owns it); keep it
+  on mobile where there's no Header.
+- Audit breakpoints (sm/md/lg) for consistent gutters, max-widths, and tap targets;
+  ensure no horizontal overflow; respect `prefers-reduced-motion`.
+- Perceived speed: confirm skeletons + optimistic updates on all mutations; lazy-render
+  offscreen images (already `loading="lazy"`).
+Acceptance: no duplicated chrome; clean layout at all breakpoints; feels snappy.
+
+## V7 sequencing
+V7-1 → V7-2 (auth/login bugs, highest user pain) → V7-4 (quick removal) → V7-3
+(multi-select, back+front) → V7-5 (polish). Then resume Phase 1–2. Each step: local
+`tsc`+`test`+`pytest` green before push; user runs `verify-deployed`.
