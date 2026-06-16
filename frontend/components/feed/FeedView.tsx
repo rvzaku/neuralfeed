@@ -1,10 +1,9 @@
 "use client";
 
-// V8 (app-feedback-v5): one For You page — ranked, capped, personalized
-// card list. V6: smart ranking is always on and cannot be disabled. The two
-// tabs differ only in freshness: "For You" hides items you've already opened;
-// "All items" is the same ranking with viewed items kept, so you can browse
-// back over what you've read. Filters live behind one button.
+// The Feed is one ranked, finite, personalized list (smart ranking always on,
+// app-feedback-v6). Items already opened drop out so it always presents fresh
+// signal; deep/repeat browsing lives in Discover. Filters live behind one
+// button; the Day/Month/Year horizon chooses the window.
 
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -41,9 +40,6 @@ export function FeedView() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [openArticle, setOpenArticle] = useState<Article | null>(null);
 
-  // "For You" = ranked + personalized; "All" = raw chronological
-  const view = params.get("view") === "all" ? "all" : "foryou";
-
   const filters: FeedFilters = useMemo(() => ({
     // category/topic/source_id may be comma-joined (multi-select); passed through
     // as CSV — the backend splits and builds IN / OR queries.
@@ -55,11 +51,11 @@ export function FeedView() {
     is_bookmarked: params.get("is_bookmarked") === "true" ? true : undefined,
     feedback:    params.get("feedback") ? Number(params.get("feedback")) as FeedFilters["feedback"] : undefined,
     ranked:      true,            // V6: smart ranking is never disabled
-    include_read: view === "all", // "All items" = ranked archive incl. viewed
+    include_read: false,          // dynamic feed: opened items drop out
     // V7-6: the Feed is a finite ranked shortlist — the backend caps it to the
     // feed-density setting (cap_to_density defaults true); 50 just holds the page.
     limit: 50,
-  }), [params, view]);
+  }), [params]);
 
   // Count every selected value (CSV members count individually) so the badge
   // reflects multi-select reality, not just how many dimensions are touched.
@@ -80,13 +76,6 @@ export function FeedView() {
   function setHorizon(h: Horizon) {
     const sp = new URLSearchParams(params.toString());
     sp.set("time_range", HORIZON_RANGE[h] as string);
-    router.push(`?${sp.toString()}`, { scroll: false });
-  }
-
-  function setView(next: "foryou" | "all") {
-    const sp = new URLSearchParams(params.toString());
-    if (next === "all") sp.set("view", "all");
-    else sp.delete("view");
     router.push(`?${sp.toString()}`, { scroll: false });
   }
 
@@ -113,24 +102,8 @@ export function FeedView() {
             </div>
           </div>
 
-          {/* View tabs + count + filter — present on every breakpoint */}
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5">
-              {([["foryou", "For You"], ["all", "All items"]] as const).map(([key, label]) => (
-                <button
-                  key={key}
-                  onClick={() => setView(key)}
-                  className={cn(
-                    "px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors",
-                    view === key
-                      ? "bg-foreground text-background border-foreground"
-                      : "border-border text-muted-foreground hover:bg-muted"
-                  )}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+          {/* Count + filter — present on every breakpoint */}
+          <div className="flex items-center justify-end gap-2">
             <div className="flex items-center gap-3">
               {!isLoading && !isError && total > 0 && (
                 <span className="hidden text-xs text-muted-foreground tabular-nums sm:inline">

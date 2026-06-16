@@ -18,8 +18,27 @@ def _make_article(
     a.published_at = datetime.now(timezone.utc) - timedelta(hours=published_hours_ago)
     a.trending_score = trending_score
     a.feedback = feedback
-    a.topic_tags = topic_tags or []
+    # Default to a specific AI topic — a normally-classified item. Tests that
+    # exercise the "general"-only topicality penalty pass topic_tags explicitly.
+    a.topic_tags = topic_tags if topic_tags is not None else ["llm"]
     return a
+
+
+class TestTopicality:
+    def test_general_only_item_is_penalized(self):
+        specific = _make_article(published_hours_ago=6, topic_tags=["llm"])
+        general = _make_article(published_hours_ago=6, topic_tags=["general"])
+        assert score_article(specific, 0.5, {}, set()) > score_article(general, 0.5, {}, set())
+
+    def test_untagged_item_is_penalized(self):
+        tagged = _make_article(published_hours_ago=6, topic_tags=["ai-agents"])
+        untagged = _make_article(published_hours_ago=6, topic_tags=[])
+        assert score_article(tagged, 0.5, {}, set()) > score_article(untagged, 0.5, {}, set())
+
+    def test_general_plus_specific_not_penalized(self):
+        only_general = _make_article(published_hours_ago=6, topic_tags=["general"])
+        mixed = _make_article(published_hours_ago=6, topic_tags=["general", "llm"])
+        assert score_article(mixed, 0.5, {}, set()) > score_article(only_general, 0.5, {}, set())
 
 
 class TestScoreArticle:

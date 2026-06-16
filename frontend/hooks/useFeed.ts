@@ -126,7 +126,15 @@ export function useSetPreference() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ key, value }: { key: string; value: unknown }) => setPreference(key, value),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["preferences"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["preferences"] });
+      // Preferences (feed density, muted sources, learned weights) change what
+      // the ranked feed returns, but the feed query key doesn't include them —
+      // so without this the stale cached feed (e.g. the old density's 10 items)
+      // is served until staleTime elapses. Invalidate so the change is immediate.
+      queryClient.invalidateQueries({ queryKey: ["feed"] });
+      queryClient.invalidateQueries({ queryKey: ["feed-infinite"] });
+    },
   });
 }
 

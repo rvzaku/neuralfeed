@@ -228,8 +228,8 @@ export default function SettingsPage() {
             Feed Density
           </h2>
           <p className="text-xs text-muted-foreground mb-4">
-            How many top items each source category may contribute per day.
-            Lower = only the biggest stories; higher = broader coverage.
+            How many ranked items your Feed shows. Lower = only the biggest
+            stories; higher = broader coverage. Discover always has more.
           </p>
           <div className="flex items-center gap-2">
             {[5, 10, 15, 20].map((n) => (
@@ -243,7 +243,7 @@ export default function SettingsPage() {
                     : "border-border hover:bg-muted text-muted-foreground"
                 )}
               >
-                {n}<span className="font-normal text-xs">/day</span>
+                {n}<span className="font-normal text-xs"> items</span>
               </button>
             ))}
           </div>

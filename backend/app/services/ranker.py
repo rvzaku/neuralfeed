@@ -66,6 +66,16 @@ def score_article(
 
     feedback_boost = 0.3 if article.feedback == 1 else (-0.5 if article.feedback == -1 else 0.0)
 
+    # Topicality (relevance precision, app-feedback-v7): the keyword tagger files
+    # items it can't classify into a specific AI topic under the catch-all
+    # "general" tag. A high-traction item that is only "general" is the classic
+    # off-topic noise (a viral non-AI Hacker News post) that made the feed feel
+    # irrelevant — penalize it so genuine AI stories outrank it. Specifically
+    # tagged items are unaffected.
+    tags = article.topic_tags or []
+    specific = [t for t in tags if t != "general"]
+    topicality = -0.18 if not specific else 0.0
+
     # V6: lean harder on what the user actually likes. Learned topic affinity and
     # source affinity now carry more weight so off-preference items visibly sink
     # (and disliked topics, which contribute negative topic_boost, sink hardest)
@@ -76,6 +86,7 @@ def score_article(
         + 0.15 * source_affinity
         + 0.10 * (source_signal - 0.5)   # quality nudge, centered so 0.5 is neutral
         + 0.10 * feedback_boost
+        + topicality
     )
     return round(score, 4)
 
