@@ -5,7 +5,7 @@
 // signal; deep/repeat browsing lives in Discover. Filters live behind one
 // button; the Day/Month/Year horizon chooses the window.
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Search, AlertCircle, Inbox, SlidersHorizontal } from "lucide-react";
 import { FeedCard } from "./FeedCard";
@@ -14,7 +14,12 @@ import { FilterDrawer } from "./FilterDrawer";
 import { RefreshIndicator } from "./RefreshIndicator";
 import { SearchModal } from "./SearchModal";
 import { SummarySheet } from "./SummarySheet";
-import { useFeed } from "@/hooks/useFeed";
+import { CommandPalette } from "./CommandPalette";
+import { ShortcutCheatSheet } from "./ShortcutCheatSheet";
+import { useFeed, usePostFeedback, useToggleBookmark, useTriggerRefresh } from "@/hooks/useFeed";
+import { useFeedKeyboard } from "@/hooks/useFeedKeyboard";
+import { shareUrl } from "@/lib/share";
+import { isTypingTarget } from "@/lib/shortcuts";
 import { cn } from "@/lib/utils";
 import type { Article, FeedFilters } from "@/lib/types";
 
@@ -38,7 +43,12 @@ export function FeedView() {
   const router = useRouter();
   const [searchOpen, setSearchOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [cheatOpen, setCheatOpen] = useState(false);
   const [openArticle, setOpenArticle] = useState<Article | null>(null);
+  const { mutate: postFeedback } = usePostFeedback();
+  const { mutate: toggleBookmark } = useToggleBookmark();
+  const { mutate: triggerRefresh } = useTriggerRefresh();
 
   const filters: FeedFilters = useMemo(() => ({
     // category/topic/source_id may be comma-joined (multi-select); passed through
@@ -73,11 +83,48 @@ export function FeedView() {
 
   const horizon = rangeToHorizon(params.get("time_range"));
 
+  // Index of the article whose summary sheet is open, for in-sheet prev/next.
+  const openIndex = openArticle ? allItems.findIndex((a) => a.id === openArticle.id) : -1;
+
   function setHorizon(h: Horizon) {
     const sp = new URLSearchParams(params.toString());
     sp.set("time_range", HORIZON_RANGE[h] as string);
     router.push(`?${sp.toString()}`, { scroll: false });
   }
+
+  // Any overlay open means the feed shortcuts step aside (the overlay owns keys).
+  const anyOverlayOpen = searchOpen || drawerOpen || paletteOpen || cheatOpen || openArticle != null;
+
+  const { focused, setFocused } = useFeedKeyboard(allItems, {
+    onOpen: (a) => setOpenArticle(a),
+    onOpenSource: (a) => window.open(a.url, "_blank", "noopener,noreferrer"),
+    onFeedback: (a, value) => postFeedback({ articleId: a.id, value: (a.feedback === value ? 0 : value) as 1 | -1 | 0 }),
+    onBookmark: (a) => toggleBookmark(a.id),
+    onShare: (a) => { void shareUrl(a.url, a.title); },
+    onRefresh: () => triggerRefresh(),
+    onSearch: () => setSearchOpen(true),
+    onHorizon: setHorizon,
+    isBlocked: () => anyOverlayOpen,
+  });
+
+  // Global: ⌘K / Ctrl-K opens the command palette; `?` opens the cheat sheet.
+  useEffect(() => {
+    function handler(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        // The search modal owns ⌘K while it's open (it closes itself).
+        if (searchOpen) return;
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+        return;
+      }
+      if (e.key === "?" && !isTypingTarget(e.target) && !anyOverlayOpen) {
+        e.preventDefault();
+        setCheatOpen(true);
+      }
+    }
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [anyOverlayOpen]);
 
   return (
     <div className="flex min-h-screen">
@@ -179,10 +226,26 @@ export function FeedView() {
             </div>
           )}
 
+          {/* Keying the list on the active params remounts it when the horizon or
+              filters change, replaying the staggered entrance (capped so it never
+              feels slow). It does not replay on background refetch. */}
           {!isLoading && !isError && allItems.length > 0 && (
-            <div className="space-y-3">
+            <div key={params.toString()} className="space-y-3">
               {allItems.map((article, i) => (
-                <FeedCard key={article.id} article={article} onOpen={setOpenArticle} rank={i + 1} boxed />
+                <div
+                  key={article.id}
+                  className="feed-enter"
+                  style={{ ["--i" as string]: Math.min(i, 8) }}
+                >
+                  <FeedCard
+                    article={article}
+                    onOpen={setOpenArticle}
+                    rank={i + 1}
+                    boxed
+                    focused={focused === i}
+                    onFocus={() => setFocused(i)}
+                  />
+                </div>
               ))}
             </div>
           )}
@@ -207,7 +270,26 @@ export function FeedView() {
 
       <FilterDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
       <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
-      <SummarySheet article={openArticle} onClose={() => setOpenArticle(null)} />
+      <SummarySheet
+        article={openArticle}
+        onClose={() => setOpenArticle(null)}
+        hasPrev={openIndex > 0}
+        hasNext={openIndex >= 0 && openIndex < allItems.length - 1}
+        onPrev={() => {
+          if (openIndex > 0) { setOpenArticle(allItems[openIndex - 1]); setFocused(openIndex - 1); }
+        }}
+        onNext={() => {
+          if (openIndex >= 0 && openIndex < allItems.length - 1) { setOpenArticle(allItems[openIndex + 1]); setFocused(openIndex + 1); }
+        }}
+      />
+      <CommandPalette
+        isOpen={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        onSearch={() => setSearchOpen(true)}
+        onRefresh={() => triggerRefresh()}
+        onHorizon={setHorizon}
+      />
+      <ShortcutCheatSheet isOpen={cheatOpen} onClose={() => setCheatOpen(false)} />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { ThumbsUp, ThumbsDown, Bookmark, BookmarkCheck, ExternalLink, Share2, Check, Star, MessageSquare, ArrowBigUp, TrendingUp, Flame, Download } from "lucide-react";
 import { shareUrl } from "@/lib/share";
 import { SourceBadge } from "@/components/ui/SourceBadge";
@@ -18,6 +18,10 @@ interface FeedCardProps {
   rank?: number;
   /** Render as a bordered card (the Feed/Today look) instead of a flat list row */
   boxed?: boolean;
+  /** Keyboard-navigation focus (j/k); draws a ring and scrolls into view */
+  focused?: boolean;
+  /** Sync keyboard focus when the card is clicked/pointer-entered */
+  onFocus?: () => void;
 }
 
 function compact(n: number): string {
@@ -89,15 +93,30 @@ function isUnseen(article: Article): boolean {
   return ageHours > 48;
 }
 
-function FeedCardInner({ article, onOpen, rank, boxed }: FeedCardProps) {
+function FeedCardInner({ article, onOpen, rank, boxed, focused, onFocus }: FeedCardProps) {
   const { mutate: postFeedback } = usePostFeedback();
   const { mutate: toggleBookmark } = useToggleBookmark();
   const unread = !article.is_read;
   const [shared, setShared] = useState(false);
+  // Ephemeral "pop" trigger: bumping `n` remounts the icon so the animation
+  // replays on every activation (not just the first).
+  const [pop, setPop] = useState<{ action: string; n: number }>({ action: "", n: 0 });
+  const firePop = (action: string) => setPop((p) => ({ action, n: p.n + 1 }));
+  const popProps = (action: string) =>
+    pop.action === action
+      ? { key: `${action}-${pop.n}`, className: cn("h-3.5 w-3.5", "pop") }
+      : { className: "h-3.5 w-3.5" };
+  const ref = useRef<HTMLElement>(null);
+
+  // When keyboard focus lands here, bring it into view without yanking the page.
+  useEffect(() => {
+    if (focused) ref.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [focused]);
 
   async function handleShare(e: React.MouseEvent) {
     e.stopPropagation();
     const result = await shareUrl(article.url, article.title);
+    firePop("share");
     if (result === "copied") {
       setShared(true);
       setTimeout(() => setShared(false), 1500);
@@ -112,22 +131,26 @@ function FeedCardInner({ article, onOpen, rank, boxed }: FeedCardProps) {
   function handleCardClick(e: React.MouseEvent) {
     const target = e.target as HTMLElement;
     if (target.closest("button") || target.closest("a")) return;
+    onFocus?.();
     activate();
   }
 
   function handleFeedback(e: React.MouseEvent, value: 1 | -1) {
     e.stopPropagation();
     const next = article.feedback === value ? 0 : value;
+    if (next !== 0) firePop(value === 1 ? "up" : "down");
     postFeedback({ articleId: article.id, value: next as 1 | -1 | 0 });
   }
 
   function handleBookmark(e: React.MouseEvent) {
     e.stopPropagation();
+    if (!article.is_bookmarked) firePop("bookmark");
     toggleBookmark(article.id);
   }
 
   return (
     <article
+      ref={ref}
       role="article"
       tabIndex={0}
       onClick={handleCardClick}
@@ -138,6 +161,7 @@ function FeedCardInner({ article, onOpen, rank, boxed }: FeedCardProps) {
           ? "rounded-xl border border-border bg-card px-4 py-4 card-lift focus-visible:rounded-xl"
           : "px-1 py-5 transition-colors sm:px-2 focus-visible:rounded-lg",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        focused && "kbd-focused",
         article.is_read && "opacity-55 hover:opacity-90"
       )}
     >
@@ -221,30 +245,30 @@ function FeedCardInner({ article, onOpen, rank, boxed }: FeedCardProps) {
           <button
             aria-label="Thumbs up"
             onClick={(e) => handleFeedback(e, 1)}
-            className={cn("flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-secondary", article.feedback === 1 ? "text-primary" : "text-muted-foreground/70")}
+            className={cn("flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-secondary active:scale-90", article.feedback === 1 ? "text-primary" : "text-muted-foreground/70")}
           >
-            <ThumbsUp className="h-3.5 w-3.5" />
+            <ThumbsUp {...popProps("up")} />
           </button>
           <button
             aria-label="Thumbs down"
             onClick={(e) => handleFeedback(e, -1)}
-            className={cn("flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-secondary", article.feedback === -1 ? "text-foreground" : "text-muted-foreground/70")}
+            className={cn("flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-secondary active:scale-90", article.feedback === -1 ? "text-foreground" : "text-muted-foreground/70")}
           >
-            <ThumbsDown className="h-3.5 w-3.5" />
+            <ThumbsDown {...popProps("down")} />
           </button>
           <button
             aria-label={shared ? "Link copied" : "Share"}
             onClick={handleShare}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground/70 transition-colors hover:bg-secondary"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground/70 transition-colors hover:bg-secondary active:scale-90"
           >
-            {shared ? <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" /> : <Share2 className="h-3.5 w-3.5" />}
+            {shared ? <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" /> : <Share2 {...popProps("share")} />}
           </button>
           <button
             aria-label="Bookmark"
             onClick={handleBookmark}
-            className={cn("flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-secondary", article.is_bookmarked ? "text-primary" : "text-muted-foreground/70")}
+            className={cn("flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-secondary active:scale-90", article.is_bookmarked ? "text-primary" : "text-muted-foreground/70")}
           >
-            {article.is_bookmarked ? <BookmarkCheck className="h-3.5 w-3.5" /> : <Bookmark className="h-3.5 w-3.5" />}
+            {article.is_bookmarked ? <BookmarkCheck {...popProps("bookmark")} /> : <Bookmark {...popProps("bookmark")} />}
           </button>
           <a
             href={article.url}
