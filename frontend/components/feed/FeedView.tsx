@@ -20,8 +20,10 @@ import { useFeed, usePostFeedback, useToggleBookmark, useTriggerRefresh } from "
 import { useFeedKeyboard } from "@/hooks/useFeedKeyboard";
 import { shareUrl } from "@/lib/share";
 import { isTypingTarget } from "@/lib/shortcuts";
-import { cn } from "@/lib/utils";
+import { cn, formatRelativeTime } from "@/lib/utils";
 import type { Article, FeedFilters } from "@/lib/types";
+
+const HORIZON_STORAGE_KEY = "nf-horizon";
 
 // time_range is driven by the Day/Month/Year horizon selector, not the filter
 // drawer, so it is intentionally excluded from the filter count.
@@ -75,7 +77,7 @@ export function FeedView() {
     return n + (["category", "topic", "source_id"].includes(k) ? v.split(",").filter(Boolean).length : 1);
   }, 0);
 
-  const { data, isLoading, isError, refetch } = useFeed(filters);
+  const { data, isLoading, isError, refetch, dataUpdatedAt } = useFeed(filters);
   const allItems = data?.items ?? [];
   // total == feed-density here: the backend caps the ranked Feed to the density
   // setting, so this is the finite "top N" count shown to the user.
@@ -89,8 +91,19 @@ export function FeedView() {
   function setHorizon(h: Horizon) {
     const sp = new URLSearchParams(params.toString());
     sp.set("time_range", HORIZON_RANGE[h] as string);
+    try { localStorage.setItem(HORIZON_STORAGE_KEY, h); } catch { /* storage unavailable */ }
     router.push(`?${sp.toString()}`, { scroll: false });
   }
+
+  // On a fresh visit with no horizon in the URL, restore the user's habitual
+  // window from the last session so the feed opens where they left off.
+  useEffect(() => {
+    if (params.get("time_range")) return;
+    let saved: string | null = null;
+    try { saved = localStorage.getItem(HORIZON_STORAGE_KEY); } catch { /* ignore */ }
+    if (saved === "day" || saved === "month" || saved === "year") setHorizon(saved);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Any overlay open means the feed shortcuts step aside (the overlay owns keys).
   const anyOverlayOpen = searchOpen || drawerOpen || paletteOpen || cheatOpen || openArticle != null;
@@ -175,8 +188,9 @@ export function FeedView() {
           </div>
 
           {/* Horizon selector — the Feed is the most important + relevant items over
-              the chosen window (Day = today's top N), as one finite numbered list. */}
-          <div className="flex items-center justify-between gap-2 pt-1">
+              the chosen window (Day = today's top N), as one finite numbered list.
+              Sticky so switching window/filters stays one tap away while scrolling. */}
+          <div className="sticky top-0 z-20 -mx-4 flex items-center justify-between gap-2 border-b border-border/60 bg-background/85 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/70">
             <h2 className="font-serif text-lg font-semibold tracking-tight text-foreground">
               {horizon === "day" ? "Today in AI" : horizon === "year" ? "This year in AI" : "This month in AI"}
             </h2>
@@ -253,13 +267,21 @@ export function FeedView() {
           {/* V7-6: the Feed is a finite, numbered shortlist — no "Show more" here.
               Exploration (paginated) lives in Discover. */}
           {!isLoading && !isError && allItems.length > 0 && (
-            <div className="py-6 text-center">
+            <div className="flex flex-col items-center gap-1.5 py-8 text-center">
+              <span aria-hidden className="mb-1 inline-flex h-7 w-7 items-center justify-center rounded-full border border-border text-primary">
+                ✓
+              </span>
               <p className="font-serif text-sm font-semibold text-foreground">
-                Your ranked top {total} — that&apos;s the signal worth your time today.
+                You&apos;re caught up — your ranked top {total} is the signal worth your time.
               </p>
+              {dataUpdatedAt > 0 && (
+                <p className="text-xs text-muted-foreground tabular-nums">
+                  Updated {formatRelativeTime(new Date(dataUpdatedAt).toISOString())}
+                </p>
+              )}
               <button
                 onClick={() => router.push("/discover")}
-                className="mt-2 text-sm text-primary hover:underline"
+                className="mt-1 text-sm text-primary hover:underline"
               >
                 Explore more in Discover →
               </button>
