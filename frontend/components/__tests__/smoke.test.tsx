@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { SummarySheet } from "@/components/feed/SummarySheet";
 import { FeedCard } from "@/components/feed/FeedCard";
+import { ShortcutCheatSheet } from "@/components/feed/ShortcutCheatSheet";
 import type { Article } from "@/lib/types";
 
 function withQuery(ui: React.ReactElement) {
@@ -57,6 +58,20 @@ describe("FeedCard", () => {
       screen.getByLabelText(/Relevance 87 out of 100/)
     ).toBeInTheDocument();
     expect(screen.getByText("412")).toBeInTheDocument();
+  });
+});
+
+describe("ShortcutCheatSheet", () => {
+  it("renders nothing when closed", () => {
+    const { container } = render(<ShortcutCheatSheet isOpen={false} onClose={vi.fn()} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("lists keyboard shortcuts when open", () => {
+    render(<ShortcutCheatSheet isOpen onClose={vi.fn()} />);
+    expect(screen.getByRole("dialog", { name: /keyboard shortcuts/i })).toBeInTheDocument();
+    expect(screen.getByText("Next item")).toBeInTheDocument();
+    expect(screen.getByText("Command palette")).toBeInTheDocument();
   });
 });
 

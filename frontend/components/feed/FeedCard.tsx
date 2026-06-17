@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { ThumbsUp, ThumbsDown, Bookmark, BookmarkCheck, ExternalLink, Share2, Check, Star, MessageSquare, ArrowBigUp, TrendingUp, Flame, Download } from "lucide-react";
 import { shareUrl } from "@/lib/share";
 import { SourceBadge } from "@/components/ui/SourceBadge";
@@ -18,6 +18,10 @@ interface FeedCardProps {
   rank?: number;
   /** Render as a bordered card (the Feed/Today look) instead of a flat list row */
   boxed?: boolean;
+  /** Keyboard-navigation focus (j/k); draws a ring and scrolls into view */
+  focused?: boolean;
+  /** Sync keyboard focus when the card is clicked/pointer-entered */
+  onFocus?: () => void;
 }
 
 function compact(n: number): string {
@@ -89,11 +93,17 @@ function isUnseen(article: Article): boolean {
   return ageHours > 48;
 }
 
-function FeedCardInner({ article, onOpen, rank, boxed }: FeedCardProps) {
+function FeedCardInner({ article, onOpen, rank, boxed, focused, onFocus }: FeedCardProps) {
   const { mutate: postFeedback } = usePostFeedback();
   const { mutate: toggleBookmark } = useToggleBookmark();
   const unread = !article.is_read;
   const [shared, setShared] = useState(false);
+  const ref = useRef<HTMLElement>(null);
+
+  // When keyboard focus lands here, bring it into view without yanking the page.
+  useEffect(() => {
+    if (focused) ref.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [focused]);
 
   async function handleShare(e: React.MouseEvent) {
     e.stopPropagation();
@@ -112,6 +122,7 @@ function FeedCardInner({ article, onOpen, rank, boxed }: FeedCardProps) {
   function handleCardClick(e: React.MouseEvent) {
     const target = e.target as HTMLElement;
     if (target.closest("button") || target.closest("a")) return;
+    onFocus?.();
     activate();
   }
 
@@ -128,6 +139,7 @@ function FeedCardInner({ article, onOpen, rank, boxed }: FeedCardProps) {
 
   return (
     <article
+      ref={ref}
       role="article"
       tabIndex={0}
       onClick={handleCardClick}
@@ -138,6 +150,7 @@ function FeedCardInner({ article, onOpen, rank, boxed }: FeedCardProps) {
           ? "rounded-xl border border-border bg-card px-4 py-4 card-lift focus-visible:rounded-xl"
           : "px-1 py-5 transition-colors sm:px-2 focus-visible:rounded-lg",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        focused && "kbd-focused",
         article.is_read && "opacity-55 hover:opacity-90"
       )}
     >

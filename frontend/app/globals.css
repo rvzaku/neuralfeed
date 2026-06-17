@@ -96,6 +96,32 @@
     border-color: hsl(var(--foreground) / 0.18);
     box-shadow: 0 1px 2px hsl(var(--foreground) / 0.05);
   }
+
+  /* Overlay entrance — subtle, fast (<200ms). Used by command palette,
+     cheat sheet, and other dialogs. */
+  @keyframes nf-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  .fade-in {
+    animation: nf-fade-in 140ms ease-out;
+  }
+
+  /* Keyboard-focused feed card ring — same accent as :focus-visible so mouse
+     and keyboard navigation feel like one system. */
+  .kbd-focused {
+    box-shadow: 0 0 0 2px hsl(var(--ring));
+  }
+}
+
+/* Honor the OS "reduce motion" setting everywhere — a stated UI rule. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Mobile tap highlight removal */
