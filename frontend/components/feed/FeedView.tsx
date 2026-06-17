@@ -223,18 +223,26 @@ export function FeedView() {
             </div>
           )}
 
+          {/* Keying the list on the active params remounts it when the horizon or
+              filters change, replaying the staggered entrance (capped so it never
+              feels slow). It does not replay on background refetch. */}
           {!isLoading && !isError && allItems.length > 0 && (
-            <div className="space-y-3">
+            <div key={params.toString()} className="space-y-3">
               {allItems.map((article, i) => (
-                <FeedCard
+                <div
                   key={article.id}
-                  article={article}
-                  onOpen={setOpenArticle}
-                  rank={i + 1}
-                  boxed
-                  focused={focused === i}
-                  onFocus={() => setFocused(i)}
-                />
+                  className="feed-enter"
+                  style={{ ["--i" as string]: Math.min(i, 8) }}
+                >
+                  <FeedCard
+                    article={article}
+                    onOpen={setOpenArticle}
+                    rank={i + 1}
+                    boxed
+                    focused={focused === i}
+                    onFocus={() => setFocused(i)}
+                  />
+                </div>
               ))}
             </div>
           )}
