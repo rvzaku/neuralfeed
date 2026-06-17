@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   X, ExternalLink, ThumbsUp, ThumbsDown, Bookmark, BookmarkCheck, AlertCircle, Share2, Check,
+  ChevronUp, ChevronDown, Copy, Sparkles,
 } from "lucide-react";
 import { shareUrl } from "@/lib/share";
 import { SourceBadge } from "@/components/ui/SourceBadge";
@@ -207,6 +208,22 @@ export function DeepMarkdown({ markdown }: { markdown: string }) {
 interface SummarySheetProps {
   article: Article | null;
   onClose: () => void;
+  /** Step to the previous/next ranked item without leaving the sheet (optional). */
+  onPrev?: () => void;
+  onNext?: () => void;
+  hasPrev?: boolean;
+  hasNext?: boolean;
+}
+
+/** One-line, honest explanation of why this item is ranked where it is — built
+ *  from the same signals the ranker uses (relevance / traction / freshness). */
+function rankReasons(article: Article): string[] {
+  if (article.why && article.why.length) return article.why;
+  const reasons: string[] = [];
+  if (article.relevance != null) reasons.push(`${article.relevance}/100 match to your interests`);
+  if (article.heat != null && article.heat >= 3) reasons.push("gaining traction right now");
+  if (article.context_line) reasons.push(article.context_line);
+  return reasons;
 }
 
 function SummarySkeleton() {
@@ -220,7 +237,7 @@ function SummarySkeleton() {
   );
 }
 
-export function SummarySheet({ article, onClose }: SummarySheetProps) {
+export function SummarySheet({ article, onClose, onPrev, onNext, hasPrev, hasNext }: SummarySheetProps) {
   const { data, isLoading, isError, error, refetch, isFetching } = useSummary(article?.id ?? null);
   const errorDetail =
     (error as { response?: { data?: { detail?: string } } } | null)?.response?.data?.detail ?? null;
@@ -228,16 +245,50 @@ export function SummarySheet({ article, onClose }: SummarySheetProps) {
   const { mutate: postFeedback } = usePostFeedback();
   const { mutate: toggleBookmark } = useToggleBookmark();
   const [shared, setShared] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [whyOpen, setWhyOpen] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const bodyRef = useRef<HTMLDivElement>(null);
+
+  // Reading-progress: fraction of the scrollable body scrolled through.
+  function onBodyScroll() {
+    const el = bodyRef.current;
+    if (!el) return;
+    const max = el.scrollHeight - el.clientHeight;
+    setProgress(max > 0 ? Math.min(1, el.scrollTop / max) : 0);
+  }
+
+  // Reset transient UI whenever a different article opens (prev/next navigation).
+  useEffect(() => {
+    setProgress(0);
+    setWhyOpen(false);
+    if (bodyRef.current) bodyRef.current.scrollTop = 0;
+  }, [article?.id]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
+      // Arrow through the ranked list without closing the sheet.
+      if (e.key === "ArrowRight" || e.key === "]") onNext?.();
+      if (e.key === "ArrowLeft" || e.key === "[") onPrev?.();
     }
     if (article) document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [article, onClose]);
+  }, [article, onClose, onPrev, onNext]);
 
   if (!article) return null;
+
+  async function copyMarkdown() {
+    if (!data) return;
+    const md = `# ${article!.title}\n\n${data.markdown}\n\n— ${article!.url}`;
+    try {
+      await navigator.clipboard.writeText(md);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch { /* clipboard unavailable — no-op */ }
+  }
+
+  const reasons = rankReasons(article);
 
   return (
     <>
@@ -283,17 +334,72 @@ export function SummarySheet({ article, onClose }: SummarySheetProps) {
               </div>
             )}
           </div>
-          <button
-            onClick={onClose}
-            aria-label="Close summary"
-            className="min-w-[44px] min-h-[44px] -mr-2 -mt-1 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-0.5 -mr-2 -mt-1 shrink-0">
+            {(onPrev || onNext) && (
+              <>
+                <button
+                  onClick={onPrev}
+                  disabled={!hasPrev}
+                  aria-label="Previous item"
+                  className="min-w-[40px] min-h-[44px] flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+                >
+                  <ChevronUp className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={onNext}
+                  disabled={!hasNext}
+                  aria-label="Next item"
+                  className="min-w-[40px] min-h-[44px] flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+                >
+                  <ChevronDown className="h-4 w-4" />
+                </button>
+              </>
+            )}
+            <button
+              onClick={onClose}
+              aria-label="Close summary"
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
+        {/* Reading-progress bar — tracks scroll through the body */}
+        <div className="h-0.5 w-full bg-transparent" aria-hidden>
+          <div
+            className="h-full bg-primary transition-[width] duration-75 ease-out"
+            style={{ width: `${progress * 100}%` }}
+          />
+        </div>
+
+        {/* Why this is ranked here — honest, collapsible, built from ranker signals */}
+        {reasons.length > 0 && (
+          <div className="px-5 pt-3">
+            <button
+              onClick={() => setWhyOpen((o) => !o)}
+              aria-expanded={whyOpen}
+              className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Sparkles className="h-3 w-3 text-primary" />
+              Why this is ranked here
+              {whyOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            </button>
+            {whyOpen && (
+              <ul className="mt-2 space-y-1">
+                {reasons.map((r, i) => (
+                  <li key={i} className="flex gap-2 text-[12.5px] leading-snug text-foreground/80">
+                    <span aria-hidden className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-primary/50" />
+                    <span>{r}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-5 pb-4">
+        <div ref={bodyRef} onScroll={onBodyScroll} className="flex-1 overflow-y-auto px-5 pb-4">
           {article.image_url && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -342,9 +448,19 @@ export function SummarySheet({ article, onClose }: SummarySheetProps) {
 
           {data && (
             <div className="space-y-4">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
-                ~{data.reading_minutes} min read · AI-generated — read the original for the full story
-              </p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+                  ~{data.reading_minutes} min read · AI-generated — read the original for the full story
+                </p>
+                <button
+                  onClick={copyMarkdown}
+                  aria-label={copied ? "Copied" : "Copy summary as markdown"}
+                  className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-muted"
+                >
+                  {copied ? <Check className="h-3 w-3 text-emerald-600 dark:text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                  {copied ? "Copied" : "Copy"}
+                </button>
+              </div>
               <DeepMarkdown markdown={data.markdown} />
             </div>
           )}

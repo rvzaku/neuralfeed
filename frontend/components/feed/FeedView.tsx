@@ -83,6 +83,9 @@ export function FeedView() {
 
   const horizon = rangeToHorizon(params.get("time_range"));
 
+  // Index of the article whose summary sheet is open, for in-sheet prev/next.
+  const openIndex = openArticle ? allItems.findIndex((a) => a.id === openArticle.id) : -1;
+
   function setHorizon(h: Horizon) {
     const sp = new URLSearchParams(params.toString());
     sp.set("time_range", HORIZON_RANGE[h] as string);
@@ -267,7 +270,18 @@ export function FeedView() {
 
       <FilterDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
       <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
-      <SummarySheet article={openArticle} onClose={() => setOpenArticle(null)} />
+      <SummarySheet
+        article={openArticle}
+        onClose={() => setOpenArticle(null)}
+        hasPrev={openIndex > 0}
+        hasNext={openIndex >= 0 && openIndex < allItems.length - 1}
+        onPrev={() => {
+          if (openIndex > 0) { setOpenArticle(allItems[openIndex - 1]); setFocused(openIndex - 1); }
+        }}
+        onNext={() => {
+          if (openIndex >= 0 && openIndex < allItems.length - 1) { setOpenArticle(allItems[openIndex + 1]); setFocused(openIndex + 1); }
+        }}
+      />
       <CommandPalette
         isOpen={paletteOpen}
         onClose={() => setPaletteOpen(false)}
